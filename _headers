@@ -2,10 +2,6 @@
   Cache-Control: no-store, max-age=0
   Permissions-Policy: microphone=(self), camera=(self)
 
-/mobile-standalone.html
-  Cache-Control: no-store, max-age=0
-  Permissions-Policy: microphone=(self), camera=(self)
-
 /manifest.webmanifest
   Cache-Control: no-store, max-age=0
 

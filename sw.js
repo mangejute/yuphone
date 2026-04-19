@@ -1,9 +1,8 @@
-const STATIC_CACHE = "lifetalk-static-v20260417-journeyfix-11";
-const SENSEVOICE_CACHE = "lifetalk-sensevoice-v20260417-journeyfix-11";
+const STATIC_CACHE = "lifetalk-static-v20260419-pwafix-12";
+const SENSEVOICE_CACHE = "lifetalk-sensevoice-v20260419-pwafix-12";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
-  "./mobile-standalone.html",
   "./manifest.webmanifest",
   "./pwa-icon-192.png",
   "./pwa-icon-512.png",
@@ -87,8 +86,7 @@ self.addEventListener("fetch", (event) => {
           const cache = await caches.open(STATIC_CACHE);
           return (
             (await cache.match(request, { ignoreSearch: true })) ||
-            (await cache.match("./index.html")) ||
-            (await cache.match("./mobile-standalone.html"))
+            (await cache.match("./index.html"))
           );
         }),
     );
