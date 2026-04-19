@@ -1,5 +1,5 @@
-const STATIC_CACHE = "lifetalk-static-v20260419-chatfix-51";
-const SENSEVOICE_CACHE = "lifetalk-sensevoice-v20260419-chatfix-51";
+const STATIC_CACHE = "lifetalk-static-v20260420-chatfix-55";
+const SENSEVOICE_CACHE = "lifetalk-sensevoice-v20260420-chatfix-55";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
