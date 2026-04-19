@@ -1,5 +1,5 @@
-const STATIC_CACHE = "lifetalk-static-v20260419-pwafix-12";
-const SENSEVOICE_CACHE = "lifetalk-sensevoice-v20260419-pwafix-12";
+const STATIC_CACHE = "lifetalk-static-v20260419-chatfix-48";
+const SENSEVOICE_CACHE = "lifetalk-sensevoice-v20260419-chatfix-48";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -105,6 +105,55 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => cached);
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  const notification = event?.notification;
+  const data = notification?.data && typeof notification.data === "object" ? notification.data : {};
+  const roleId = String(data.roleId || "").trim();
+  const targetUrl = String(data.targetUrl || "./").trim() || "./";
+  notification?.close?.();
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windowClients) => {
+      const normalizedTargetOrigin = (() => {
+        try {
+          return new URL(targetUrl, self.location.origin).origin;
+        } catch {
+          return self.location.origin;
+        }
+      })();
+      const matchedClient =
+        windowClients.find((client) => {
+          try {
+            return new URL(client.url).origin === normalizedTargetOrigin;
+          } catch {
+            return true;
+          }
+        }) || windowClients[0];
+
+      if (matchedClient) {
+        try {
+          await matchedClient.focus();
+        } catch (error) {
+          void error;
+        }
+        try {
+          matchedClient.postMessage({
+            type: "lifetalk-notification-click",
+            roleId,
+            targetUrl,
+          });
+        } catch (error) {
+          void error;
+        }
+        return;
+      }
+
+      if (clients.openWindow) {
+        await clients.openWindow(targetUrl);
+      }
     }),
   );
 });
