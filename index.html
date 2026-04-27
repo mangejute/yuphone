@@ -22983,10 +22983,9 @@ const getJourneyLinkedSnapshotForDate = (role, dateKey = formatDateKey()) => {
 
 const getJourneyDisplayGoalsForDate = (role, dateKey = formatDateKey()) => {
   const snapshot = getJourneyLinkedSnapshotForDate(role, dateKey);
-  if (Array.isArray(snapshot?.displayGoals) && snapshot.displayGoals.length) {
-    return snapshot.displayGoals;
-  }
-  return Array.isArray(role?.goals) ? role.goals : [];
+  const liveGoals = Array.isArray(role?.goals) ? role.goals : [];
+  if (liveGoals.length) return liveGoals;
+  return Array.isArray(snapshot?.displayGoals) ? snapshot.displayGoals : [];
 };
 
 const getJourneyMonitorPreviewForDate = (role, dateKey = formatDateKey()) => {
@@ -27823,8 +27822,7 @@ const renderMapGeneratorSheet = (state) =>
 
 const renderJourneyPreviewMetaSection = (goals = [], monitor = null, event = null) => {
   const orderedGoals = getOrderedDisplayGoals(Array.isArray(goals) ? goals : []);
-  const hasEvent = Boolean(String(event?.title || event?.summary || "").trim());
-  if (!orderedGoals.length && !hasEvent) return "";
+  if (!orderedGoals.length) return "";
 
   return `
     ${
@@ -27849,19 +27847,6 @@ const renderJourneyPreviewMetaSection = (goals = [], monitor = null, event = nul
         `
         : ""
     }
-    ${
-      hasEvent
-        ? `
-          <article class="goal-item">
-            <div class="goal-row">
-              <strong>${escapeHtml(event?.title || "当日事件")}</strong>
-              <span>${escapeHtml(event?.status || "进行中")}</span>
-            </div>
-            <p>${escapeHtml(event?.summary || "")}</p>
-          </article>
-        `
-        : ""
-    }
   `;
 };
 
@@ -27871,9 +27856,8 @@ const renderJourneyGeneratorSheet = (state, role) => {
   const monthMeta = getJourneyCalendarMonthMeta(generatorDate);
   const savedJourneyPrompt = String(role?.settings?.journeyPromptDraft || "").trim();
   const isLinkedJourneyBusy = hasBusyToken(state.apiGenerationBusy, "journey") || hasBusyToken(state.apiGenerationBusy, "monitor");
-  const singlePreviewEntries = alignJourneyEntriesTailForRender(
-    role,
-    Array.isArray(state.journeyGenerationPreview) ? state.journeyGenerationPreview : [],
+  const singlePreviewEntries = filterJourneyTimelineForDisplay(
+    alignJourneyEntriesTailForRender(role, Array.isArray(state.journeyGenerationPreview) ? state.journeyGenerationPreview : []),
   );
 
   return renderChatBottomSheet(
@@ -27947,7 +27931,7 @@ const renderJourneyGeneratorSheet = (state, role) => {
                   )
                   .join("")}
               </div>
-              ${renderJourneyPreviewMetaSection(state.journeyGoalPreview, state.journeyMonitorPreview, state.journeyEventPreview)}
+              ${renderJourneyPreviewMetaSection(state.journeyGoalPreview)}
               <button class="sheet-action-btn primary sheet-generate-btn" type="button" data-action="save-journey-preview">保存到 ${escapeHtml(formatJourneyDateLabel(previewDate))}</button>
             </section>
           `
@@ -28048,15 +28032,26 @@ const renderJourneyCalendarSheet = (state, role) => {
   );
 };
 
+const isJourneyEntryLikelyLifeTrackStory = (item = {}) => {
+  const title = String(item?.title || "").trim();
+  const place = String(item?.place || "").trim();
+  const detail = String(item?.detail || "").trim();
+  const combined = `${title} ${place} ${detail}`;
+  const hasStoryLength = place.length > 48 || detail.length > 100 || combined.length > 180;
+  if (!hasStoryLength) return false;
+  if (/生活轨迹|突发事件|事件总标题|短期目标|运势|余波|误会|乌龙|灵感|小票|纸袋|Demo|样带|故事|转折|插曲/u.test(combined)) return true;
+  return /[。！？；]/u.test(place) || /[。！？；]/u.test(detail);
+};
+
+const filterJourneyTimelineForDisplay = (items = []) =>
+  (Array.isArray(items) ? items : []).filter((item) => !isJourneyEntryLikelyLifeTrackStory(item));
+
 const renderJourneySheetRefined = (state, role) => {
   const activeDate = clampDateKeyToCurrentMonth(state.journeyActiveDate || formatJourneyDayKey());
   const activeDateKey = formatDateKey(activeDate);
   const activeDateLabel = formatJourneyDateLabel(activeDateKey);
-  const journeyItems = alignJourneyEntriesTailForRender(role, getRoleTimelineForDate(role, activeDate));
+  const journeyItems = filterJourneyTimelineForDisplay(alignJourneyEntriesTailForRender(role, getRoleTimelineForDate(role, activeDate)));
   const journeyDisplayGoals = getJourneyDisplayGoalsForDate(role, activeDateKey);
-  const journeyMonitorPreview = getJourneyMonitorPreviewForDate(role, activeDateKey) || (activeDateKey === formatJourneyDayKey() ? role.monitor : null);
-  const journeyEventPreview = getJourneyEventPreviewForDate(role, activeDateKey);
-  const linkedLifeTrackItems = buildLifeStatusFeedItems(role, { dateKey: activeDateKey, limit: 10 });
   const mealTimes = Array.isArray(role.settings?.mealTimes) ? role.settings.mealTimes : ["10:30", "14:00", "20:00"];
   const journeyRoutineCollapsed = state.journeyRoutineCollapsed !== false;
 
@@ -28068,14 +28063,6 @@ const renderJourneySheetRefined = (state, role) => {
         note: "当前有行程联动任务正在运行，完成后这里会自动刷新",
       })}
       ${renderJourneyDateContextCard(role, activeDate)}
-      ${renderLinkedLifeTrackCard(linkedLifeTrackItems, {
-        wrapperClass: "sheet-card journey-mobile-card journey-linked-track-card",
-        kicker: "",
-        title: "生活轨迹",
-        subtitle: "跟着当天行程一起推进",
-        eventTitle: journeyEventPreview?.title || linkedLifeTrackItems.find((item) => item?.eventTitle)?.eventTitle || "",
-        emptyText: `${activeDateLabel} 还没有新的生活轨迹`,
-      })}
       <section class="sheet-card journey-mobile-card">
         <div class="sheet-kicker">当日动向</div>
         ${
@@ -28145,19 +28132,6 @@ const renderJourneySheetRefined = (state, role) => {
             )
             .join("")}
         </div>
-        ${
-          journeyEventPreview?.title || journeyEventPreview?.summary
-            ? `
-              <article class="goal-item">
-                <div class="goal-row">
-                  <strong>${escapeHtml(journeyEventPreview?.title || "当日事件")}</strong>
-                  <span>${escapeHtml(journeyEventPreview?.status || "进行中")}</span>
-                </div>
-                <p>${escapeHtml(journeyEventPreview?.summary || "")}</p>
-              </article>
-            `
-            : ""
-        }
       </section>
       ${renderCollapsibleSheetCard({
         title: "作息与三餐",
@@ -36866,124 +36840,6 @@ const requestJourneyModelText = async ({
     requestTrace,
   });
 
-const requestJourneyModelJson = async ({
-  systemPrompt,
-  payload,
-  includeMeta = false,
-  skipJsonRepair = false,
-  temperatureOverride = null,
-  signal = null,
-  preferredVariantMode = "",
-  singleVariant = false,
-}) =>
-  requestModelJsonWithConfigFallback({
-    primaryConfig: getJourneyApiConfig(),
-    primaryMissingMessage: "请先在设置里填好行程 / 人生状态 API 地址 模型和 API Key",
-    fallbackConfig: null,
-    fallbackMissingMessage: "请先在设置里填好行程 / 人生状态 API 地址 模型和 API Key",
-    systemPrompt,
-    payload,
-    includeMeta,
-    skipJsonRepair,
-    fallbackLane: "",
-    temperatureOverride,
-    signal,
-    preferredVariantMode,
-    singleVariant,
-  });
-
-const requestJourneyModelJsonValidated = async ({
-  systemPrompt,
-  payload,
-  validate,
-  retries = 0,
-  includeMeta = false,
-  repairResult = null,
-  useQueue = false,
-  skipJsonRepair = false,
-  softValidate = false,
-  temperatureOverride = null,
-  signal = null,
-  preferredVariantMode = "",
-  singleVariant = false,
-}) => {
-  const journeyStructuredRequestOptions = getJourneyStructuredRequestOptions();
-  const resolvedPreferredVariantMode = String(preferredVariantMode || journeyStructuredRequestOptions.preferredVariantMode).trim();
-  const resolvedSingleVariant = Boolean(singleVariant || journeyStructuredRequestOptions.singleVariant);
-  const runTask = async () => {
-    let lastError = null;
-
-    for (let attempt = 0; attempt <= retries; attempt += 1) {
-      if (signal?.aborted) {
-        throw createAbortRequestError();
-      }
-      try {
-        const response = await requestJourneyModelJson({
-          systemPrompt:
-            attempt === 0
-              ? systemPrompt
-              : `${systemPrompt}
-上一次返回无效 原因: ${lastError?.message || "结果校验失败"}
-这一次必须完全遵守 roleContext 与 hardConstraints 不得擅自改写角色名 地点 参考城市 目标或 references`,
-          payload: {
-            ...payload,
-            validationAttempt: attempt + 1,
-          },
-          includeMeta,
-          skipJsonRepair,
-          temperatureOverride,
-          signal,
-          preferredVariantMode: resolvedPreferredVariantMode,
-          singleVariant: resolvedSingleVariant,
-        });
-        const rawResult = includeMeta ? response?.result : response;
-        const result = typeof repairResult === "function" ? repairResult(rawResult) : rawResult;
-        const message = validate ? validate(result) : "";
-        if (message) {
-          if (softValidate && attempt >= retries && isRelaxableValidationErrorMessage(message)) {
-            if (!includeMeta) {
-              return result;
-            }
-            return {
-              result,
-              meta: {
-                ...(response?.meta || {}),
-                validationAttempts: attempt + 1,
-                validationSoftened: true,
-                validationWarning: message,
-              },
-            };
-          }
-          const validationError = new Error(message);
-          throw includeMeta && response?.meta ? attachModelMetaToError(validationError, response.meta) : validationError;
-        }
-
-        if (!includeMeta) {
-          return result;
-        }
-
-        return {
-          result,
-          meta: {
-            ...(response?.meta || {}),
-            validationAttempts: attempt + 1,
-          },
-        };
-      } catch (error) {
-        lastError = error;
-        if (signal?.aborted || isAbortRequestError(error)) {
-          throw error;
-        }
-        if (STRICT_SINGLE_AI_REQUEST_PER_ENTRY) throw error;
-      }
-    }
-
-    throw lastError || new Error("模型返回无效结果");
-  };
-
-  return useQueue ? enqueueSecondaryApiTask(runTask) : runTask();
-};
-
 const getModelsEndpointCandidates = (base) => {
   const normalized = String(base || "").replace(/\/+$/, "");
   if (!normalized) return [];
@@ -44029,6 +43885,9 @@ const parseJourneyPreviewTimeRange = (value = "") => {
   };
 };
 
+const isJourneyPreviewTimeRangeText = (value = "") =>
+  /(\d{1,2}:\d{2})\s*(?:-|—|–|~|至|到)\s*(\d{1,2}:\d{2})/.test(String(value || "").trim());
+
 const JOURNEY_SLEEP_TAIL_MEALISH_PATTERN = /晚餐|晚饭|吃饭|用餐|夜宵|宵夜|简聊|闲聊|小聊|聚餐/;
 const JOURNEY_DINNER_SLOT_TITLE_PATTERN = /晚餐|晚饭|用餐|吃饭|夜宵|宵夜|聚餐/;
 
@@ -45093,17 +44952,37 @@ const collectJourneyPreviewLinesFromNode = (node, fallbackDate = "", lines = [])
   return lines;
 };
 
-const extractJourneyPreviewCandidateLines = (rawText = "") => {
-  const normalizedText = stripJourneyPreviewCodeFence(rawText);
-  const lines = normalizedText
-    .split(/\r?\n+/)
-    .map((line) => normalizeJourneyPreviewCandidateLine(line))
-    .filter(Boolean);
+const isJourneyLifeTrackSectionHeaderLine = (value = "") => /^(?:生活轨迹|生活轨迹[:：]?|life\s*track)$/i.test(String(value || "").trim());
 
-  try {
-    const jsonPayload = extractJsonPayload(normalizedText);
-    collectJourneyPreviewLinesFromNode(jsonPayload, "", lines);
-  } catch {}
+const isJourneyLifeTrackProtocolLine = (value = "") => {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  if (/^(?:事件|突发事件|event|短期目标|目标|short\s*term\s*goal|goal)\s*(?:\|\||｜｜|\||｜|[:：])/i.test(text)) return true;
+  if (/^\d{1,2}:\d{2}\s*(?:\|\||｜｜|\||｜)/.test(text)) return true;
+  return false;
+};
+
+const extractJourneyPreviewCandidateLines = (rawText = "", { includeJson = true, stopAtLifeTrack = false } = {}) => {
+  const normalizedText = stripJourneyPreviewCodeFence(rawText);
+  const lines = [];
+  let isInsideLifeTrack = false;
+  normalizedText.split(/\r?\n+/).forEach((line) => {
+    const normalizedLine = normalizeJourneyPreviewCandidateLine(line);
+    if (!normalizedLine) return;
+    if (stopAtLifeTrack && isJourneyLifeTrackSectionHeaderLine(normalizedLine)) {
+      isInsideLifeTrack = true;
+      return;
+    }
+    if (stopAtLifeTrack && (isInsideLifeTrack || isJourneyLifeTrackProtocolLine(normalizedLine))) return;
+    lines.push(normalizedLine);
+  });
+
+  if (includeJson) {
+    try {
+      const jsonPayload = extractJsonPayload(normalizedText);
+      collectJourneyPreviewLinesFromNode(jsonPayload, "", lines);
+    } catch {}
+  }
 
   return [...new Set(lines)];
 };
@@ -47792,167 +47671,25 @@ const requestJourneyPreviewFallbackData = async (
     signal = null,
   } = {},
 ) => {
-  const normalizedJourneyPrompt = normalizeJourneyGenerationPrompt(journeyPrompt, 140);
-  const preferredEntryCount = getJourneyPreferredEntryCount(normalizedTargetDate, role);
-  const roleName = role?.profile?.note || role?.profile?.name || "角色";
-  const currentPlace = getJourneyAllowedPlaceNames(role, 8)[0] || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
-  const referenceCity = role?.profile?.realCityReference || role?.profile?.location || "";
-  const activeFallbackPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, "midday") || currentPlace || "当前地点");
-  const currentStatus = getVideoSafeCurrentStatusText(role);
-  const goalTitles = (role?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean);
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 8);
-  const { roll: fortuneRoll, promptBlock: lifeFatePromptBlock } = buildLifeFatePromptBlock(role, normalizedTargetDate);
-  const apiResponse = await requestJourneyModelJsonValidated({
-    systemPrompt: `你现在只负责在复杂联动失败时，补出一个可直接使用的当天行程预览。
-只输出 JSON，不要解释。
-规则:
-- 当前角色固定是「${roleName}」
-- 当前地点锚点是「${currentPlace}」，它只用于出发点和收尾，不等于整天所有活动都必须发生在这里
-- 参考真实城市（只作现实参照）固定是「${referenceCity}」
-- 当前状态可参考「${currentStatus}」
-- 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
-- 只允许使用这些地图地点：${enabledPlaces.join(" / ") || currentPlace}
-${buildJourneyPlaceDiversityPrompt(currentPlace)}
-${lifeFatePromptBlock}
-- 场景必须是现代日常生活，不允许改成玄幻、古风、战斗、宫廷、异世界、冒险游戏、旅游攻略或其他完全无关题材
-- 不要输出日文、韩文或英文整段内容
-- 必须生成 ${targetDateLabel} 的当天行程
-- timeline 条数允许 ${JOURNEY_DYNAMIC_ENTRY_MIN} 到 ${JOURNEY_DYNAMIC_ENTRY_MAX} 条，并且要按当天忙闲自然浮动，不要机械固定成每天都 6 条
-- 建议返回 ${preferredEntryCount} 条 timeline；如果当天确实更忙可以多写，前端会完整保留
-- 每条都要有 time title place mood detail
-- 地点必须严格从上面给出的地图地点里选，目标优先围绕当前目标推进
-- detail 简短自然，不要空话
-- 短期目标应像 ${SHORT_GOAL_MIN_DAYS} 到 ${SHORT_GOAL_MAX_DAYS} 天内能收尾的阶段，不要把同一件短事拖成整周
-- 不要连续多天都只写同一个很细的小部件或小步骤，后面要推进到下一阶段或收尾
-- 晚餐必须单独占 1 条 timeline，晚饭后的继续忙碌、出门、收尾或夜间活动必须另起 1 条，不能直接合成 20:00-03:00 这种超长末条
-- monitor.timeline 必须返回 2 到 4 条具体状态轨迹，每条都带 title 字段，title 是 8 到 12 个字的小标题，text 用第三人称写成具体生活切片，不能只写抽象心情
-- 如果今日命运触发突发事件，event 不能是空对象，必须写出具体 title 和 summary，最好再附上 2 到 4 条 event.beats
-- event.title 不能直接照抄运势档位或写成“状态波动”“工作推进”“小有运气”这类空标题，必须点明当天到底发生了什么
-- 如果今日没有触发突发事件，event 可以为空对象，但 monitor.timeline 仍然要具体、有画面感，不能平铺直叙
-- 如果涉及 NPC，可以在 detail 里带上 @名字
-- 便利店 餐馆 快递站这类中转地点如果只是路过 补给 吃点东西或取东西，必须单独成条，后面真正处理正事的地点要另起一条，不能把长时间工作直接挂在中转点上
-${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
-${buildJourneyLateNightCarryPrompt(role)}
-返回格式:
-{
-  "timeline": [
-    { "time": "10:00-11:00", "title": "处理消息", "place": "${activeFallbackPlace}", "mood": "在线", "detail": "回完消息顺手整理今天安排" }
-  ],
-  "goal_updates": [
-    { "title": "目标标题", "progress": 65, "detail": "推进了一点" }
-  ],
-  "monitor": {
-    "headline": "一句标题",
-    "summary": "一句总结",
-    "timeline": [
-      { "time": "12:40", "title": "现场小标题", "text": "第三人称生活切片", "tag": "推进中" }
-    ]
-  },
-  "event": {
-    "title": "事件标题",
-    "status": "进行中",
-    "summary": "一句摘要",
-    "beats": [
-      { "time": "19:50", "text": "事件过程", "tag": "插曲" }
-    ]
-  }
-}`,
-    payload: {
-      task: `补生成 ${targetDateLabel} 的简洁可用行程预览`,
-      targetDate: normalizedTargetDate,
-      userInput: normalizedJourneyPrompt,
-      slimContext: {
-        roleName: role?.profile?.note || role?.profile?.name || "",
-        currentPlace: getRoleCurrentPlace(role),
-        referenceCity: role?.profile?.realCityReference || role?.profile?.location || "",
-        weather: role?.profile?.weather || "",
-        continuity: buildJourneyContinuityContext(role, normalizedTargetDate),
-        currentStatus: role?.status?.headerText || role?.status?.mood || "",
-        goals: (role?.goals || []).slice(0, 3).map((item) => ({
-          title: String(item?.title || "").trim(),
-          progress: clampValue(Number(item?.progress ?? 0), 0, 100),
-        })),
-        enabledPlaces: getRoleUsableMapPlaceNames(role, 8),
-        currentTimeline: getJourneyTimelineForRole(role, normalizedTargetDate)
-          .slice(0, 6)
-          .map((item) => `${String(item?.time || "").trim()} ${String(item?.title || item?.place || "").trim()}`.trim()),
-        npcNames: (role?.npcs || []).slice(0, 6).map((item) => String(item?.name || "").trim()).filter(Boolean),
-        wakeTime: role?.settings?.sleepEnd || "10:00",
-        sleepTime: role?.settings?.sleepStart || "03:00",
-        mealTimes: [
-          { label: "早餐", time: mealTimes[0] || "10:30" },
-          { label: "午餐", time: mealTimes[1] || "14:00" },
-          { label: "晚餐", time: mealTimes[2] || "20:00" },
-        ],
-        holiday: targetHoliday?.name || "",
-        holidayHint: targetHoliday?.promptHint || "",
-        preferredEntryCount,
-        requiredEntryCount: preferredEntryCount,
-        lifeFate: {
-          tierLabel: fortuneRoll.tierLabel,
-          tierBlurb: fortuneRoll.tierBlurb,
-          eventTriggered: Boolean(fortuneRoll.eventTriggered),
-          triggerChance: Number(fortuneRoll.triggerChance || 0),
-          effectiveTriggerChance: Number(fortuneRoll.effectiveTriggerChance || 0),
-          variationScore: Number(fortuneRoll.variationScore || 0),
-          requiredConcreteMoments: Number(fortuneRoll.requiredConcreteMoments || 1),
-          dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
-          storyHooks: Array.isArray(fortuneRoll.storyHooks) ? [...fortuneRoll.storyHooks] : [],
-        },
-      },
-    },
-    includeMeta: true,
-    retries: 1,
-    useQueue: false,
-    softValidate: true,
-    temperatureOverride: 0.2,
+  const apiResponse = await requestJourneyPreviewTimelineOnlyTextData(role, {
+    journeyPrompt,
+    normalizedTargetDate,
+    targetDateLabel,
+    targetHoliday,
+    mealTimes,
+    referenceCatalog,
     signal,
-    repairResult: (payload) =>
-      repairJourneyPreviewPayload(
-        role,
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          targetDate: normalizedTargetDate,
-          anchors: buildRoleAnchors(role),
-        },
-        referenceCatalog,
-        normalizedTargetDate,
-      ),
-    validate: (payload) => {
-      const timeline = normalizeJourneyTimelineItems(payload?.timeline || payload?.entries || payload?.items || []);
-      if (timeline.length < JOURNEY_DYNAMIC_ENTRY_MIN) return "缺少timeline";
-      const monitorTimeline = (Array.isArray(payload?.monitor?.timeline) ? payload.monitor.timeline : []).filter((item) =>
-        String(item?.text || item?.summary || "").trim(),
-      );
-      if (monitorTimeline.length < 2) return "缺少 monitor.timeline";
-      const monitorDramaError = validateLifeMonitorTimelineDrama(monitorTimeline, fortuneRoll);
-      if (monitorDramaError) return monitorDramaError;
-      const eventTitle = String(payload?.event?.title || "").trim();
-      const eventSummary = String(payload?.event?.summary || "").trim();
-      if (fortuneRoll.eventTriggered && !eventTitle && !eventSummary) return "缺少 event";
-      if (eventTitle && isJourneyEventTitleTooGeneric(eventTitle, fortuneRoll)) return "event.title 过于空泛";
-      const driftError = collectJourneySemanticDriftMessage(
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          timeline,
-        },
-        "行程",
-      );
-      if (driftError) return driftError;
-      return validateBlockedTermsInJourneyResult(
-        role,
-        {
-          timeline,
-          goal_updates: Array.isArray(payload?.goal_updates) ? payload.goal_updates : [],
-          monitor: payload?.monitor || null,
-          event: payload?.event || null,
-        },
-        "行程",
-      );
-    },
   });
 
-  return apiResponse;
+  return {
+    result: apiResponse?.result || null,
+    meta: {
+      ...(apiResponse?.meta || {}),
+      apiLane: "journey-single-plain-text-fallback",
+      outputFormat: "journey-single-plain-text-fallback",
+      jsonDisabled: true,
+    },
+  };
 };
 
 const requestJourneyPreviewMinimalRescueData = async (
@@ -47967,162 +47704,25 @@ const requestJourneyPreviewMinimalRescueData = async (
     signal = null,
   } = {},
 ) => {
-  const normalizedJourneyPrompt = normalizeJourneyGenerationPrompt(journeyPrompt, 120);
-  const context = buildJourneyGenerationContext(role, normalizedJourneyPrompt, normalizedTargetDate);
-  const plannerConfig = getPlannerApiConfig();
-  const prefersGeminiCompatibleBudget = shouldUseGeminiCompatibleMode(plannerConfig);
-  const preferredEntryCount = getJourneyPreferredEntryCount(normalizedTargetDate, role);
-  const roleName = role?.profile?.note || role?.profile?.name || "角色";
-  const currentPlace = getJourneyAllowedPlaceNames(role, 8)[0] || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
-  const referenceCity = role?.profile?.realCityReference || role?.profile?.location || "";
-  const activeFallbackPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, "midday") || currentPlace || "当前地点");
-  const goalTitles = (role?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean);
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 8);
-  const npcNames = (role?.npcs || []).slice(0, 6).map((item) => String(item?.name || "").trim()).filter(Boolean);
-  const { roll: fortuneRoll, promptBlock: lifeFatePromptBlock } = buildLifeFatePromptBlock(role, normalizedTargetDate);
-  const apiResponse = await requestJourneyModelJsonValidated({
-    systemPrompt: `你现在只负责在前面的复杂联动失败后，补一版稳定可用的 ${targetDateLabel} 行程。
-只输出 JSON，不要解释，不要 Markdown。
-规则:
-- 当前角色固定是「${roleName}」
-- 当前地点锚点是「${currentPlace}」，它只用于出发点和收尾，不等于整天所有活动都必须发生在这里
-- 参考真实城市（只作现实参照）固定是「${referenceCity}」
-- 场景只能是现代城市日常生活，禁止玄幻、古风、宫廷、异世界、旅游攻略、游戏任务、冒险题材
-- 不要输出日文、韩文或英文整段内容，也不要提 AI、Gemini、Google、模型、助手
-- 必须生成 ${targetDateLabel} 的时间轴，不是别的日期
-- timeline 条数允许 ${JOURNEY_DYNAMIC_ENTRY_MIN} 到 ${JOURNEY_DYNAMIC_ENTRY_MAX} 条，并且要按当天忙闲自然浮动，不要机械固定成每天都 6 条
-- 建议返回 ${preferredEntryCount} 条 timeline；如果当天确实更忙可以多写，前端会完整保留
-- 每条都必须有 time title place mood detail
-- detail 保持简短自然，控制在 12 到 24 个字
-- 优先复用这些地点：${enabledPlaces.join(" / ") || currentPlace}
-- 优先围绕这些目标推进：${goalTitles.join(" / ") || "暂无目标"}
-- 短期目标应像 ${SHORT_GOAL_MIN_DAYS} 到 ${SHORT_GOAL_MAX_DAYS} 天内能收尾的阶段，不要把同一件短事拖成整周
-- 不要连续多天都只写同一个很细的小部件或小步骤，后面要推进到下一阶段或收尾
-- place 只能填写上面提供的地点或「${currentPlace}」，不要编造新的城市名、商圈名或地标
-${buildJourneyPlaceDiversityPrompt(currentPlace)}
-- 晚餐必须单独占 1 条 timeline，晚饭后的继续安排必须另起 1 条，不能把晚饭和后半夜活动直接合并成一个超长条目
-- monitor.timeline 必须返回 2 到 4 条具体状态轨迹，每条都带 title 字段，title 是 8 到 12 个字的小标题，text 用第三人称写成真实生活推进，不要只有一句大而空的总结
-- 如果今日命运触发突发事件，event 不能留空，必须明确 title / summary，最好补 2 到 4 条 event.beats
-- event.title 不能直接照抄运势档位或写成“状态波动”“工作推进”“小有运气”这类空标题，必须点明当天到底发生了什么
-- 如果今日没有触发突发事件，event 可以为空对象，但 monitor.timeline 仍然要保留 2 到 4 条有画面的日常变化
-- 如果涉及 NPC，可以在 detail 里自然带上 @名字，可用 NPC：${npcNames.join(" / ") || "暂无"}，不要编造新的 @名字
-- 便利店 餐馆 快递站这类中转地点如果只是路过 补给 吃点东西或取东西，必须单独成条，后面真正处理正事的地点要另起一条，不能把长时间工作直接挂在中转点上
-- 今日作息: 起床 ${role?.settings?.sleepEnd || "10:00"} 睡觉 ${role?.settings?.sleepStart || "03:00"} 早餐 ${mealTimes[0] || "10:30"} 午餐 ${mealTimes[1] || "14:00"} 晚餐 ${mealTimes[2] || "20:00"}
-${lifeFatePromptBlock}
-${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
-${buildJourneyLateNightCarryPrompt(role)}
-- 当天节假日信息: ${targetHoliday?.name || "普通工作日"} ${targetHoliday?.promptHint || ""}
-返回格式:
-{
-  "targetDate": "${normalizedTargetDate}",
-  "timeline": [
-    { "time": "10:00-11:20", "title": "处理消息", "place": "${activeFallbackPlace}", "mood": "在线", "detail": "接上前面的事情继续推进" }
-  ],
-  "goal_updates": [
-    { "title": "${goalTitles[0] || "当前目标"}", "progress": 62, "detail": "今天往前推进了一点" }
-  ],
-  "monitor": {
-    "headline": "一句标题",
-    "summary": "一句总结",
-    "timeline": [
-      { "time": "12:40", "title": "现场小标题", "text": "第三人称状态切片", "tag": "推进中" }
-    ]
-  },
-  "event": {
-    "title": "事件标题",
-    "status": "进行中",
-    "summary": "一句摘要",
-    "beats": [
-      { "time": "19:50", "text": "事件过程", "tag": "插曲" }
-    ]
-  }
-}`,
-    payload: {
-      task: `补生成 ${targetDateLabel} 的稳定行程预览`,
-      targetDate: normalizedTargetDate,
-      slimContext: {
-        profile: context.profile,
-        userProfile: context.userProfile,
-        status: context.status,
-        monitor: context.monitor,
-        goals: context.goals,
-        events: context.events,
-        mapPlaces: context.mapPlaces,
-        schedule: context.schedule,
-        activeDate: context.activeDate,
-        recentTimeline: context.recentTimeline,
-        npcs: context.npcs,
-        worldbook: context.worldbook,
-        journeyPrompt: normalizedJourneyPrompt,
-        preferredEntryCount,
-        requiredEntryCount: preferredEntryCount,
-        lifeFate: {
-          tierLabel: fortuneRoll.tierLabel,
-          tierBlurb: fortuneRoll.tierBlurb,
-          eventTriggered: Boolean(fortuneRoll.eventTriggered),
-          triggerChance: Number(fortuneRoll.triggerChance || 0),
-          effectiveTriggerChance: Number(fortuneRoll.effectiveTriggerChance || 0),
-          variationScore: Number(fortuneRoll.variationScore || 0),
-          requiredConcreteMoments: Number(fortuneRoll.requiredConcreteMoments || 1),
-          dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
-          storyHooks: Array.isArray(fortuneRoll.storyHooks) ? [...fortuneRoll.storyHooks] : [],
-        },
-      },
-      outputRules: {
-        maxOutputTokens: prefersGeminiCompatibleBudget ? 3600 : 1600,
-      },
-    },
-    includeMeta: true,
-    retries: 2,
-    useQueue: false,
-    softValidate: true,
-    temperatureOverride: 0.18,
+  const apiResponse = await requestJourneyPreviewTimelineOnlyTextData(role, {
+    journeyPrompt,
+    normalizedTargetDate,
+    targetDateLabel,
+    targetHoliday,
+    mealTimes,
+    referenceCatalog,
     signal,
-    repairResult: (payload) =>
-      repairJourneyPreviewPayload(
-        role,
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          targetDate: normalizedTargetDate,
-          anchors: buildRoleAnchors(role),
-        },
-        referenceCatalog,
-        normalizedTargetDate,
-      ),
-    validate: (payload) => {
-      if (String(payload?.targetDate || "").trim() !== normalizedTargetDate) return "行程日期不匹配";
-      const timeline = normalizeJourneyTimelineItems(payload?.timeline || payload?.entries || payload?.items || []);
-      if (timeline.length < JOURNEY_DYNAMIC_ENTRY_MIN) return "缺少timeline";
-      const monitorTimeline = (Array.isArray(payload?.monitor?.timeline) ? payload.monitor.timeline : []).filter((item) =>
-        String(item?.text || item?.summary || "").trim(),
-      );
-      if (monitorTimeline.length < 2) return "缺少 monitor.timeline";
-      const monitorDramaError = validateLifeMonitorTimelineDrama(monitorTimeline, fortuneRoll);
-      if (monitorDramaError) return monitorDramaError;
-      const eventTitle = String(payload?.event?.title || "").trim();
-      const eventSummary = String(payload?.event?.summary || "").trim();
-      if (fortuneRoll.eventTriggered && !eventTitle && !eventSummary) return "缺少 event";
-      if (eventTitle && isJourneyEventTitleTooGeneric(eventTitle, fortuneRoll)) return "event.title 过于空泛";
-      const driftError = collectJourneySemanticDriftMessage(
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          timeline,
-        },
-        "行程",
-      );
-      if (driftError) return driftError;
-      return validateBlockedTermsInJourneyResult(
-        role,
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          timeline,
-        },
-        "行程",
-      );
-    },
   });
 
-  return apiResponse;
+  return {
+    result: apiResponse?.result || null,
+    meta: {
+      ...(apiResponse?.meta || {}),
+      apiLane: "journey-single-plain-text-rescue",
+      outputFormat: "journey-single-plain-text-rescue",
+      jsonDisabled: true,
+    },
+  };
 };
 
 const requestJourneyPreviewTimelineOnlyData = async (
@@ -48137,128 +47737,25 @@ const requestJourneyPreviewTimelineOnlyData = async (
     signal = null,
   } = {},
 ) => {
-  const normalizedJourneyPrompt = normalizeJourneyGenerationPrompt(journeyPrompt, 88);
-  const plannerConfig = getPlannerApiConfig();
-  const prefersGeminiCompatibleBudget = shouldUseGeminiCompatibleMode(plannerConfig);
-  const preferredEntryCount = getJourneyPreferredEntryCount(normalizedTargetDate, role);
-  const roleName = role?.profile?.note || role?.profile?.name || "角色";
-  const allowedPlaces = getJourneyAllowedPlaceNames(role, 8);
-  const currentPlace = allowedPlaces[0] || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
-  const referenceCity = role?.profile?.realCityReference || role?.profile?.location || "";
-  const goalTitles = (role?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean);
-  const npcNames = (role?.npcs || []).slice(0, 4).map((item) => String(item?.name || "").trim()).filter(Boolean);
-  const recentTimeline = getJourneyTimelineForRole(role, normalizedTargetDate)
-    .slice(0, 3)
-    .map((item) => `${String(item?.time || "").trim()} ${String(item?.title || item?.place || "").trim()}`.trim())
-    .filter(Boolean);
-
-  const apiResponse = await requestJourneyModelJsonValidated({
-    systemPrompt: `你现在只负责补出 ${targetDateLabel} 的当天时间轴。
-只输出 JSON，不要解释，不要 Markdown，不要返回 monitor event goal_updates。
-规则:
-- 当前角色固定是「${roleName}」
-- 当前地点锚点是「${currentPlace}」，它只用于出发点和收尾，不等于整天所有活动都必须发生在这里
-- 参考真实城市（只作现实参照）固定是「${referenceCity}」
-- 必须生成 ${targetDateLabel} 的 timeline，不是别的日期
-- 建议返回 ${preferredEntryCount} 条 timeline；如果当天确实更忙可以多写，前端会完整保留
-- 每条都必须有 time title place mood detail
-- time 必须写成 HH:MM-HH:MM，并按时间先后排序，不要重叠
-- title 要像真实在做什么，detail 保持简短自然，控制在 10 到 22 个字
-- place 只能从这些地点里选：${allowedPlaces.join(" / ") || currentPlace}
-- 优先围绕这些目标推进：${goalTitles.join(" / ") || "暂无目标"}
-- 如果涉及 NPC，只能在 detail 里自然带上 @名字，可用 NPC：${npcNames.join(" / ") || "暂无"}
-- 晚餐必须单独占 1 条，晚饭后的继续安排必须另起 1 条
-- 场景只能是现代城市日常生活，不允许玄幻、古风、旅游攻略、游戏任务、异世界
-- 不要输出日文、韩文或英文整段内容，也不要提 AI、模型、Gemini、OpenAI、DeepSeek
-- 当天节假日信息只作轻微参考：${targetHoliday?.name || "普通工作日"} ${targetHoliday?.promptHint || ""}
-${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
-返回格式:
-{
-  "targetDate": "${normalizedTargetDate}",
-  "timeline": [
-    { "time": "10:00-11:10", "title": "处理消息", "place": "${sanitizeJourneyWeekTextField(currentPlace)}", "mood": "在线", "detail": "把今天手头的事先顺一遍" }
-  ]
-}`,
-    payload: {
-      task: `补生成 ${targetDateLabel} 的当天时间轴`,
-      targetDate: normalizedTargetDate,
-      userInput: normalizedJourneyPrompt || `按今天的节奏自然安排 ${targetDateLabel} 的当天行程`,
-      slimContext: {
-        roleName: String(role?.profile?.note || role?.profile?.name || "").trim(),
-        currentPlace,
-        referenceCity,
-        weather: String(role?.profile?.weather || "").trim(),
-        continuity: buildJourneyContinuityContext(role, normalizedTargetDate),
-        status: String(getVideoSafeCurrentStatusText(role) || "").trim().slice(0, 48),
-        goalTitles,
-        placeOptions: allowedPlaces,
-        npcNames,
-        wakeTime: role?.settings?.sleepEnd || "10:00",
-        sleepTime: role?.settings?.sleepStart || "03:00",
-        mealTimes: [
-          { label: "早餐", time: mealTimes[0] || "10:30" },
-          { label: "午餐", time: mealTimes[1] || "14:00" },
-          { label: "晚餐", time: mealTimes[2] || "20:00" },
-        ],
-        recentTimeline,
-        preferredEntryCount,
-        requiredEntryCount: preferredEntryCount,
-      },
-      outputRules: {
-        maxOutputTokens: prefersGeminiCompatibleBudget ? 3600 : 1200,
-      },
-    },
-    includeMeta: true,
-    retries: 2,
-    useQueue: false,
-    softValidate: true,
-    temperatureOverride: 0.16,
+  const apiResponse = await requestJourneyPreviewTimelineOnlyTextData(role, {
+    journeyPrompt,
+    normalizedTargetDate,
+    targetDateLabel,
+    targetHoliday,
+    mealTimes,
+    referenceCatalog,
     signal,
-    repairResult: (payload) =>
-      repairJourneyPreviewPayload(
-        role,
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          targetDate: normalizedTargetDate,
-          goal_updates: [],
-          monitor: null,
-          event: null,
-          anchors: buildRoleAnchors(role),
-        },
-        referenceCatalog,
-        normalizedTargetDate,
-      ),
-    validate: (payload) => {
-      if (String(payload?.targetDate || "").trim() !== normalizedTargetDate) return "行程日期不匹配";
-      const timeline = normalizeJourneyTimelineItems(payload?.timeline || payload?.entries || payload?.items || []);
-      if (timeline.length < JOURNEY_DYNAMIC_ENTRY_MIN) return "缺少timeline";
-      const driftError = collectJourneySemanticDriftMessage(
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          timeline,
-        },
-        "行程",
-      );
-      if (driftError) return driftError;
-      const blockedTermsError = validateBlockedTermsInJourneyResult(
-        role,
-        {
-          ...(payload && typeof payload === "object" ? payload : {}),
-          timeline,
-        },
-        "行程",
-      );
-      if (blockedTermsError) return blockedTermsError;
-      for (const item of timeline) {
-        if (isJourneyStablePlaceInvalid(role, item?.place || "")) {
-          return "行程地点不匹配";
-        }
-      }
-      return "";
-    },
   });
 
-  return apiResponse;
+  return {
+    result: apiResponse?.result || null,
+    meta: {
+      ...(apiResponse?.meta || {}),
+      apiLane: "journey-single-timeline-only-plain-text",
+      outputFormat: "journey-single-timeline-only-plain-text",
+      jsonDisabled: true,
+    },
+  };
 };
 
 const buildJourneyTimelineOnlyTextTimeSeeds = (role, preferredEntryCount = JOURNEY_DYNAMIC_ENTRY_MIN) => {
@@ -48426,10 +47923,11 @@ const buildJourneyTimelineOnlyTextCompletedTimeline = (
 const parseJourneyTimelineOnlyTextPayload = (rawText = "", expectedCount = 0) => {
   const parsedTimeline = [];
   const dedupeKeys = new Set();
-  extractJourneyPreviewCandidateLines(rawText).forEach((line) => {
+  extractJourneyPreviewCandidateLines(rawText, { includeJson: false, stopAtLifeTrack: true }).forEach((line) => {
     const cleanedLine = stripJourneyStructuredLinePrefix(line);
     if (!cleanedLine) return;
     if (/^\|?[-:\s|｜]+\|?$/.test(cleanedLine)) return;
+    if (isJourneyLifeTrackSectionHeaderLine(cleanedLine) || isJourneyLifeTrackProtocolLine(cleanedLine)) return;
     let parts = cleanedLine.includes("||") || cleanedLine.includes("｜｜")
       ? cleanedLine.split(/\s*(?:\|\||｜｜)\s*/)
       : cleanedLine.split(/\s*[|｜]\s*/);
@@ -48448,7 +47946,8 @@ const parseJourneyTimelineOnlyTextPayload = (rawText = "", expectedCount = 0) =>
     const title = sanitizeJourneyWeekTextField(rawTitle);
     const place = sanitizeJourneyWeekTextField(rawPlace);
     const detail = sanitizeJourneyWeekTextField(rawDetailParts.join(" "));
-    if (!parseJourneyPreviewTimeRange(time) || !title || !place || !detail) return;
+    if (!isJourneyPreviewTimeRangeText(time) || !parseJourneyPreviewTimeRange(time) || !title || !place || !detail) return;
+    if (place.length > 42 || detail.length > 80) return;
     const dedupeKey = `${time}|${title}|${place}`;
     if (dedupeKeys.has(dedupeKey)) return;
     dedupeKeys.add(dedupeKey);
@@ -50358,6 +49857,45 @@ const injectJourneyNpcMentions = (detail = "", npcNames = []) => {
   return [normalizedDetail, suffix].filter(Boolean).join(" ").trim();
 };
 
+const parseJourneyReplacementPlainTextPayload = (rawText = "", fallbackTime = "") => {
+  const lines = extractJourneyPreviewCandidateLines(rawText, { includeJson: false, stopAtLifeTrack: true });
+  for (const line of lines) {
+    const cleanedLine = stripJourneyStructuredLinePrefix(line);
+    if (!cleanedLine || isJourneyLifeTrackProtocolLine(cleanedLine)) continue;
+    const parts = cleanedLine.includes("||") || cleanedLine.includes("｜｜")
+      ? cleanedLine.split(/\s*(?:\|\||｜｜)\s*/)
+      : cleanedLine.split(/\s*[|｜]\s*/);
+    const cleanedParts = parts.map((part) => sanitizeJourneyWeekTextField(part)).filter(Boolean);
+    if (cleanedParts.length < 4) continue;
+    const [rawTime, rawTitle, rawPlace, rawDetail, rawMood = "", rawNpcNames = ""] = cleanedParts;
+    const time = isJourneyPreviewTimeRangeText(rawTime) ? rawTime : fallbackTime;
+    if (!isJourneyPreviewTimeRangeText(time)) continue;
+    const title = rawTitle;
+    const place = rawPlace;
+    const detail = rawDetail;
+    if (!title || !place || !detail) continue;
+    if (place.length > 42 || detail.length > 80) continue;
+    return {
+      targetDate: "",
+      replacement: {
+        time,
+        title,
+        place,
+        mood: rawMood || "在线",
+        detail,
+        npcNames: normalizeReferenceItems(
+          rawNpcNames
+            .split(/[、,，\s]+/)
+            .map((item) => item.replace(/^@+/, "").trim())
+            .filter(Boolean),
+          4,
+        ),
+      },
+    };
+  }
+  return null;
+};
+
 const regenerateJourneyEntry = async (journeyId, journeyIndex = -1) => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role) return;
@@ -50398,161 +49936,96 @@ const regenerateJourneyEntry = async (journeyId, journeyIndex = -1) => {
   paint();
 
   try {
-    const apiResponse = await requestJourneyModelJsonValidated({
-      systemPrompt: `${INTERNAL_PROMPTS.journey}
+    const plannerConfig = getPlannerApiConfig();
+    const apiResponse = await requestJourneyModelText({
+      systemPrompt: `你只负责重生成 ${targetDateLabel} 的 1 条行程。
+必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要标题，只输出 1 行纯文本。
+输出格式固定：
+HH:MM-HH:MM||标题||地点||详情||状态||NPC名1,NPC名2
+完整输出必须能匹配这个格式：数字数字:数字数字-数字数字:数字数字||文字||文字||文字||文字||可空NPC
+规则：
+- 最终输出第一个字符必须是数字，不能有开场白
+- 只返回 1 行，不能返回生活轨迹、事件、短期目标、字段名、表格、日程表、编号、标题、示例、JSON
+- 禁止出现 #、###、表头、冒号说明、项目符号、换行列表；如果你想写多条，只保留最适合替换原条目的那 1 条
+- 不要写“个人日程安排表”“以下是”“好的”“生成结果”这类任何说明文字
+- 时间优先沿用 ${String(item?.time || "").trim() || "原时间段"}；如果必须微调，只能小幅调整，且不能和前后行程冲突
+- 标题 2 到 8 个字，地点 2 到 12 个字，详情 10 到 24 字，状态 2 到 6 字
+- 你必须结合前后行程、当前目标、地图地点、世界书、记忆和当天生活轨迹，但这 1 行只能写行程本身，不能把生活轨迹故事塞进时间轴
+- 用户点重新生成就是希望这一时段换一个新方案，不是把原条目换个说法
+- replacement 至少满足一项：换成与「${originalPlaceLabel}」不同的地点，或保留同地点但换成和「${originalTitleLabel}」明显不同的新事情
+- 可用替换地点优先从这里选：${alternatePlaceCandidates.join(" / ") || "暂无，这时至少要把事件明显换掉"}
+- 如果涉及 NPC，只在最后一列写 NPC 名，详情里可以自然带 @NPC名
 ${buildBlockedTermsPrompt(role)}
-- 这次不是重写整天 只重写其中 1 条行程
-- 必须明确生成 ${targetDateLabel} 的替换条目 不是其他日期
-- 返回 targetDate 必须等于 ${normalizedTargetDate}
-- 只返回 1 条 replacement
-- replacement 必须延续原条目的生活轨迹和当天上下文 不能改成无关的人生方向
-- 用户点“重新生成”就是希望这一时段换一个新方案 不是把原条目换个说法
-- 你必须结合这一天的其他行程 前后相邻行程 当前目标 地点和状态来重写这一条 不能只写空泛的占位语
-- 不要把旧聊天里偶然出现过 但已经不在当前目标 人生状态 事件簿和用户输入里的监督类话题 固化成新的固定行程
-- 标题必须具体 一眼就能看出在做什么 严禁使用 计划重整 重新规划 事项整理 节奏调整 任务处理 这种空话标题
-- detail 必须补充这一条为什么安排在这里 它推进了什么 或和前后行程怎么衔接 不要写套话
-- replacement 至少要满足下面一项: 1 换成与「${originalPlaceLabel}」不同的地点 2 保留同地点但把事件换成和「${originalTitleLabel}」明显不同的新事情
-- 绝对禁止 place 和 title 同时沿用原条目的核心意思 也禁止只改语气词 修饰词 同义词
-- 如果有可用替换地点 优先从这里选一个不同地点: ${alternatePlaceCandidates.join(" / ") || "暂无 这时至少要把事件明显换掉"}
-- 优先沿用原时间段 ${String(item?.time || "").trim() || "原时间段"} 如果必须微调 也只能小幅调整 且不能和前后行程明显冲突
-- detail 保持简短 10 到 24 字 但必须是有信息量的具体内容
-- 如果这条行程明确涉及 NPC 必须在 detail 里自然带上 @NPC名 并在 npcNames 数组里返回这些 NPC
-- references 里至少返回 mapPlaceNames 和 goalTitles 如果用了原条目或前后行程线索 再返回 timelineRefs 如果明显涉及 NPC 再返回 npcNames
-${REFERENCES_RULE}
-返回格式:
-{
-  "targetDate": "${normalizedTargetDate}",
-  "replacement": {
-    "time": "${String(item?.time || "").trim().replaceAll("\\", "\\\\").replaceAll('"', '\\"')}",
-    "title": "新的行程标题",
-    "place": "地点",
-    "mood": "状态",
-    "detail": "简短描述 @NPC名",
-    "npcNames": ["涉及到的NPC"]
-  },
-  "anchors": {
-    "roleName": "当前角色名",
-    "location": "当前位置",
-    "referenceCity": "参考真实城市",
-    "goalTitles": ["当前目标标题"]
-  },
-${REFERENCES_SCHEMA}
-}`,
+直接输出纯文本。`,
       payload: {
         task: `只重生成 ${targetDateLabel} 的单条行程并替换原条目`,
-        userInput: `请围绕原条目重生成更合适的一条行程 仅替换这一条 不要重写整天`,
         targetDate: normalizedTargetDate,
+        originalEntry: currentItem,
+        previousEntry: previousItem,
+        nextEntry: nextItem,
+        siblingTimeline: siblingTimeline.map((entry) => ({
+          time: String(entry?.time || "").trim(),
+          title: String(entry?.title || "").trim(),
+          place: String(entry?.place || "").trim(),
+          detail: String(entry?.detail || "").trim(),
+        })),
+        alternatePlaceCandidates,
         roleContext: buildJourneyGenerationContext(
           role,
-          `请只重生成 ${targetDateLabel} 的单条行程 并严格联动原条目和前后行程`,
+          `只重生成 ${targetDateLabel} 的单条行程，输出纯文本单行`,
           normalizedTargetDate,
         ),
-        referenceCatalog,
-          hardConstraints: {
-            ...buildRoleAnchors(role),
-            targetDate: normalizedTargetDate,
-            holidayContext: targetHoliday,
-            existingPlaces: (role.mapPlaces || []).map((entry) => entry.name),
-            originalEntry: currentItem,
-            alternatePlaceCandidates,
-            previousEntry: previousItem,
-            nextEntry: nextItem,
-            siblingTimeline: siblingTimeline.map((entry) => ({
-              time: String(entry?.time || "").trim(),
-              title: String(entry?.title || "").trim(),
-            place: String(entry?.place || "").trim(),
-            mood: String(entry?.mood || "").trim(),
-            detail: String(entry?.detail || "").trim(),
-          })),
-        },
         outputRules: {
+          format: "HH:MM-HH:MM||标题||地点||详情||状态||NPC名1,NPC名2",
+          maxOutputTokens: shouldUseGeminiCompatibleMode(plannerConfig) ? 35000 : 1200,
+          noJson: true,
           singleEntryOnly: true,
-          keepTimeNearby: String(item?.time || "").trim(),
-          concise: true,
-          detailLengthHint: "10 到 24 字",
-          requireConcreteAction: true,
-          avoidGenericLabels: true,
-          mustChangePlaceOrEvent: true,
-          preferredAlternatePlaces: alternatePlaceCandidates,
         },
-      },
-      validate: (payload) => {
-        if (String(payload?.targetDate || "").trim() !== normalizedTargetDate) return "行程日期不匹配";
-        const anchorError = validateAnchorsForRole(role, payload?.anchors, {
-          requireLocation: true,
-          requireReferenceCity: Boolean(role.profile.realCityReference),
-          requireGoals: false,
-          goalMatchMode: "subset",
-          allowedLocations: referenceCatalog.mapPlaceNames,
-        });
-        if (anchorError) return anchorError;
-
-        const replacement = payload?.replacement || null;
-        if (!replacement || typeof replacement !== "object") return "缺少 replacement";
-        if (!String(replacement?.time || "").trim()) return "replacement 缺少时间";
-        if (isJourneyReplacementTooGeneric(replacement, item, siblingTimeline)) return "replacement 过于空泛";
-        const replacementChangeError = getJourneyReplacementChangeError(replacement, item, {
-          alternatePlaces: alternatePlaceCandidates,
-        });
-        if (replacementChangeError) return replacementChangeError;
-        const driftError = collectJourneySemanticDriftMessage(
-          {
-            replacement,
-            timeline: [replacement],
-            monitor: null,
-            event: null,
-          },
-          "行程",
-        );
-        if (driftError) return driftError;
-        const blockedTermsError = validateBlockedTermsForRole(
-          role,
-          [
-            sanitizeChatLine(replacement?.title || ""),
-            sanitizeChatLine(replacement?.place || ""),
-            sanitizeChatLine(replacement?.detail || ""),
-            sanitizeChatLine(replacement?.mood || ""),
-          ],
-          "行程",
-        );
-        if (blockedTermsError) return blockedTermsError;
-
-        return validateReferencesForRole(role, payload?.references, {
-          catalog: referenceCatalog,
-          requireAny: true,
-          requiredCategories: requiredReferenceCategories,
-          fieldCatalogOverrides: {
-            mapPlaceNames: normalizeReferenceItems([
-              ...referenceCatalog.mapPlaceNames,
-              replacement?.place,
-            ], 24),
-            timelineRefs: normalizeReferenceItems([
-              ...referenceCatalog.timelineRefs,
-              currentItem?.title,
-              currentItem?.place,
-              currentItem?.time && currentItem?.title ? `${currentItem.time} ${currentItem.title}` : "",
-              currentItem?.title && currentItem?.place ? `${currentItem.title}｜${currentItem.place}` : "",
-              previousItem?.title,
-              previousItem?.place,
-              nextItem?.title,
-              nextItem?.place,
-            ], 24),
-          },
-          fallbackReferences: {
-            mapPlaceNames: [replacement?.place, currentItem?.place, previousItem?.place, nextItem?.place],
-            timelineRefs: buildTimelineReferenceFallbackFromItems([replacement, currentItem, previousItem, nextItem]),
-            goalTitles: buildGoalTitleFallbackFromPayload(payload),
-          },
-        });
       },
       includeMeta: true,
-      retries: 3,
-      useQueue: false,
-      softValidate: true,
+      rejectFinishReasonLength: false,
       temperatureOverride: 0.34,
-      repairResult: (payload) =>
-        repairJourneyReplacementPayload(role, payload, referenceCatalog, normalizedTargetDate, currentItem, previousItem, nextItem),
+      preferredVariantMode: shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard",
+      singleVariant: true,
     });
+
+    const parsedPayload = parseJourneyReplacementPlainTextPayload(apiResponse?.text || "", String(item?.time || "").trim());
+    if (!parsedPayload?.replacement) {
+      throw attachModelMetaToError(new Error("模型没有返回可用的行程文本"), apiResponse?.meta || null, {
+        rawResponseText: apiResponse?.text || "",
+      });
+    }
+
+    parsedPayload.targetDate = normalizedTargetDate;
+    const replacement = parsedPayload.replacement;
+    if (isJourneyReplacementTooGeneric(replacement, item, siblingTimeline)) {
+      throw attachModelMetaToError(new Error("这条行程重生成得太空泛"), apiResponse?.meta || null, {
+        rawResponseText: apiResponse?.text || "",
+      });
+    }
+    const replacementChangeError = getJourneyReplacementChangeError(replacement, item, {
+      alternatePlaces: alternatePlaceCandidates,
+    });
+    if (replacementChangeError) {
+      throw attachModelMetaToError(new Error(replacementChangeError), apiResponse?.meta || null, {
+        rawResponseText: apiResponse?.text || "",
+      });
+    }
+    const blockedTermsError = validateBlockedTermsForRole(
+      role,
+      [
+        sanitizeChatLine(replacement?.title || ""),
+        sanitizeChatLine(replacement?.place || ""),
+        sanitizeChatLine(replacement?.detail || ""),
+        sanitizeChatLine(replacement?.mood || ""),
+      ],
+      "行程",
+    );
+    if (blockedTermsError) {
+      throw attachModelMetaToError(new Error(blockedTermsError), apiResponse?.meta || null, {
+        rawResponseText: apiResponse?.text || "",
+      });
+    }
 
     persistSecondaryTaskUsageSnapshot(role.id, {
       feature: "journey",
@@ -50560,8 +50033,7 @@ ${REFERENCES_SCHEMA}
       meta: apiResponse?.meta,
     });
 
-    const result = apiResponse?.result || null;
-    const replacementPayload = result?.replacement || null;
+    const replacementPayload = replacement;
     const replacementNpcNames = extractJourneyNpcNamesFromEntry(role, replacementPayload);
     const replacementEntry = {
       ...item,
@@ -50769,7 +50241,7 @@ const generateMapPlacesFromText = async (raw) => {
   }
 };
 
-const requestJourneyStableSingleJsonPreviewData = async (role, raw, targetDateKey = formatDateKey(), { signal = null } = {}) => {
+const requestJourneyStableSingleTextPreviewChainData = async (role, raw, targetDateKey = formatDateKey(), { signal = null } = {}) => {
   const normalizedTargetDate = formatDateKey(targetDateKey);
   const targetDateLabel = formatJourneyDateLabel(normalizedTargetDate);
   const startedAtMs = Date.now();
@@ -50789,7 +50261,7 @@ const requestJourneyStableSingleJsonPreviewData = async (role, raw, targetDateKe
       meta[key] = attemptErrors[key] || "";
       return meta;
     }, {});
-  const buildJsonPreviewResponse = (response, { apiLane, outputFormat, includeErrorKeys = [] } = {}) => ({
+  const buildTextPreviewResponse = (response, { apiLane, outputFormat, includeErrorKeys = [] } = {}) => ({
     journeyData: decorateJourneyDataWithLinkedState(
       role,
       finalizeJourneyPreviewResult(role, response?.result || {}, normalizedTargetDate, targetDateLabel),
@@ -50840,7 +50312,7 @@ const requestJourneyStableSingleJsonPreviewData = async (role, raw, targetDateKe
           `${targetDateLabel} 文本行程生成超时`,
         ),
       resolve: (response) =>
-        buildJsonPreviewResponse(response, {
+        buildTextPreviewResponse(response, {
           apiLane: "journey-single-text-timeline-only",
           outputFormat: "journey-single-text-timeline-only",
         }),
@@ -50918,7 +50390,7 @@ const requestJourneyStableSingleJsonPreviewData = async (role, raw, targetDateKe
   );
 };
 
-const requestJourneyStableWeekJsonPreviewData = async (role, raw, startDateKey = formatDateKey(), { signal = null } = {}) => {
+const requestJourneyStableWeekTextPreviewData = async (role, raw, startDateKey = formatDateKey(), { signal = null } = {}) => {
   const normalizedStartDate = formatDateKey(startDateKey);
   const dayPlans = buildJourneyStableDayPlans(role, normalizedStartDate, 7, { compact: false });
   const workingRole = structuredClone(role);
@@ -50934,7 +50406,7 @@ const requestJourneyStableWeekJsonPreviewData = async (role, raw, startDateKey =
           async (timeoutSignal) => {
             const linked = createLinkedAbortController(signal, timeoutSignal);
             try {
-              return await requestJourneyStableSingleJsonPreviewData(workingRole, raw, plan.targetDate, {
+              return await requestJourneyStableSingleTextPreviewChainData(workingRole, raw, plan.targetDate, {
                 signal: linked.controller.signal,
               });
             } finally {
@@ -50979,8 +50451,8 @@ const requestJourneyStableWeekJsonPreviewData = async (role, raw, startDateKey =
     weeklyResults,
     meta: {
       ...aggregateJourneyRewriteMeta(metas, null, buildJourneyRewriteSyntheticMeta({}, Date.now())),
-      apiLane: "journey-week-json-day-by-day",
-      outputFormat: "journey-week-json-day-by-day",
+      apiLane: "journey-week-text-day-by-day",
+      outputFormat: "journey-week-text-day-by-day",
       dayCount: weeklyResults.length,
       attemptTrail,
     },
@@ -51369,7 +50841,7 @@ const generateJourneyForSevenDays = async (raw) => {
           meta: { apiLane: "journey-week-single-day-strict", outputFormat: "journey-week-single-day-strict", dayCount: 1 },
         }
       : await runAbortableTaskWithTimeout(
-          (signal) => requestJourneyStableWeekJsonPreviewData(refreshedRole, raw, startDateKey, { signal }),
+          (signal) => requestJourneyStableWeekTextPreviewData(refreshedRole, raw, startDateKey, { signal }),
           JOURNEY_REWRITE_WEEK_TIMEOUT_MS,
           "7天行程生成超时",
         );
@@ -51380,7 +50852,7 @@ const generateJourneyForSevenDays = async (raw) => {
       status: "success",
       meta: {
         ...(resolved?.meta || {}),
-        apiLane: "journey-week-json-day-by-day",
+        apiLane: "journey-week-text-day-by-day",
       },
     });
     if (!weeklyResults.length) {
@@ -51402,7 +50874,7 @@ const generateJourneyForSevenDays = async (raw) => {
       feature: "journey",
       status: "error",
       meta: {
-        apiLane: "journey-week-json-day-by-day",
+        apiLane: "journey-week-text-day-by-day",
         ...(error?.modelMeta || {}),
       },
       errorMessage: error?.message || "7天行程生成失败",
