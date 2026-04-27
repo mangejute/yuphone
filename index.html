@@ -25171,6 +25171,15 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
             </div>
           </section>
 
+          ${renderLinkedLifeTrackCard(feedItems, {
+            wrapperClass: "panel-card life-stream-track-card",
+            kicker: "人生事件流",
+            title: "生活轨迹",
+            subtitle: "跟着当天行程一起推进",
+            eventTitle: latestEventTitle,
+            emptyText: "这一天还没有新的生活轨迹",
+          })}
+
           <section class="panel-card life-stream-group-card">
             <div class="life-stream-section-head">
               <div>
@@ -40956,21 +40965,6 @@ const validateAutonomousChatResult = (role, normalizedMode, result, referenceCat
   const items = normalizeChatReplyItems(result);
   if (!items.length) return "没有生成有效消息";
   if (items.length > 6) return normalizedMode === "offline" ? "离线消息条数过多" : "主动消息条数过多";
-  const replyCountError = getChatReplyCountValidationMessage(items, "", { minCount: 3 });
-  if (replyCountError) {
-    const locallyRepaired = ensureAutonomousMessageMinimumCount(
-      role,
-      buildAutonomousMessagesWithPolicies(role, result, sanitizeChatLine(result?.status || "")),
-      normalizedMode,
-      {
-        promptSeed: sanitizeChatLine(result?.status || ""),
-        statusText: result?.status || "",
-      },
-    );
-    if (locallyRepaired.length < 3) {
-      return normalizedMode === "offline" ? "离线消息条数偏少" : "主动消息条数偏少";
-    }
-  }
   if (items.some((item) => !["text", "sticker", "image"].includes(item.type))) return "自动消息类型无效";
   if (items.some((item) => item.type === "text" && !item.content)) return "存在空白文本消息";
   const promptLeakAnalysis = analyzeChatPromptLeakTexts([
@@ -41215,16 +41209,16 @@ const buildAutonomousMessagesWithPolicies = (role, source, promptSeed = "") =>
         }),
         {
           userInput: promptSeed,
-          preserveMinCount: 3,
+          preserveMinCount: 1,
         },
       ),
       {
         seedText: promptSeed,
-        preserveMinCount: 3,
+        preserveMinCount: 1,
       },
     ),
     {
-      minCount: 3,
+      minCount: 1,
     },
   );
 
@@ -41254,7 +41248,7 @@ const buildAutonomousReplyBatchFromSource = async (
     },
   );
 
-  if (messages.length < 3 && !STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
+  if (!messages.length && !STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
     const fallbackResponse = await requestAutonomousChatReplyTextFallback(role, normalizedMode, {
       scheduledAt: scheduledAt || normalizeLooseTimestamp(source?.scheduledAt || "") || startedAt,
       promptSeed,
@@ -41278,9 +41272,9 @@ const buildAutonomousReplyBatchFromSource = async (
     );
   }
 
-  if (messages.length < 3) {
+  if (!messages.length) {
     throw attachModelMetaToError(
-      new Error(normalizedMode === "offline" ? "离线消息最终可显示条数不足" : "主动消息最终可显示条数不足"),
+      new Error(normalizedMode === "offline" ? "离线消息没有可显示内容" : "主动消息没有可显示内容"),
       effectiveModelMeta || null,
     );
   }
