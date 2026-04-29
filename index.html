@@ -21846,7 +21846,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.04.24-lossless-export-02";
+const APP_BUILD_VERSION_LABEL = "v2026.04.29-journey-fast-refresh-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27287,6 +27287,14 @@ const renderIosDataSettingsPage = (state) => {
       "备份与恢复",
       [
         renderIosSettingRow({
+          label: "刷新至最新版本",
+          icon: icons.sync,
+          tone: "blue",
+          subtitle: "清理页面缓存并重新加载最新 HTML",
+          detail: APP_BUILD_VERSION_LABEL,
+          action: "refresh-latest-version",
+        }),
+        renderIosSettingRow({
           label: "导出数据",
           icon: icons.download,
           tone: "orange",
@@ -27365,6 +27373,14 @@ const renderSettings = (state) => {
     .filter(Boolean)
     .join("");
   const dataRows = [
+    renderIosSettingRow({
+      label: "刷新至最新版本",
+      icon: icons.sync,
+      tone: "blue",
+      detail: "清理缓存",
+      subtitle: "手机端如果卡旧版本，点这里强制更新",
+      action: "refresh-latest-version",
+    }),
     renderIosSettingRow({
       label: "备份与恢复",
       icon: icons.download,
@@ -30220,6 +30236,7 @@ const DZZI_LEGACY_KEYS = new Set([
   "sk-4NkbjwUREJ06W3CMg9nyLoArRLMLk0Z0m7vjyrzUpnHVlnFT",
 ]);
 const MODEL_OUTPUT_TOKEN_BUDGET = 65536;
+const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 16000;
 
 const MINIMAX_VOICE_DEFAULTS = Object.freeze({
   url: "https://api.minimaxi.com/v1",
@@ -33529,6 +33546,49 @@ const setToast = (message) => {
     state.toast = "";
     paint();
   }, 1800);
+};
+
+const refreshToLatestVersion = async () => {
+  syncPersistentState();
+  state.toast = "正在刷新至最新版本…";
+  paint();
+
+  try {
+    const registrations =
+      typeof globalThis?.navigator?.serviceWorker?.getRegistrations === "function"
+        ? await globalThis.navigator.serviceWorker.getRegistrations()
+        : [];
+    await Promise.all(
+      registrations.map(async (registration) => {
+        await registration.update?.().catch(() => null);
+        await registration.unregister?.().catch(() => null);
+      }),
+    );
+  } catch (error) {
+    void error;
+  }
+
+  try {
+    if (globalThis?.caches?.keys) {
+      const cacheKeys = await globalThis.caches.keys();
+      await Promise.all(
+        cacheKeys
+          .filter((key) => /lifetalk|static|sensevoice|workbox/i.test(String(key || "")))
+          .map((key) => globalThis.caches.delete(key).catch(() => false)),
+      );
+    }
+  } catch (error) {
+    void error;
+  }
+
+  try {
+    const url = new URL(globalThis.location.href);
+    url.searchParams.set("lifetalk_refresh", String(Date.now()));
+    globalThis.location.replace(url.toString());
+  } catch (error) {
+    void error;
+    globalThis.location.reload();
+  }
 };
 
 const clearVideoSessionReadyCue = ({ paintNow = false } = {}) => {
@@ -45861,7 +45921,7 @@ ${buildJourneyPlaceDiversityPrompt(currentPlace)}
       outputRules: {
         format: "YYYY-MM-DD||slotKey||标题||地点||详情",
         lineCount: missingSlots.length,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
       },
     },
@@ -46070,7 +46130,7 @@ const requestJourneyWeekCompactDayPlanSetData = async (
       outputRules: {
         format: "YYYY-MM-DD||早标题##早地点##早详情||午标题##午地点##午详情||下标题##下地点##下详情||晚标题##晚地点##晚详情",
         lineCount: dayPlans.length,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
       },
     },
@@ -46764,7 +46824,7 @@ const requestJourneyStableTextPlanSetData = async (
       outputRules: {
         format: "YYYY-MM-DD||slotKey||标题||地点||详情",
         lineCount: totalLines,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
       },
     },
@@ -47033,7 +47093,7 @@ const buildJourneyRewritePayload = (
     outputRules: {
       format: "YYYY-MM-DD||slotKey||标题||地点||详情",
       lineCount: totalLines,
-      maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+      maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
       compactBudget: true,
     },
   };
@@ -47089,7 +47149,7 @@ const buildJourneyRewriteCompactPayload = (role, raw, dayPlans = [], slimContext
     outputRules: {
       format: "YYYY-MM-DD||早标题##早地点##早详情||午标题##午地点##午详情||下标题##下地点##下详情||晚标题##晚地点##晚详情",
       lineCount: Math.max(1, dayPlans.length || 0),
-      maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+      maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
       compactBudget: true,
     },
   };
@@ -47946,7 +48006,7 @@ ${dayPlans[0].targetDate}||morning||起床洗漱||${enabledPlaces[0] || getRoleC
       outputRules: {
         format: "YYYY-MM-DD||slotKey||标题||地点||详情",
         lineCount: 28,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
       },
     },
@@ -48067,7 +48127,7 @@ ${dayPlans[0].targetDate}||morning||起床洗漱||${enabledPlaces[0] || getRoleC
       outputRules: {
         format: "YYYY-MM-DD||slotKey||标题||地点||详情",
         lineCount: 28,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
       },
     },
@@ -48682,9 +48742,9 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   });
 
   const response = await requestJourneyModelText({
-    systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. First visible character must be a digit. The life header line must have exactly 5 fields. The life node line must have exactly 4 fields separated by ||. The life node first field must be HH:MM only, not a date. The story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
+    systemPrompt: `纯文本格式任务：只输出指定的双竖线分隔纯文本。不要 JSON，不要 Markdown，不要代码块，不要解释。第一个可见字符必须是数字。生活轨迹首行必须正好 5 段。生活轨迹节点行必须正好 4 段并用 || 分隔。生活轨迹节点第一段只能是 HH:MM，不能写日期。故事正文目标 120 到 160 个简体汉字，最多不超过 200 个汉字。
 你现在负责一次性生成 ${targetDateLabel} 的当天行程和生活轨迹。
-必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要英文段落，只输出纯文本。
+必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
 每行格式固定：
 HH:MM-HH:MM||标题||地点||详情
 硬性开头:
@@ -48714,7 +48774,7 @@ HH:MM-HH:MM||标题||地点||详情
 - 地理锁定：地点只能使用当前地点、当天行程地点和参考上下文里的地图地点；严禁把城市改成东京、涩谷、原宿、京都、大阪等无关日本地点，除非角色地图里本来就有
 - 人物锁定：只允许使用参考上下文里的 NPC，或用户昵称；不要编造佐藤、田中、山田等无关日文姓名
 - 生活轨迹要从角色人设、长期记忆、世界书、地图地点描述、最近总结、目标和当天行程里各取素材，写成这名角色自己的生活切片，不要写成通用会议纪要、项目汇报或数据监控
-- 如果上下文和格式要求冲突，优先保持角色身份、城市、地图地点和简体中文纯文本
+- 如果上下文和格式要求冲突，优先保持角色身份、城市、地图地点和简体中文纯文本；只要出现韩文、日文、英文或任何外语倾向，必须立刻改写成简体中文
 ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
 - 行程写完后另起一行写「生活轨迹」四个字，再写 1 行${journeyCanWriteEventLine ? "事件总标题" : "普通生活主题"}和 1 行生活轨迹节点，可选 1 行短期目标
 - 生活轨迹首行格式固定：${journeyCanWriteEventLine ? "事件||像作文题一样的突发事件总标题||进行中||运势等级||影响天数1到7" : "主题||今天的普通生活主题||片段||运势等级||0"}
@@ -48754,7 +48814,7 @@ ${journeyCanWriteEventLine ? "事件||咖啡纸袋里的暗号祝福||进行中|
         format: `行程: HH:MM-HH:MM||标题||地点||详情; 生活轨迹: ${journeyCanWriteEventLine ? "事件" : "主题"}||标题||状态||等级||天数 + HH:MM||小标题||故事||标签`,
         contextFormat: "plain-text",
         suggestedLineCount: preferredEntryCount,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
       },
     },
@@ -50600,7 +50660,7 @@ const regenerateJourneyEntry = async (journeyId, journeyIndex = -1) => {
     const plannerConfig = getPlannerApiConfig();
     const apiResponse = await requestJourneyModelText({
       systemPrompt: `你只负责重生成 ${targetDateLabel} 的 1 条行程。
-必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要标题，只输出 1 行纯文本。
+必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要标题，不要日文/韩文/英文/任何外语，只输出 1 行纯文本。
 输出格式固定：
 HH:MM-HH:MM||标题||地点||详情||状态||NPC名1,NPC名2
 完整输出必须能匹配这个格式：数字数字:数字数字-数字数字:数字数字||文字||文字||文字||文字||可空NPC
@@ -50638,7 +50698,7 @@ ${buildBlockedTermsPrompt(role)}
         ),
         outputRules: {
           format: "HH:MM-HH:MM||标题||地点||详情||状态||NPC名1,NPC名2",
-          maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+          maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
           noJson: true,
           singleEntryOnly: true,
         },
@@ -52982,7 +53042,7 @@ const requestLifeMonitorPlainTextData = async ({
   const response = await requestPlannerModelText({
     systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. First visible character must be ${canWriteEventLine ? "事" : "主"}. Line 1 must have exactly 5 fields. Line 2 must have exactly 4 fields. Line 2 first field must be HH:MM only, not a date. The story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
 你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹新节点。
-必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要英文段落，只输出纯文本。
+必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
 输出格式：
 ${canWriteEventLine ? "事件||像作文题一样的突发事件总标题||进行中或收尾||运势等级||影响天数1到7" : "主题||今天的普通生活主题||片段||运势等级||0"}
 HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事正文||短标签
@@ -52995,7 +53055,7 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - ${canWriteEventLine ? "第一行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字" : "第一行第 3 段必须固定写片段，第 5 段必须固定写 0"}
 - 第二行只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段
 - 最终输出第一个字符必须是“${canWriteEventLine ? "事" : "主"}”，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
-- 禁止输出 JSON、Markdown、代码块、日文、英文说明、列表编号和项目符号
+- 禁止输出 JSON、Markdown、代码块、日文、韩文/朝鲜文、英文说明、任何外语、列表编号和项目符号
 - 双竖线 || 只是字段分隔符，不是表格；禁止写表头、字段名、分隔线，不准输出 时间||动作||地点||描述||心情 这类旧格式
 - 第二行的第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文
 - 故事正文必须控制在${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字内，像时间簿现场记录，不要总结腔，短标签不计入字数；写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间
@@ -53042,7 +53102,7 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
       outputRules: {
         format: "life-monitor-node-text",
         contextFormat: "plain-text",
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
       },
     },
     includeMeta: true,
@@ -61472,6 +61532,11 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "test-offline-notification-diagnostic") {
     await sendRoleNotificationDiagnostic("offline");
+    return;
+  }
+
+  if (action === "refresh-latest-version") {
+    await refreshToLatestVersion();
     return;
   }
 
