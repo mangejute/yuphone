@@ -48164,9 +48164,9 @@ const JOURNEY_WEEK_DAY_RESCUE_TOTAL_TIMEOUT_MS = 42000;
 const JOURNEY_SINGLE_MAIN_TIMEOUT_MS = 16_000;
 const JOURNEY_SINGLE_FALLBACK_TIMEOUT_MS = 16_000;
 const JOURNEY_SINGLE_RESCUE_TIMEOUT_MS = 30_000;
-const JOURNEY_SINGLE_TIMELINE_ONLY_TIMEOUT_MS = 45_000;
-const JOURNEY_STABLE_SINGLE_TEXT_TIMEOUT_MS = 45_000;
-const JOURNEY_STABLE_SINGLE_TEXT_RESCUE_TIMEOUT_MS = 30_000;
+const JOURNEY_SINGLE_TIMELINE_ONLY_TIMEOUT_MS = 240_000;
+const JOURNEY_STABLE_SINGLE_TEXT_TIMEOUT_MS = 240_000;
+const JOURNEY_STABLE_SINGLE_TEXT_RESCUE_TIMEOUT_MS = 120_000;
 const JOURNEY_STABLE_WEEK_TEXT_TIMEOUT_MS = 32_000;
 const JOURNEY_STABLE_WEEK_TEXT_RESCUE_TIMEOUT_MS = 18_000;
 const JOURNEY_STABLE_WEEK_MISSING_DAY_TIMEOUT_MS = 16_000;
@@ -51011,7 +51011,8 @@ const requestJourneyStableSingleTextPreviewChainData = async (role, raw, targetD
     },
   ];
 
-  for (const attempt of attempts) {
+  const runnableAttempts = STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? attempts.slice(0, 1) : attempts;
+  for (const attempt of runnableAttempts) {
     try {
       const response = await attempt.run();
       return attempt.resolve(response);
