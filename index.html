@@ -19965,28 +19965,23 @@ const normalizeTimelineList = (items = [], fallbackItems = []) => {
 const getDateKeyMonthPrefix = (dateKey = formatJourneyDayKey()) => formatDateKey(dateKey).slice(0, 7);
 const isDateKeyInCurrentMonth = (dateKey = formatJourneyDayKey()) => getDateKeyMonthPrefix(dateKey) === getDateKeyMonthPrefix();
 const clampDateKeyToCurrentMonth = (dateKey = formatJourneyDayKey(), fallbackDateKey = formatJourneyDayKey()) => {
-  if (isDateKeyInCurrentMonth(dateKey)) return formatDateKey(dateKey);
-  if (isDateKeyInCurrentMonth(fallbackDateKey)) return formatDateKey(fallbackDateKey);
-  return formatJourneyDayKey();
+  const normalizedDateKey = formatDateKey(dateKey || fallbackDateKey || formatJourneyDayKey());
+  return normalizedDateKey || formatDateKey(fallbackDateKey || formatJourneyDayKey());
 };
 
 const pruneTimelineByDateToCurrentMonth = (timelineByDate = {}, fallbackTimeline = [], fallbackDateKey = formatJourneyDayKey()) => {
-  const currentMonthPrefix = getDateKeyMonthPrefix();
-  const preferredFallbackDateKey =
-    getDateKeyMonthPrefix(fallbackDateKey) === currentMonthPrefix ? formatDateKey(fallbackDateKey) : formatJourneyDayKey();
+  const preferredFallbackDateKey = formatDateKey(fallbackDateKey || formatJourneyDayKey());
   const result = {};
 
   Object.entries(timelineByDate || {}).forEach(([dateKey, items]) => {
     const normalizedKey = formatDateKey(dateKey);
-    if (getDateKeyMonthPrefix(normalizedKey) !== currentMonthPrefix) return;
     const normalizedItems = normalizeTimelineList(items);
     if (!normalizedItems.length) return;
     result[normalizedKey] = normalizedItems;
   });
 
   if (!Object.keys(result).length) {
-    result[preferredFallbackDateKey] =
-      getDateKeyMonthPrefix(fallbackDateKey) === currentMonthPrefix ? normalizeTimelineList(fallbackTimeline) : [];
+    result[preferredFallbackDateKey] = normalizeTimelineList(fallbackTimeline);
   }
 
   return result;
@@ -21382,7 +21377,6 @@ const getRoleTimelineDateKeys = (role) => {
 };
 const setRoleTimelineForDate = (role, dateKey, items = []) => {
   const normalizedKey = formatDateKey(dateKey);
-  if (!isDateKeyInCurrentMonth(normalizedKey)) return role;
   const timelineByDate = normalizeTimelineByDateData(role?.timelineByDate, role?.timeline, normalizedKey);
   const normalizedItems = normalizeTimelineList(items);
   if (normalizedItems.length) {
@@ -22838,6 +22832,29 @@ const formatPreciseTimelineTime = (item) => {
   }).format(date);
 };
 
+const padDatePart = (value) => String(value).padStart(2, "0");
+
+const formatLifeTrackDateTime = (date, clock = "") => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return String(clock || "").trim();
+  const resolvedClock =
+    String(clock || "").trim().match(/\b\d{1,2}:\d{2}\b/)?.[0] ||
+    `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`;
+  return `${date.getFullYear()}年${padDatePart(date.getMonth() + 1)}月${padDatePart(date.getDate())}日 ${resolvedClock}`;
+};
+
+const formatLifeTrackDisplayTime = (item = {}) => {
+  const rawTime = String(item?.time || item?.date || "").trim();
+  const explicitDateKey = String(item?.journeyDateKey || "").trim();
+  const clock = rawTime.match(/\b\d{1,2}:\d{2}\b/)?.[0] || "";
+  if (explicitDateKey) {
+    const date = parseLooseTimelineDate(`${formatDateKey(explicitDateKey)} ${clock || "00:00"}`);
+    return formatLifeTrackDateTime(date, clock || rawTime);
+  }
+  const parsedDate = getTimelineDate(item);
+  if (parsedDate) return formatLifeTrackDateTime(parsedDate, clock);
+  return rawTime;
+};
+
 const filterRecentTimelineItems = (items = []) => {
   const now = Date.now();
   const mappedItems = items.map((item) => ({ item, date: getTimelineDate(item) }));
@@ -22887,6 +22904,31 @@ const buildLifeTrackItemTitle = (item = {}) => {
   if (tagTitle && tagTitle !== eventTitle) return tagTitle;
   if (eventTitle) return eventTitle;
   return "";
+};
+
+const isLikelyLifeTrackStoryText = (value = "") => {
+  const text = String(value || "").trim();
+  return text.length > 32 || /[。！？；，、]/.test(text);
+};
+
+const normalizeLifeTrackDisplayItem = (item = {}) => {
+  const rawTitle = String(item?.title || "").trim();
+  const rawText = String(item?.text || item?.summary || item?.status || "").trim();
+  const rawTag = String(item?.tag || "").trim();
+  const tagLooksLikeStory = isLikelyLifeTrackStoryText(rawTag);
+  const textLooksShortTitle = rawText && rawText.length <= 18 && !isLikelyLifeTrackStoryText(rawText);
+  if (tagLooksLikeStory) {
+    return {
+      title: textLooksShortTitle ? rawText : rawTitle,
+      text: rawTag,
+      tag: "",
+    };
+  }
+  return {
+    title: rawTitle,
+    text: rawText,
+    tag: rawTag.length > 18 ? "" : rawTag,
+  };
 };
 
 const getLifeStatusFeedItemDateKey = (item = {}) => {
@@ -25160,14 +25202,19 @@ const renderLinkedLifeTrackCard = (
           feedItems.length
             ? feedItems
                 .map((item) => {
-                  const itemTitle = buildLifeTrackItemTitle(item);
+                  const displayItem = normalizeLifeTrackDisplayItem(item);
+                  const itemTitle = buildLifeTrackItemTitle({
+                    ...item,
+                    title: displayItem.title,
+                    tag: displayItem.tag,
+                  });
                   return `
                     <div class="timeline-item monitor-timeline-item">
                       <div class="timeline-dot monitor-timeline-dot"></div>
                       <div class="monitor-timeline-body">
-                        <strong>${escapeHtml(item.time || formatPreciseTimelineTime(item))}${itemTitle ? ` · ${escapeHtml(itemTitle)}` : ""}</strong>
-                        <p>${escapeHtml(item.text || item.summary || item.status || "")}</p>
-                        ${item.tag ? `<span class="monitor-inline-tag">${escapeHtml(item.tag)}</span>` : ""}
+                        <strong>${escapeHtml(formatLifeTrackDisplayTime(item))}${itemTitle ? ` · ${escapeHtml(itemTitle)}` : ""}</strong>
+                        <p>${escapeHtml(displayItem.text)}</p>
+                        ${displayItem.tag ? `<span class="monitor-inline-tag">${escapeHtml(displayItem.tag)}</span>` : ""}
                       </div>
                     </div>
                   `;
@@ -28037,10 +28084,10 @@ const renderJourneyGeneratorSheet = (state, role) => {
           ${renderJourneyDateBadge(generatorDate)}
         </div>
         <div class="journey-generator-date-row">
-          <input class="soft-input journey-date-input" type="date" value="${generatorDate}" min="${monthMeta.startDateKey}" max="${monthMeta.endDateKey}" data-journey-date-field="generator" />
+          <input class="soft-input journey-date-input" type="date" value="${generatorDate}" data-journey-date-field="generator" />
           <div class="journey-generator-date-copy">
             <strong>${escapeHtml(formatJourneyDateLabel(generatorDate))}</strong>
-            <p>如果你没有明确写日期，系统也会严格按这一天生成，仅保留 ${escapeHtml(monthMeta.monthLabel)} 里的安排与轨迹</p>
+            <p>如果你没有明确写日期，系统也会严格按这一天生成，并按节假日、周末和调休调整生活节奏</p>
           </div>
         </div>
         <div class="sheet-panel-head journey-generator-head journey-generator-head-secondary">
@@ -30853,7 +30900,7 @@ const getActiveBubbleStyleNameForRole = (role) => {
 };
 const clampJourneyDateKey = (dateKey, fallbackDateKey = formatJourneyDayKey()) =>
   clampDateKeyToCurrentMonth(dateKey || fallbackDateKey, fallbackDateKey);
-const isJourneyPreviewInCurrentMonth = (journeyData) => Boolean(String(journeyData?.targetDate || "").trim()) && isDateKeyInCurrentMonth(journeyData.targetDate);
+const isJourneyPreviewInCurrentMonth = (journeyData) => Boolean(String(journeyData?.targetDate || "").trim());
 const getJourneyActiveDateKey = () => clampJourneyDateKey(state.journeyActiveDate || formatJourneyDayKey(), formatJourneyDayKey());
 const getJourneyGeneratorDateKey = () => clampJourneyDateKey(state.journeyGeneratorDate || getJourneyActiveDateKey(), getJourneyActiveDateKey());
 const shiftDateKey = (dateKey, offsetDays = 0) => {
@@ -30956,7 +31003,7 @@ const normalizeJourneyLinkedSnapshotEvent = (event = {}, targetDateKey = formatD
 const pruneJourneyLinkedSnapshotsToCurrentMonth = (snapshotMap = {}) =>
   Object.fromEntries(
     Object.entries(snapshotMap || {})
-      .filter(([dateKey, value]) => dateKey && isDateKeyInCurrentMonth(dateKey) && value && typeof value === "object")
+      .filter(([dateKey, value]) => dateKey && value && typeof value === "object")
       .sort((left, right) => left[0].localeCompare(right[0]))
       .slice(-JOURNEY_LINKED_SNAPSHOT_MAX_DAYS),
   );
@@ -48787,7 +48834,7 @@ HH:MM-HH:MM||标题||地点||详情
 - 优先围绕这些目标推进：${goalTitles.join(" / ") || "暂无目标"}
 - 如果涉及 NPC，只能在详情里自然带上 @名字，可用 NPC：${npcNames.join(" / ") || "暂无"}
 - 当前地点锚点是「${currentPlace}」，参考真实城市是「${role?.profile?.realCityReference || role?.profile?.location || ""}」
-- 节假日信息只作轻微参考：${targetHoliday?.name || "普通工作日"} ${targetHoliday?.promptHint || ""}
+- 日期类型必须参与行程节奏：${targetHoliday?.name || "普通工作日"} ${targetHoliday?.promptHint || ""}；如果是节假日或周末休息日，除非角色人设/目标/用户输入明确要求工作，否则不要按普通工作日塞满工作安排，可以更偏生活、朋友、外出、休息或目标的轻量推进
 - 只写现代城市日常生活，不允许玄幻、古风、旅游攻略、游戏任务、异世界
 - 不要提 AI、模型、Gemini、OpenAI、DeepSeek
 - 你会收到下方纯文本参考上下文。生成前必须先锁定角色：姓名、人设、说话风格、长期记忆、总结记忆、世界书、NPC关系、地图地点和当天行程都以参考上下文为准
@@ -60413,12 +60460,8 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "select-journey-date") {
     const selectedDate = formatDateKey(button.dataset.journeyDate || new Date());
     state.journeyCalendarDate = selectedDate;
-    if (isDateKeyInCurrentMonth(selectedDate)) {
-      state.journeyActiveDate = clampJourneyDateKey(selectedDate, getJourneyActiveDateKey());
-      popPanel();
-      return;
-    }
-    paint();
+    state.journeyActiveDate = clampJourneyDateKey(selectedDate, getJourneyActiveDateKey());
+    popPanel();
     return;
   }
 
