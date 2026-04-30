@@ -21846,7 +21846,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.04.30-settings-memory-01";
+const APP_BUILD_VERSION_LABEL = "v2026.04.30-chat-send-paint-02";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -33331,11 +33331,25 @@ const queueChatKeyboardViewportStateSync = () => {
   });
 };
 
-const shouldDeferPaintForComposerComposition = () =>
-  composerRuntime.isComposing && isTouchLikeDevice() && document.activeElement?.id === "composer-input";
+const shouldDeferPaintForComposerComposition = () => {
+  const active = document.activeElement;
+  return (
+    composerRuntime.isComposing &&
+    isTouchLikeDevice() &&
+    active instanceof HTMLTextAreaElement &&
+    active.id === "composer-input" &&
+    String(active.value || "").trim().length > 0
+  );
+};
+
+const releaseComposerCompositionForCommittedAction = () => {
+  if (!composerRuntime.isComposing || document.activeElement?.id !== "composer-input") return;
+  composerRuntime.isComposing = false;
+  queueChatKeyboardViewportStateSync();
+};
 
 const shouldDeferPaintForFocusedTextEditor = () =>
-  isTouchLikeDevice() && isDeferredTextEditor(document.activeElement) && !state.modal && !state.contextMenu;
+  isTouchLikeDevice() && isPersistentSettingsTextEditor(document.activeElement) && !state.modal && !state.contextMenu;
 
 const shouldPauseLiveChatFeedPaint = (roleId = state.activeChatRoleId) =>
   isTouchLikeDevice() &&
@@ -59283,6 +59297,7 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
     return;
   }
 
+  releaseComposerCompositionForCommittedAction();
   if (input) {
     input.value = "";
     syncComposerTextarea();
@@ -59338,6 +59353,7 @@ const triggerPendingAiReply = () => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role || !pendingAiReply || pendingAiReply.roleId !== role.id) return false;
 
+  releaseComposerCompositionForCommittedAction();
   const pending = pendingAiReply;
   pendingAiReply = null;
   markChatFeedForAutoScroll();
