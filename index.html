@@ -34499,6 +34499,8 @@ const buildWorldbookContextEntries = (
   const normalizedMode = String(generationMode || "chat").trim().toLowerCase();
   const isVideoMode = normalizedMode === "video";
   const isJourneyMode = normalizedMode === "journey";
+  const shouldKeepFullWorldbookContext =
+    !structuredTask && ["chat", "proactive", "offline"].includes(normalizedMode);
   const matchedText = String(userInput || "").trim().toLowerCase();
   const enabledEntries = (entries || []).filter(Boolean);
   const prioritized = enabledEntries
@@ -34528,6 +34530,16 @@ const buildWorldbookContextEntries = (
       if (left.importance !== right.importance) return right.importance - left.importance;
       return left.index - right.index;
     });
+
+  if (shouldKeepFullWorldbookContext) {
+    return prioritized
+      .map(({ entry }) => ({
+        title: String(entry?.title || "").trim(),
+        keywords: String(entry?.keywords || "").trim(),
+        content: String(entry?.content || "").trim(),
+      }))
+      .filter((entry) => measureWorldbookContextEntry(entry));
+  }
 
   const alwaysIncludeCount = prioritized.filter((item) => item.alwaysInclude).length;
   const baseMaxTotalChars = isVideoMode ? 900 : isJourneyMode ? 420 : structuredTask ? 4200 : 7200;
