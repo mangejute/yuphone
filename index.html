@@ -3181,6 +3181,12 @@ body,
   animation: refined-enter 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both !important;
 }
 
+.screen-message.screen-enter,
+.screen-moments.screen-enter,
+.screen-settings.screen-enter {
+  animation: none !important;
+}
+
 .chat-screen.page-enter,
 .panel-screen.page-enter,
 .sheet-modal.page-enter,
@@ -29716,6 +29722,16 @@ const systemChromeRuntime = {
   connectionListenersBound: false,
   snapshot: createFallbackSystemChromeStatus(),
 };
+const areStatusSnapshotsEqual = (left = {}, right = {}, keys = []) =>
+  keys.every((key) => Object.is(left?.[key], right?.[key]));
+const SYSTEM_CHROME_STATUS_KEYS = [
+  "networkKind",
+  "networkLabel",
+  "batterySupported",
+  "batteryLevel",
+  "batteryLabel",
+  "batteryCharging",
+];
 const createInitialSystemChromeStatus = () => ({
   ...systemChromeRuntime.snapshot,
 });
@@ -30163,13 +30179,16 @@ let state = buildStateFromPersistent(loadState());
 const applySystemChromeStatus = (patch = {}, { paintNow = true } = {}) => {
   const currentStatus =
     state.systemChromeStatus && typeof state.systemChromeStatus === "object" ? state.systemChromeStatus : createInitialSystemChromeStatus();
-  state.systemChromeStatus = {
+  const nextStatus = {
     ...createFallbackSystemChromeStatus(),
     ...currentStatus,
     ...patch,
   };
+  const changed = !areStatusSnapshotsEqual(currentStatus, nextStatus, SYSTEM_CHROME_STATUS_KEYS);
+  state.systemChromeStatus = nextStatus;
   systemChromeRuntime.snapshot = { ...state.systemChromeStatus };
-  if (paintNow) paint();
+  if (paintNow && changed) paint();
+  return changed;
 };
 const refreshSystemChromeStatus = ({ paintNow = true } = {}) => {
   applySystemChromeStatus(
@@ -32091,6 +32110,21 @@ const sendRoleNotificationDiagnostic = async (scenario = "reply") => {
     return false;
   }
 };
+const GLOBAL_FEATURE_STATUS_KEYS = [
+  "keepAliveSupported",
+  "keepAliveStatus",
+  "keepAliveStatusLabel",
+  "keepAliveNote",
+  "notificationsSupported",
+  "notificationsPermission",
+  "notificationsPermissionLabel",
+  "notificationsStatusLabel",
+  "notificationsNote",
+  "notificationsDiagnosticLabel",
+  "notificationsDiagnosticNote",
+  "notificationsDiagnosticKind",
+  "notificationsDiagnosticSuccess",
+];
 const refreshGlobalFeatureStatus = ({ paintNow = false } = {}) => {
   const keepAliveEnabled = Boolean(state.appConfig?.backgroundKeepAlive);
   const keepAliveSupported = isGlobalKeepAliveSupported() && Boolean(GLOBAL_KEEPALIVE_AUDIO_DATA_URL);
@@ -32140,7 +32174,9 @@ const refreshGlobalFeatureStatus = ({ paintNow = false } = {}) => {
     }
   }
 
-  state.globalFeatureStatus = {
+  const currentStatus =
+    state.globalFeatureStatus && typeof state.globalFeatureStatus === "object" ? state.globalFeatureStatus : createInitialGlobalFeatureStatus();
+  const nextStatus = {
     keepAliveSupported,
     keepAliveStatus,
     keepAliveStatusLabel,
@@ -32155,10 +32191,13 @@ const refreshGlobalFeatureStatus = ({ paintNow = false } = {}) => {
     notificationsDiagnosticKind: String(notificationRuntime.lastDiagnosticKind || "").trim(),
     notificationsDiagnosticSuccess: notificationRuntime.lastDiagnosticSuccess === true,
   };
+  const changed = !areStatusSnapshotsEqual(currentStatus, nextStatus, GLOBAL_FEATURE_STATUS_KEYS);
+  state.globalFeatureStatus = nextStatus;
 
-  if (paintNow) {
+  if (paintNow && changed) {
     paint();
   }
+  return changed;
 };
 const clearBackgroundKeepAliveGestureRetry = () => {
   if (typeof document === "undefined") return;
@@ -33306,7 +33345,7 @@ const isUserScrollActive = () =>
   isTouchLikeDevice() && Date.now() - Number(scrollRuntime.lastUserScrollAt || 0) < ACTIVE_SCROLL_PAINT_DEFER_MS;
 
 const shouldDeferPaintForActiveScroll = () =>
-  isUserScrollActive() && hasRecentAsyncUiWork() && !state.modal && !state.contextMenu;
+  isUserScrollActive() && !state.modal && !state.contextMenu;
 
 const scheduleDeferredScrollPaint = () => {
   if (scrollRuntime.deferredPaintTimer) {
@@ -33535,6 +33574,22 @@ const safeRun = (task) => {
     }
     renderFatalErrorScreen(error);
     return null;
+  }
+};
+
+const formatIosStatusClockText = (date = new Date()) =>
+  new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+const patchIosStatusClockDom = () => {
+  const timeNode = root.querySelector(".ios-device-status-time");
+  if (!(timeNode instanceof HTMLElement)) return;
+  const nextText = formatIosStatusClockText(new Date());
+  if (timeNode.textContent !== nextText) {
+    timeNode.textContent = nextText;
   }
 };
 
@@ -42506,7 +42561,9 @@ const applyRoleWeatherSnapshot = (roleId, weather, { source = "manual", now = ne
     refreshRoleRuntime(next);
     syncRoleGoalsWithTime(next, now);
     syncRoleLiveEventsWithTime(next, now);
-    syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now);
+    if (syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now)) {
+      changed = true;
+    }
     changed = true;
     return next;
   });
@@ -50124,8 +50181,11 @@ const deriveCurrentStatus = (role, latestText = "", now = new Date()) => {
 };
 
 const syncRoleLiveHeaderStatus = (role, latestText = "", now = new Date()) => {
-  if (!role?.status) return;
-  role.status.liveHeaderText = deriveCurrentStatus(role, latestText || role.status.headerText || "", now).slice(0, 10);
+  if (!role?.status) return false;
+  const nextHeaderText = deriveCurrentStatus(role, latestText || role.status.headerText || "", now).slice(0, 10);
+  if (role.status.liveHeaderText === nextHeaderText) return false;
+  role.status.liveHeaderText = nextHeaderText;
+  return true;
 };
 
 const updateUserProfileField = (field, value) => {
@@ -59702,7 +59762,10 @@ const applyRuntime = async () => {
 
   if (shouldClearOfflineSession && !shouldKeepOfflineSession) {
     clearOfflineSessionStart();
+    changed = true;
   }
+
+  return changed || linkedJourneyJobs.length > 0 || autonomousJobs.length > 0 || autoMomentJobs.length > 0 || lifeMonitorJobs.length > 0;
 };
 
 const shouldDeferInputCommit = (target) => {
@@ -62200,9 +62263,13 @@ let lastRuntimeTickAt = 0;
 const runRuntimeTick = async () => {
   if (runtimeTickPromise) return runtimeTickPromise;
   lastRuntimeTickAt = Date.now();
+  let runtimeTickChanged = false;
 
   runtimeTickPromise = Promise.resolve()
     .then(() => applyRuntime())
+    .then((changed) => {
+      runtimeTickChanged = Boolean(changed);
+    })
     .catch((error) => {
       console.error("Runtime tick failed:", error);
       setToast(error?.message || "后台刷新失败，当前界面已保留");
@@ -62210,7 +62277,11 @@ const runRuntimeTick = async () => {
     .finally(() => {
       lastRuntimeTickAt = Date.now();
       runtimeTickPromise = null;
-      paint();
+      if (runtimeTickChanged) {
+        paint();
+      } else {
+        patchIosStatusClockDom();
+      }
     });
 
   return runtimeTickPromise;
