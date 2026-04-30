@@ -21846,7 +21846,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.04.29-journey-fast-refresh-01";
+const APP_BUILD_VERSION_LABEL = "v2026.04.30-settings-memory-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27339,14 +27339,6 @@ const renderIosDataSettingsPage = (state) => {
     ${renderIosSection(
       "备份与恢复",
       [
-        renderIosSettingRow({
-          label: "刷新至最新版本",
-          icon: icons.sync,
-          tone: "blue",
-          subtitle: "清理页面缓存并重新加载最新 HTML",
-          detail: APP_BUILD_VERSION_LABEL,
-          action: "refresh-latest-version",
-        }),
         renderIosSettingRow({
           label: "导出数据",
           icon: icons.download,
@@ -33098,6 +33090,7 @@ const isTouchLikeDevice = () => {
 };
 
 const COMPOSER_DRAFT_SYNC_DELAY_MS = 180;
+const ROLE_PROFILE_SYNC_DELAY_MS = 320;
 const MOBILE_KEYBOARD_MIN_OVERLAY_PX = 72;
 const ACTIVE_SCROLL_PAINT_DEFER_MS = 260;
 const ASYNC_SCROLL_PAINT_GRACE_MS = 4000;
@@ -33108,6 +33101,7 @@ const composerRuntime = {
   pendingPaint: false,
   suppressNextFocusRestore: false,
 };
+let roleProfileSyncTimer = 0;
 const scrollRuntime = {
   restoring: false,
   pendingPaint: false,
@@ -33217,8 +33211,33 @@ const queueComposerDraftSync = ({ flush = false } = {}) => {
   composerRuntime.draftSyncTimer = window.setTimeout(runSync, COMPOSER_DRAFT_SYNC_DELAY_MS);
 };
 
+const queueRoleProfileSync = ({ flush = false } = {}) => {
+  const runSync = () => {
+    roleProfileSyncTimer = 0;
+    syncPersistentState();
+  };
+
+  if (roleProfileSyncTimer) {
+    window.clearTimeout(roleProfileSyncTimer);
+    roleProfileSyncTimer = 0;
+  }
+
+  if (flush) {
+    runSync();
+    return;
+  }
+
+  roleProfileSyncTimer = window.setTimeout(runSync, ROLE_PROFILE_SYNC_DELAY_MS);
+};
+
 const isTrackedTextComposer = (node) =>
   node instanceof HTMLTextAreaElement && (node.id === "composer-input" || node.id === "video-session-manual-input");
+
+const isPersistentSettingsTextEditor = (node) =>
+  node instanceof HTMLTextAreaElement &&
+  (Boolean(node.dataset?.roleProfile) || Boolean(node.dataset?.chatField) || node.classList.contains("ios-settings-area"));
+
+const isDeferredTextEditor = (node) => isTrackedTextComposer(node) || isPersistentSettingsTextEditor(node);
 
 const captureFocusedTextComposerSnapshot = () => {
   const active = document.activeElement;
@@ -33314,6 +33333,9 @@ const queueChatKeyboardViewportStateSync = () => {
 
 const shouldDeferPaintForComposerComposition = () =>
   composerRuntime.isComposing && isTouchLikeDevice() && document.activeElement?.id === "composer-input";
+
+const shouldDeferPaintForFocusedTextEditor = () =>
+  isTouchLikeDevice() && isDeferredTextEditor(document.activeElement) && !state.modal && !state.contextMenu;
 
 const shouldPauseLiveChatFeedPaint = (roleId = state.activeChatRoleId) =>
   isTouchLikeDevice() &&
@@ -33595,6 +33617,12 @@ const patchIosStatusClockDom = () => {
 
 const paint = () => {
   if (shouldDeferPaintForComposerComposition()) {
+    composerRuntime.pendingPaint = true;
+    queueChatKeyboardViewportStateSync();
+    return;
+  }
+
+  if (shouldDeferPaintForFocusedTextEditor()) {
     composerRuntime.pendingPaint = true;
     queueChatKeyboardViewportStateSync();
     return;
@@ -50197,7 +50225,7 @@ const updateActiveRoleProfileField = (field, value) => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role) return;
   role.profile[field] = value;
-  syncPersistentState();
+  queueRoleProfileSync();
 };
 
 const updateActiveRoleChatField = (field, value) => {
@@ -59676,7 +59704,9 @@ const applyRuntime = async () => {
     if (!hasLifeMonitorJobDue && syncRoleLiveEventsWithTime(next, now)) {
       changed = true;
     }
-    syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now);
+    if (syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now)) {
+      changed = true;
+    }
 
     const offlineDueTimestamps = getOfflineDueTimestamps(next, now);
     if (offlineDueTimestamps.length) {
@@ -62076,20 +62106,27 @@ eventRoot.addEventListener("compositionend", (event) => {
 });
 
 eventRoot.addEventListener("focusin", (event) => {
-  if (!isTrackedTextComposer(event.target)) return;
+  if (!isDeferredTextEditor(event.target)) return;
   composerRuntime.suppressNextFocusRestore = false;
   queueChatKeyboardViewportStateSync();
 });
 
 eventRoot.addEventListener("focusout", (event) => {
-  if (!isTrackedTextComposer(event.target)) return;
+  if (!isDeferredTextEditor(event.target)) return;
   if (event.target.id === "composer-input") {
     composerRuntime.isComposing = false;
     queueComposerDraftSync({ flush: true });
   }
+  if (event.target?.dataset?.roleProfile) {
+    queueRoleProfileSync({ flush: true });
+  }
   window.requestAnimationFrame(() => {
     queueChatKeyboardViewportStateSync();
-    if (composerRuntime.pendingPaint && !shouldDeferPaintForComposerComposition()) {
+    if (
+      composerRuntime.pendingPaint &&
+      !shouldDeferPaintForComposerComposition() &&
+      !shouldDeferPaintForFocusedTextEditor()
+    ) {
       composerRuntime.pendingPaint = false;
       paint();
     }
@@ -62312,6 +62349,7 @@ const handleAppForeground = () => {
 const handleAppBackground = () => {
   pauseVideoSessionForBackground();
   blurChatComposer({ flushDraft: true, suppressRestore: true });
+  queueRoleProfileSync({ flush: true });
   markAppBackgrounded();
   saveState(serializeState());
   void flushPendingStateBackup();
@@ -62324,6 +62362,7 @@ window.addEventListener("offline", handleSystemChromeConnectionChange);
 window.addEventListener("resize", maybeResumeRuntimeTick);
 window.addEventListener("pagehide", handleAppBackground);
 window.addEventListener("beforeunload", () => {
+  queueRoleProfileSync({ flush: true });
   markAppBackgrounded();
   void flushPendingStateBackup();
 });
