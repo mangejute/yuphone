@@ -38976,9 +38976,27 @@ const mergeMapPlacePreviewCandidates = (modelPlaces = [], fallbackDrafts = [], d
 
 const sanitizeAiReplyTextContent = (value = "", { preserveStandalone = false } = {}) => {
   void preserveStandalone;
-  const normalized = sanitizeChatLine(String(value || "").trim());
+  const normalized = stripVisibleProtocolLeakText(String(value || "").trim());
   if (!normalized) return "";
   return normalized;
+};
+
+const stripVisibleProtocolLeakText = (value = "") => {
+  let text = sanitizeChatLine(String(value || "").trim());
+  if (!text) return "";
+  for (let index = 0; index < 3; index += 1) {
+    const nextText = text
+      .replace(/^(?:输出协议|输出格式|回复协议|视频回复协议|聊天协议|协议文本)\s*[:：]\s*/iu, "")
+      .replace(/^(?:直接)?输出协议文本\s*[:：]?\s*/iu, "")
+      .replace(/^(?:然后)?只写\s*1\s*行消息\s*[:：]?\s*/iu, "")
+      .trim();
+    if (nextText === text) break;
+    text = sanitizeChatLine(nextText);
+  }
+  if (/^(?:输出协议|输出格式|回复协议|视频回复协议|聊天协议|协议文本|直接输出协议文本|规则)\s*[:：]?$/iu.test(text)) {
+    return "";
+  }
+  return text;
 };
 
 const sanitizeAiContextMessageContent = (message, value = "") => {
@@ -39851,7 +39869,7 @@ const normalizePlainChatFallbackText = (value = "") =>
     .replace(FALLBACK_INLINE_MESSAGE_BOUNDARY_PATTERN, "$1\n");
 
 const normalizePlainChatFallbackLine = (value = "") => {
-  const normalized = sanitizeChatLine(
+  const normalized = stripVisibleProtocolLeakText(
     String(value || "")
       .replace(FALLBACK_NUMBERED_MESSAGE_HEAD_PATTERN, "")
       .replace(/\s+\d{1,2}\s*$/u, "")
@@ -49445,7 +49463,9 @@ const requestPrimaryVideoReplyFallback = async (
   const originalVideoConfig = getPrimaryApiConfig();
   const preferredVariantMode = shouldUseGeminiCompatibleMode(stableVideoConfig) ? "openai-fallback" : "openai-standard";
   const roleName = role?.profile?.note || role?.profile?.name || "角色";
-  const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
+  const timelineAnchor = getVideoSessionTimelineAnchor(role);
+  const timelineAnchorText = formatVideoSessionTimelineAnchorText(timelineAnchor);
+  const currentPlace = timelineAnchor?.currentPlace || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const referenceCity = role?.profile?.realCityReference || role?.profile?.location || "";
   const currentStatus = getVideoSafeCurrentStatusText(role);
   const goalTitles = (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean);
@@ -49473,6 +49493,8 @@ const requestPrimaryVideoReplyFallback = async (
 规则:
 - 当前角色固定是「${roleName}」
 - 当前地点固定是「${currentPlace}」
+- 当前行程硬锚点：${timelineAnchorText}
+- 如果当前行程硬锚点显示已经收工、回家、在公寓、休息、洗澡或准备睡觉，就绝不能说自己还在工作室、创意园、办公室、公司、片场或继续盯工作方案；只能写成已经离开/已经到家/一边收尾一边听用户说
 - 参考真实城市（只作现实参照）固定是「${referenceCity}」
 - 当前状态可参考「${currentStatus}」
 - 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
@@ -49493,7 +49515,8 @@ ${roundPromptBlock}
       userInput: getVideoSessionRoundUserInput(userInput, roundContext),
       slimContext: {
         roleName: role?.profile?.note || role?.profile?.name || "",
-        currentPlace: getRoleCurrentPlace(role),
+        currentPlace,
+        timelineAnchor,
         referenceCity: role?.profile?.realCityReference || role?.profile?.location || "",
         currentStatus: role?.status?.headerText || role?.status?.mood || "",
         goals: (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean),
@@ -49554,6 +49577,8 @@ ${roundPromptBlock}
                   const safeStatusText = rewriteVideoReferenceCityLeak(role, repaired?.status || "");
                   const referenceCityLeakError = getVideoReferenceCityLeakError(role, `${replyText} ${safeStatusText}`.trim(), userInput);
                   if (referenceCityLeakError) return referenceCityLeakError;
+                  const timelineConflictError = getVideoTimelineAnchorConflictError(role, `${replyText} ${safeStatusText}`.trim());
+                  if (timelineConflictError) return timelineConflictError;
                   const driftError = getTextSemanticDriftMessage(replyText, "视频回复", {
                     disallowAiDisclosure: true,
                   });
@@ -49600,7 +49625,9 @@ const requestPrimaryVideoReplyTextRescue = async (
     generationMode: "video",
   });
   const roleName = role?.profile?.note || role?.profile?.name || "角色";
-  const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
+  const timelineAnchor = getVideoSessionTimelineAnchor(role);
+  const timelineAnchorText = formatVideoSessionTimelineAnchorText(timelineAnchor);
+  const currentPlace = timelineAnchor?.currentPlace || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const referenceCity = role?.profile?.realCityReference || role?.profile?.location || "";
   const currentStatus = getVideoSafeCurrentStatusText(role);
   const goalTitles = (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean);
@@ -49617,6 +49644,8 @@ const requestPrimaryVideoReplyTextRescue = async (
 规则:
 - 当前角色固定是「${roleName}」
 - 当前地点固定是「${currentPlace}」
+- 当前行程硬锚点：${timelineAnchorText}
+- 如果当前行程硬锚点显示已经收工、回家、在公寓、休息、洗澡或准备睡觉，就绝不能说自己还在工作室、创意园、办公室、公司、片场或继续盯工作方案；只能写成已经离开/已经到家/一边收尾一边听用户说
 - 参考真实城市（只作现实参照）固定是「${referenceCity}」
 - 当前状态可参考「${currentStatus}」
 - 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
@@ -49639,6 +49668,8 @@ ${roundPromptBlock}
       userInput: getVideoSessionRoundUserInput(userInput, roundContext),
       slimContext: {
         profile: roleContext?.profile,
+        currentPlace,
+        timelineAnchor,
         status: roleContext?.status,
         goals: roleContext?.goals,
         worldbook: (roleContext?.worldbook || []).slice(0, 4),
@@ -49699,6 +49730,8 @@ ${roundPromptBlock}
                   const safeStatusText = rewriteVideoReferenceCityLeak(role, repaired?.status || "");
                   const referenceCityLeakError = getVideoReferenceCityLeakError(role, `${replyText} ${safeStatusText}`.trim(), userInput);
                   if (referenceCityLeakError) return referenceCityLeakError;
+                  const timelineConflictError = getVideoTimelineAnchorConflictError(role, `${replyText} ${safeStatusText}`.trim());
+                  if (timelineConflictError) return timelineConflictError;
                   const driftError = getTextSemanticDriftMessage(replyText, "视频回复", {
                     disallowAiDisclosure: true,
                   });
@@ -55210,6 +55243,28 @@ const mergeVideoSessionTextParts = (...parts) => {
   return merged.join(" ").replace(/\s+/g, " ").trim();
 };
 
+const shouldKeepTapRecordingRecognitionAlive = (session = state.videoSession) =>
+  Boolean(
+    isVideoSessionTapToRecordMode(session) &&
+      videoSessionRuntime.holdToTalkActive &&
+      !videoSessionRuntime.holdToTalkReleasePending &&
+      session?.active &&
+      String(session?.inputMode || "voice").trim() === "voice" &&
+      !["processing", "replying"].includes(String(session?.status || "").trim()),
+  );
+
+const queueVideoSessionTapRecordingRestart = () => {
+  clearVideoSessionRestartTimer();
+  if (!state.videoSession?.active || !isVideoSessionPanelOpen() || isDocumentHidden()) return false;
+  if (!shouldKeepTapRecordingRecognitionAlive(state.videoSession)) return false;
+  videoSessionRuntime.restartTimer = window.setTimeout(() => {
+    videoSessionRuntime.restartTimer = 0;
+    if (!shouldKeepTapRecordingRecognitionAlive(state.videoSession)) return;
+    void startVideoSessionRecognition();
+  }, VIDEO_SESSION_RESTART_DELAY_MS);
+  return true;
+};
+
 const buildVideoSessionDisplaySegments = (messages = []) => {
   const merged = [];
   (Array.isArray(messages) ? messages : [])
@@ -55422,6 +55477,90 @@ const buildVideoSessionRoundContextPayload = (roundContext = null) => {
   };
 };
 
+const getVideoSessionTimelineAnchor = (role, now = new Date()) => {
+  const roleContext = buildRoleTimeContext(role, now);
+  const currentTimeline = roleContext?.currentTimeline || null;
+  const previousTimeline = roleContext?.previousTimeline || null;
+  const nextTimeline = roleContext?.nextTimeline || null;
+  const activeTimeline = currentTimeline || previousTimeline || null;
+  const location = sanitizeChatLine(
+    String(activeTimeline?.place || roleContext?.currentPlace || getRoleCurrentPlace(role, now) || role?.profile?.location || "").trim(),
+  );
+  const title = sanitizeChatLine(String(activeTimeline?.title || "").trim());
+  const detail = sanitizeChatLine(String(activeTimeline?.detail || "").trim());
+  const time = sanitizeChatLine(String(activeTimeline?.time || "").trim());
+  const nextTitle = sanitizeChatLine(String(nextTimeline?.title || "").trim());
+  const nextTime = sanitizeChatLine(String(nextTimeline?.time || "").trim());
+  return {
+    currentTime: sanitizeChatLine(String(roleContext?.pureNowText || roleContext?.nowText || "").trim()),
+    currentPlace: location,
+    activeSlot: activeTimeline
+      ? {
+          time,
+          title,
+          place: location,
+          detail,
+          relation: currentTimeline ? "current" : "recent",
+        }
+      : null,
+    nextSlot: nextTimeline
+      ? {
+          time: nextTime,
+          title: nextTitle,
+          place: sanitizeChatLine(String(nextTimeline?.place || "").trim()),
+          detail: sanitizeChatLine(String(nextTimeline?.detail || "").trim()),
+        }
+      : null,
+  };
+};
+
+const formatVideoSessionTimelineAnchorText = (anchor = null) => {
+  const slot = anchor?.activeSlot || null;
+  if (!slot) {
+    return anchor?.currentPlace ? `当前地点：${anchor.currentPlace}` : "无当前行程槽位";
+  }
+  return [
+    anchor?.currentTime ? `现在：${anchor.currentTime}` : "",
+    slot.time ? `行程时间：${slot.time}` : "",
+    slot.title ? `当前行程：${slot.title}` : "",
+    slot.place ? `当前地点：${slot.place}` : "",
+    slot.detail ? `当前行为：${slot.detail}` : "",
+  ]
+    .filter(Boolean)
+    .join("；");
+};
+
+const getVideoTimelineAnchorConflictError = (role, value = "") => {
+  const text = sanitizeChatLine(String(value || "").trim());
+  if (!text) return "";
+  const anchor = getVideoSessionTimelineAnchor(role);
+  const slot = anchor?.activeSlot || null;
+  const anchorText = sanitizeChatLine([slot?.title, slot?.place, slot?.detail].filter(Boolean).join(" "));
+  if (!slot || !anchorText) return "";
+  const currentPlace = String(slot.place || anchor.currentPlace || "").trim();
+  const lowerText = text.toLowerCase();
+  const workLikeReply =
+    /(工作室|创意园|办公室|公司|工位|棚里|录音棚|片场|会议室|还在加班)/.test(text) ||
+    /(?:我这会儿|现在|这会|还在|正在|正).{0,14}(?:盯着|改|赶).{0,24}(?:方案|稿|视觉)/.test(text);
+  const workLikeAnchor = /(工作室|创意园|办公室|公司|工位|录音棚|片场|会议|工作|加班|方案|改稿|赶稿)/.test(anchorText);
+  const homeLikeAnchor = /(公寓|家|卧室|客厅|床|睡|洗澡|热水澡|回家|回巢|收工|晚安|休息)/.test(anchorText);
+  if (homeLikeAnchor && workLikeReply && !workLikeAnchor) {
+    return `视频回复和当前行程冲突：当前行程是「${formatVideoSessionTimelineAnchorText(anchor)}」`;
+  }
+  if (
+    currentPlace &&
+    !text.includes(currentPlace) &&
+    /(我在|我这会儿在|这会儿在|还在|正在|正).*?(工作室|创意园|办公室|公司|工位|录音棚|片场)/.test(text) &&
+    !/(工作室|创意园|办公室|公司|工位|录音棚|片场)/.test(currentPlace)
+  ) {
+    return `视频回复没有贴合当前地点「${currentPlace}」`;
+  }
+  if (lowerText.includes("studio") && !/studio/i.test(currentPlace)) {
+    return `视频回复没有贴合当前地点「${currentPlace || slot.title || "当前行程"}」`;
+  }
+  return "";
+};
+
 const buildVideoSessionRoundPromptBlock = (roundContext = null) => {
   if (!roundContext?.passiveContinuation) return "";
   return `- roundContext.source = "visual-auto" 代表这轮只是静默后的自动续聊 不是用户刚刚又把上一句重复了一遍
@@ -55629,7 +55768,9 @@ const resolveVideoSessionReplyContent = (role, result, { responseMode = "text" }
   const normalizedItems = items
     .map((item) => ({
       type: item.type === "voice" ? "voice" : "text",
-      content: rewriteVideoReferenceCityLeak(role, typeof item?.content === "string" ? item.content : ""),
+      content: stripVisibleProtocolLeakText(
+        rewriteVideoReferenceCityLeak(role, typeof item?.content === "string" ? item.content : ""),
+      ),
     }))
     .filter((item) => item.content);
 
@@ -56760,6 +56901,9 @@ const flushVideoSessionLocalTranscriptReveal = ({ queueSubmit = null, paintNow =
   );
   const shouldQueueSubmit =
     queueSubmit === null ? Boolean(videoSessionRuntime.localTranscriptRevealQueueSubmit) : Boolean(queueSubmit);
+  if (!queueSubmit && videoSessionRuntime.localTranscriptRevealTimer) {
+    clearVideoSessionLocalTranscriptRevealTimer();
+  }
   state.videoSession.transcript = mergeVideoSessionTextParts(baseText, normalizedText);
   state.videoSession.interimTranscript = "";
   state.videoSession.error = "";
@@ -57241,19 +57385,31 @@ const finalizeVideoSessionLocalVoiceTranscript = async ({ silent = false } = {})
     state.videoSession?.manualText,
   );
   if (existingText) {
+    let flushedText = "";
     if (isVideoSessionLocalRecorderActive()) {
       try {
-        await stopVideoSessionLocalAsrCapture({ discard: true });
+        const stopped = await stopVideoSessionLocalAsrCapture({ transcribe: true });
+        flushedText = mergeVideoSessionTextParts(stopped?.transcript);
+        resetVideoSessionLocalTranscriptRevealState();
       } catch {
         // ignore
       }
     }
-    return existingText;
+    const mergedText = mergeVideoSessionTextParts(existingText, flushedText);
+    if (mergedText && mergedText !== existingText) {
+      state.videoSession.transcript = mergedText;
+      state.videoSession.interimTranscript = "";
+      state.videoSession.error = "";
+      paint();
+      queueVideoSessionStateSync();
+    }
+    return mergedText || existingText;
   }
   if (!isVideoSessionLocalRecorderActive()) return "";
   const { transcript = "", durationMs = 0 } = await stopVideoSessionLocalAsrCapture({ transcribe: true });
   const resolvedTranscript = mergeVideoSessionTextParts(transcript);
   if (resolvedTranscript) {
+    resetVideoSessionLocalTranscriptRevealState();
     state.videoSession.transcript = resolvedTranscript;
     state.videoSession.interimTranscript = "";
     state.videoSession.error = "";
@@ -58451,7 +58607,7 @@ const startVideoSessionRecognition = async () => {
       }
       state.videoSession.transcript = finalText;
       state.videoSession.interimTranscript = interimText;
-      if (finalText && !interimText) {
+      if (finalText && !interimText && !isVideoSessionHoldToTalkMode(state.videoSession)) {
         queueVideoSessionSpeechAutoSubmit();
       } else {
         clearVideoSessionAutoSubmitTimer();
@@ -58507,6 +58663,9 @@ const startVideoSessionRecognition = async () => {
         (!code || ["no-speech", "aborted"].includes(code)) &&
         !(isVideoSessionHoldToTalkMode(state.videoSession) && videoSessionRuntime.holdToTalkReleasePending)
       ) {
+        if (queueVideoSessionTapRecordingRestart()) {
+          return;
+        }
         queueVideoSessionVisualAutoReply();
       }
     };
@@ -58524,6 +58683,10 @@ const startVideoSessionRecognition = async () => {
       patchVideoSessionMicHealthDom();
 
       if (shouldSuppress || !state.videoSession?.active || !isVideoSessionPanelOpen()) {
+        return;
+      }
+
+      if (queueVideoSessionTapRecordingRestart()) {
         return;
       }
 
@@ -58653,6 +58816,11 @@ const requestPrimaryVideoReply = async (
       normalizedInput,
     );
     if (referenceCityLeakError) return referenceCityLeakError;
+    const timelineConflictError = getVideoTimelineAnchorConflictError(
+      role,
+      `${mergedVideoText} ${safeStatusText}`.trim(),
+    );
+    if (timelineConflictError) return timelineConflictError;
     const driftError = getTextSemanticDriftMessage(mergedVideoText, "视频回复", {
       disallowAiDisclosure: true,
     });
@@ -58978,15 +59146,7 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     const allowPassiveVisualRound = allowVisualOnly && source === "visual-auto";
     let promptText = getVideoSessionPendingInputText(state.videoSession, { mode: inputMode });
     if (inputMode === "voice") {
-      if (promptText) {
-        try {
-          await stopVideoSessionLocalAsrCapture({ discard: true });
-        } catch {
-          // ignore
-        }
-      } else {
-        promptText = await finalizeVideoSessionLocalVoiceTranscript({ silent: true });
-      }
+      promptText = await finalizeVideoSessionLocalVoiceTranscript({ silent: true });
     }
 
     let frameAttachments = getVideoSessionRoundFrameAttachments();
