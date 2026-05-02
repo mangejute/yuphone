@@ -2392,6 +2392,53 @@ select {
   gap: 6px;
 }
 
+.video-call-transcript-block {
+  display: grid;
+  gap: 8px;
+}
+
+.video-call-transcript-list {
+  display: grid;
+  gap: 8px;
+}
+
+.video-call-transcript-item {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(17, 17, 17, 0.04);
+}
+
+.chat-message-line.user-line .video-call-transcript-item {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.video-call-transcript-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.video-call-transcript-head strong {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.video-call-transcript-head span {
+  color: #7b8088;
+  text-align: right;
+}
+
+.video-call-transcript-item p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .video-call-summary-head {
   display: flex;
   align-items: center;
@@ -18806,12 +18853,13 @@ const DEFAULT_BUBBLE_STYLE_TEMPLATE = `/*
 }
 */`;
 const DEFAULT_SUMMARY_PROMPT =
-  "请以第三人称把这一轮聊天整理成长期记忆，不要写成一段笼统概括。直接输出正文，并且必须严格按这四段结构写：本轮细节、对方推进、用户相关、待继续跟进。每一段都用编号逐条写具体事实，优先保留真实聊到的细节、原句要点、事件推进、物品、地点、时间、情绪原因、身体状态、工作或目标进度。对方推进必须写他这边的事务/目标/事件推进到了哪一步；用户相关必须写用户这边提到的状态、安排、需求、追问点或正在处理的事；待继续跟进必须写接下来还要继续聊、继续做、继续确认的内容。如果本轮某部分没有新推进，也要据实写清楚停在哪，不要用“关系稳定”“互动频繁”“无重大冲突”这种空话代替细节";
+  "请只基于这一次送来的最近聊天记录，按时间顺序整理成一份对话归档，重点写清这最近一轮都聊了什么。不要把内容改写成长期记忆、重要记忆、人物档案、基础信息总表，也不要擅自扩写到更早历史。直接输出正文，并严格按这四段结构写：本轮聊了什么、对方这边的新进展、用户这边提到的情况、接下来待继续聊/做/确认。每一段都用编号逐条写具体事实，优先保留真实聊到的细节、原句要点、事件推进、物品、地点、时间、情绪原因、身体状态、工作或目标进度。如果某一段没有新增内容，也要据实写清楚，不要用空话代替细节";
 const DEFAULT_SUMMARY_REFINE_PROMPT =
   "请把已有的总结记忆改写成更干净的长期记忆，直接输出正文，不要标题和分隔线，并尽量保留原来的四段结构：本轮细节、对方推进、用户相关、待继续跟进。删除重复句子和无效铺垫，但必须保留明确时间、具体事件、事务或目标推进、用户这边的重要状态与安排、重要承诺和后续待处理话题，不要把具体事实压缩成空泛概括，也不要改写原本事实";
 
 const LEGACY_SUMMARY_PROMPTS = Object.freeze(
   new Set([
+    "请以第三人称把这一轮聊天整理成长期记忆，不要写成一段笼统概括。直接输出正文，并且必须严格按这四段结构写：本轮细节、对方推进、用户相关、待继续跟进。每一段都用编号逐条写具体事实，优先保留真实聊到的细节、原句要点、事件推进、物品、地点、时间、情绪原因、身体状态、工作或目标进度。对方推进必须写他这边的事务/目标/事件推进到了哪一步；用户相关必须写用户这边提到的状态、安排、需求、追问点或正在处理的事；待继续跟进必须写接下来还要继续聊、继续做、继续确认的内容。如果本轮某部分没有新推进，也要据实写清楚停在哪，不要用“关系稳定”“互动频繁”“无重大冲突”这种空话代替细节",
     "请以第三人称总结这一轮聊天内容，保留明确时间、关键事件、情绪变化、关系推进、重要承诺和待继续的话题，语言简洁，适合作为长期记忆",
     "请以第三人称把这一轮聊天整理成长期记忆，直接输出正文，不要标题、分隔线和空泛套话。必须保留明确时间、原聊天里真实出现的具体话题或原句要点、谁说了什么、情绪变化原因、关系推进、重要承诺和待继续事项；如果原文只有几条短消息，就逐条概括这些短消息，不要写成“近期事件”“关系持续推进”“明确承诺”“后续计划”这类没有事实落点的句子",
     "第三人称客观总结，记得带时间，精确到年月份时钟分钟，保留细节，不要用特别笼统的话去总结，每次总结最少300字",
@@ -18840,6 +18888,9 @@ const shouldMigrateSummaryPromptToDefault = (value = "") => {
   if (/保留细节/.test(text)) hitCount += 1;
   if (/不要用特别笼统/.test(text)) hitCount += 1;
   if (/(?:顶部.*分隔|分隔符隔开|一大长条线)/.test(text)) hitCount += 1;
+  if (/(?:全部|所有|完整|全量).{0,8}(?:历史|对话|聊天|记录|消息)/.test(text)) hitCount += 2;
+  if (/(?:用户记忆总结|重要记忆|人物关系精要总结|人物档案|完整记忆|全量档案)/.test(text)) hitCount += 2;
+  if (/(?:基础信息|生活习惯|工作状态|饮食偏好|兴趣爱好|宠物信息|行为偏好|核心诉求|首次提及|第一次提及|分类清晰)/.test(text)) hitCount += 1;
   return hitCount >= 3;
 };
 
@@ -21846,7 +21897,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.04.30-chat-send-paint-02";
+const APP_BUILD_VERSION_LABEL = "v2026.05.03-life-track-yesterday-today-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -22448,18 +22499,18 @@ const getVideoMicPermissionMeta = (session = {}) => {
 };
 
 const getVideoSessionMicTriggerMode = (session = {}) =>
-  String(session?.micTriggerMode || "").trim().toLowerCase() === "hold" ? "hold" : "auto";
+  String(session?.micTriggerMode || "").trim().toLowerCase() === "auto" ? "auto" : "tap";
 
 const getVideoMicHealthMeta = (session = {}) => {
   const state = String(session?.micHealthState || "").trim().toLowerCase();
   const engine = String(session?.micEngine || "").trim().toLowerCase();
-  const holdMode = getVideoSessionMicTriggerMode(session) === "hold";
+  const holdMode = getVideoSessionMicTriggerMode(session) === "tap";
   if (state === "checking") {
     return {
-      label: holdMode ? "按住启动中" : engine === "local" ? "转写中" : "正在检查",
+      label: holdMode ? "录音启动中" : engine === "local" ? "转写中" : "正在检查",
       tone: "muted",
       message: holdMode
-        ? "继续按住，等绿色麦克风亮起再说"
+        ? "先等绿色麦克风亮起，亮起后开始录音"
         : engine === "local"
           ? "正在准备语音转写"
           : "正在检查麦克风",
@@ -22467,10 +22518,10 @@ const getVideoMicHealthMeta = (session = {}) => {
   }
   if (state === "ready") {
     return {
-      label: holdMode ? "按住说话" : engine === "local" ? "本地待命" : "待命",
+      label: holdMode ? "点按录音" : engine === "local" ? "本地待命" : "待命",
       tone: "success",
       message: holdMode
-        ? "按住麦克风说话，松开后发送"
+        ? "点一下开始录音，再点一下结束并发送"
         : engine === "local"
           ? "开口后会自动转字"
           : "开口后会实时显示",
@@ -22478,10 +22529,10 @@ const getVideoMicHealthMeta = (session = {}) => {
   }
   if (state === "listening") {
     return {
-      label: holdMode ? "按住说话中" : engine === "local" ? "录音中" : "识别中",
+      label: holdMode ? "录音中" : engine === "local" ? "录音中" : "识别中",
       tone: "success",
       message: holdMode
-        ? "继续按住说话，松开后发送"
+        ? "正在录音，再点一下就发送"
         : engine === "local"
           ? "正在收音，停顿后自动发送"
           : "正在实时转字",
@@ -22519,7 +22570,7 @@ const getVideoMicHealthMeta = (session = {}) => {
     return {
       label: "等待下一轮",
       tone: "muted",
-      message: holdMode ? "这轮已送出，等角色回复后再按住麦克风" : "这轮已送出，回复后继续监听",
+      message: holdMode ? "这轮已送出，等角色回复后再点麦克风录音" : "这轮已送出，回复后继续监听",
     };
   }
   return {
@@ -22532,7 +22583,7 @@ const getVideoMicHealthMeta = (session = {}) => {
 const getVideoSessionMicIndicatorMeta = (session = {}) => {
   const inputMode = String(session?.inputMode || "voice").trim() === "text" ? "text" : "voice";
   const micTriggerMode = getVideoSessionMicTriggerMode(session);
-  const holdMode = micTriggerMode === "hold";
+  const holdMode = micTriggerMode === "tap";
   const permissionMeta = getVideoMicPermissionMeta(session);
   const healthMeta = getVideoMicHealthMeta(session);
   const healthState = String(session?.micHealthState || "").trim().toLowerCase();
@@ -22553,8 +22604,8 @@ const getVideoSessionMicIndicatorMeta = (session = {}) => {
 
   if (healthState === "listening") {
     return {
-      label: holdMode ? "按住说话中" : "麦克风识别中",
-      message: holdMode ? "继续按住说话，松开就会发送" : "现在说话就会被识别，停顿后会自动发送",
+      label: holdMode ? "录音中" : "麦克风识别中",
+      message: holdMode ? "正在录音，再点一下麦克风就发送" : "现在说话就会被识别，停顿后会自动发送",
       tone: "live",
       buttonTone: "live",
       pulse: true,
@@ -22566,8 +22617,8 @@ const getVideoSessionMicIndicatorMeta = (session = {}) => {
 
   if (healthState === "ready") {
     return {
-      label: holdMode ? "按住麦克风说话" : "现在可以说话",
-      message: holdMode ? "按住开始识别，松开后发送" : "绿色麦克风亮起时，就可以直接开口",
+      label: holdMode ? "点麦克风录音" : "现在可以说话",
+      message: holdMode ? "点一下开始录音，再点一下结束并发送" : "绿色麦克风亮起时，就可以直接开口",
       tone: "ready",
       buttonTone: "ready",
       pulse: false,
@@ -22580,7 +22631,7 @@ const getVideoSessionMicIndicatorMeta = (session = {}) => {
   if (healthState === "checking") {
     return {
       label: "麦克风启动中",
-      message: holdMode ? "继续按住，等图标亮起再说" : "再等一下，等图标亮起再说",
+      message: holdMode ? "等图标亮起后开始录音" : "再等一下，等图标亮起再说",
       tone: "waiting",
       buttonTone: "waiting",
       pulse: false,
@@ -22593,7 +22644,7 @@ const getVideoSessionMicIndicatorMeta = (session = {}) => {
   if (healthState === "busy") {
     return {
       label: "麦克风暂时关闭",
-      message: holdMode ? "这一轮已送出，等角色回复后再按住麦克风" : "这一轮已送出，等角色回复后会重新打开",
+      message: holdMode ? "这一轮已送出，等角色回复后再点麦克风录音" : "这一轮已送出，等角色回复后会重新打开",
       tone: "waiting",
       buttonTone: "waiting",
       pulse: false,
@@ -22619,7 +22670,7 @@ const getVideoSessionMicIndicatorMeta = (session = {}) => {
   if (!active) {
     return {
       label: "麦克风待接通",
-      message: holdMode ? "接通后按住麦克风说话" : "接通后会自动开始监听",
+      message: holdMode ? "接通后点麦克风开始录音" : "接通后会自动开始监听",
       tone: "waiting",
       buttonTone: "waiting",
       pulse: false,
@@ -22630,8 +22681,8 @@ const getVideoSessionMicIndicatorMeta = (session = {}) => {
   }
 
   return {
-    label: holdMode ? "按住麦克风说话" : "麦克风准备中",
-    message: holdMode ? "按住时才会开始识别，松开后发送" : "正在等待麦克风进入待命",
+    label: holdMode ? "点麦克风录音" : "麦克风准备中",
+    message: holdMode ? "点一下开始识别，再点一下发送" : "正在等待麦克风进入待命",
     tone: "waiting",
     buttonTone: "waiting",
     pulse: false,
@@ -22944,6 +22995,12 @@ const getLifeStatusFeedItemDateKey = (item = {}) => {
   return parsedDate ? formatJourneyDayKey(parsedDate) : "";
 };
 
+const shiftRenderDateKey = (dateKey, offsetDays = 0) => {
+  const base = new Date(`${formatDateKey(dateKey)}T12:00:00`);
+  base.setDate(base.getDate() + Number(offsetDays || 0));
+  return formatDateKey(base);
+};
+
 const getLifeEventDateKey = (event = {}) => {
   const explicitDateKey = String(event?.journeyDateKey || "").trim();
   if (explicitDateKey) return formatDateKey(explicitDateKey);
@@ -22986,6 +23043,17 @@ const filterLifeStatusFeedItemsByDate = (items = [], dateKey = "") => {
   return (Array.isArray(items) ? items : []).filter((item) => getLifeStatusFeedItemDateKey(item) === normalizedDateKey);
 };
 
+const filterLifeStatusFeedItemsByDateKeys = (items = [], dateKeys = []) => {
+  const normalizedDateKeys = new Set(
+    (Array.isArray(dateKeys) ? dateKeys : [])
+      .map((dateKey) => String(dateKey || "").trim())
+      .filter(Boolean)
+      .map((dateKey) => formatDateKey(dateKey)),
+  );
+  if (!normalizedDateKeys.size) return Array.isArray(items) ? [...items] : [];
+  return (Array.isArray(items) ? items : []).filter((item) => normalizedDateKeys.has(getLifeStatusFeedItemDateKey(item)));
+};
+
 const limitLifeStatusFeedItemsPerDate = (items = [], limit = LIFE_STATUS_DAILY_DISPLAY_LIMIT) => {
   const counts = new Map();
   return (Array.isArray(items) ? items : []).filter((item) => {
@@ -22997,8 +23065,12 @@ const limitLifeStatusFeedItemsPerDate = (items = [], limit = LIFE_STATUS_DAILY_D
   });
 };
 
-const buildLifeStatusFeedItems = (role, { dateKey = "", limit = 10 } = {}) => {
+const buildLifeStatusFeedItems = (role, { dateKey = "", limit = 10, dateWindowKeys = [] } = {}) => {
   const normalizedDateKey = String(dateKey || "").trim() ? formatDateKey(dateKey) : "";
+  const normalizedWindowKeys = (Array.isArray(dateWindowKeys) ? dateWindowKeys : [])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .map((item) => formatDateKey(item));
   const sourceEvents = Array.isArray(role?.events) ? role.events : [];
   const getEventTitleForDate = (targetDateKey = "") => {
     const normalizedTargetDateKey = String(targetDateKey || "").trim() ? formatDateKey(targetDateKey) : "";
@@ -23019,7 +23091,9 @@ const buildLifeStatusFeedItems = (role, { dateKey = "", limit = 10 } = {}) => {
   }));
   const nextMonitorItems = normalizedDateKey
     ? dedupeLifeStatusFeedItems(sortTimelineItemsByOldest(filterLifeStatusFeedItemsByDate(monitorItems, normalizedDateKey)))
-    : limitLifeStatusFeedItemsPerDate(filterRecentTimelineItems(monitorItems));
+    : normalizedWindowKeys.length
+      ? limitLifeStatusFeedItemsPerDate(sortTimelineItemsByNewest(filterLifeStatusFeedItemsByDateKeys(monitorItems, normalizedWindowKeys)))
+      : limitLifeStatusFeedItemsPerDate(filterRecentTimelineItems(monitorItems));
   if (nextMonitorItems.length) {
     const dateLimit = normalizedDateKey ? Math.min(Number(limit) || 10, LIFE_STATUS_DAILY_DISPLAY_LIMIT) : limit;
     return normalizedDateKey ? nextMonitorItems.slice(Math.max(0, nextMonitorItems.length - dateLimit)) : nextMonitorItems.slice(0, dateLimit);
@@ -23050,7 +23124,9 @@ const buildLifeStatusFeedItems = (role, { dateKey = "", limit = 10 } = {}) => {
 
   const nextEventItems = normalizedDateKey
     ? dedupeLifeStatusFeedItems(sortTimelineItemsByOldest(filterLifeStatusFeedItemsByDate(eventItems, normalizedDateKey)))
-    : limitLifeStatusFeedItemsPerDate(filterRecentTimelineItems(eventItems));
+    : normalizedWindowKeys.length
+      ? limitLifeStatusFeedItemsPerDate(sortTimelineItemsByNewest(filterLifeStatusFeedItemsByDateKeys(eventItems, normalizedWindowKeys)))
+      : limitLifeStatusFeedItemsPerDate(filterRecentTimelineItems(eventItems));
   const dateLimit = normalizedDateKey ? Math.min(Number(limit) || 10, LIFE_STATUS_DAILY_DISPLAY_LIMIT) : limit;
   return normalizedDateKey ? nextEventItems.slice(Math.max(0, nextEventItems.length - dateLimit)) : nextEventItems.slice(0, dateLimit);
 };
@@ -24450,14 +24526,24 @@ const renderMessageContent = (message, role = null, state = {}) => {
     const summaryBusy =
       Array.isArray(state?.videoCallSummaryBusyMessageIds) && state.videoCallSummaryBusyMessageIds.includes(message.id);
     const summaryStatus = String(content.summaryStatus || "").trim();
-    const summaryText = String(content.summary || "").trim();
+    const summarySource = String(content.summarySource || "").trim();
+    const summaryText = summarySource === "local" ? "" : String(content.summary || "").trim();
     const summaryError = String(content.summaryError || "").trim();
+    const transcriptItems = Array.isArray(content.transcriptItems)
+      ? content.transcriptItems.filter((item) => String(item?.text || "").trim())
+      : [];
+    const roleName = String(content.counterpartName || role?.profile?.note || role?.profile?.name || "角色").trim();
+    const userName = String(content.userDisplayName || state?.userProfile?.name || "我").trim();
+    const transcriptList = renderVideoCallTranscriptList(transcriptItems, {
+      roleName,
+      userName,
+    });
     const durationLabel = String(content.durationLabel || "").trim() || formatVideoCallDuration(content.durationMs || 0);
     const startedLabel = content.startedAt ? formatMessageTime(content.startedAt) : "";
     const endedLabel = content.endedAt ? formatMessageTime(content.endedAt) : "";
     const rangeLabel = startedLabel && endedLabel ? `${startedLabel} - ${endedLabel}` : durationLabel;
     const summaryButtonLabel =
-      expanded && summaryText
+      expanded
         ? "收起总结"
         : summaryStatus === "empty"
           ? "无记录"
@@ -24465,15 +24551,15 @@ const renderMessageContent = (message, role = null, state = {}) => {
             ? "看总结"
             : summaryBusy || summaryStatus === "pending"
               ? "整理中"
-              : summaryStatus === "error"
-                ? "重试"
-                : "看总结";
+            : summaryStatus === "error"
+                ? "看记录"
+                : transcriptItems.length
+                  ? "看记录"
+                  : "看总结";
     const summaryAction =
-      expanded && summaryText
+      expanded
         ? "toggle-video-call-details"
-        : summaryStatus === "error"
-          ? "retry-video-call-summary"
-          : "open-video-call-summary";
+        : "open-video-call-summary";
     const detailBody =
       expanded
         ? `
@@ -24499,6 +24585,21 @@ const renderMessageContent = (message, role = null, state = {}) => {
                       </div>
                     `
                     : ""
+            }
+            ${
+              transcriptList
+                ? `
+                  <div class="video-call-section video-call-transcript-block">
+                    <div class="video-call-summary-head">
+                      <strong>文字记录</strong>
+                      <span>${escapeHtml(String(transcriptItems.length))} 条</span>
+                    </div>
+                    <div class="video-call-transcript-list">
+                      ${transcriptList}
+                    </div>
+                  </div>
+                `
+                : ""
             }
           </div>
         `
@@ -25028,7 +25129,7 @@ const renderChatSettingsPanel = (state, role) => `
         ${renderChatSettingsSectionLabel("提示词")}
         ${renderChatSettingsEditorCard({
           title: "自动总结提示词",
-          note: "默认已经内置一套可直接用的自动总结提示词；你不改它时，每次都会用这套，清空后也会自动恢复",
+          note: "默认会把最近一批待总结消息按时间顺序整理成对话归档；你不改它时，每次都会用这套，清空后也会自动恢复",
           body: `<textarea class="soft-input soft-area summary-prompt-area ios-settings-area" data-chat-field="summaryPrompt" placeholder="这里默认会自动填入内置自动总结提示词">${escapeHtml(role.chats.summaryPrompt || "")}</textarea>`,
         })}
         ${renderChatSettingsEditorCard({
@@ -25295,7 +25396,12 @@ const renderJourneyGenerationStatusCard = (state, { wrapperClass = "sheet-card",
 };
 
 const renderLifeStreamPanel = (role, userProfile, state) => {
-  const feedItems = buildLifeStatusFeedItems(role);
+  const activeDateKey = formatDateKey(state?.journeyActiveDate || formatJourneyDayKey());
+  const feedDateWindowKeys = [shiftRenderDateKey(activeDateKey, -1), activeDateKey];
+  const feedItems = buildLifeStatusFeedItems(role, {
+    dateWindowKeys: feedDateWindowKeys,
+    limit: LIFE_STATUS_DAILY_DISPLAY_LIMIT * 2,
+  });
   const latestFeed = feedItems[0] || null;
   const fortune = getLifeMonitorFortuneSnapshot(role);
   const syncMeta = getLifeStreamJourneySyncMeta(role);
@@ -28415,7 +28521,7 @@ const renderVideoSessionSheet = (state, role) => {
   const busy = ["preparing", "processing", "replying"].includes(String(session.status || ""));
   const inputMode = String(session.inputMode || "voice").trim() === "text" ? "text" : "voice";
   const micTriggerMode = getVideoSessionMicTriggerMode(session);
-  const holdMode = inputMode === "voice" && micTriggerMode === "hold";
+  const holdMode = inputMode === "voice" && micTriggerMode === "tap";
   const liveStartedAtMs = Date.parse(String(session.startedAt || "").trim());
   const liveDurationMs = active && Number.isFinite(liveStartedAtMs) ? Math.max(0, Date.now() - liveStartedAtMs) : 0;
   const liveDurationLabel = formatVideoCallDuration(liveDurationMs);
@@ -28423,7 +28529,7 @@ const renderVideoSessionSheet = (state, role) => {
     {
       idle: "还没有开始",
       preparing: "正在连接摄像头",
-      listening: holdMode ? (session.micListening ? "按住说话中" : "按住麦克风说话") : "正在听你说话",
+      listening: holdMode ? (session.micListening ? "录音中" : "点麦克风录音") : "正在听你说话",
       typing: "等待你输入文字",
       manual: "当前浏览器不支持直接转文字",
       processing: "正在生成回复",
@@ -28603,15 +28709,15 @@ const renderVideoSessionSheet = (state, role) => {
     inputMode === "voice"
       ? session.micListening
         ? holdMode
-          ? "按住说话中"
+          ? "录音中"
           : "正在收音"
         : String(session.micPermissionState || "").trim() === "granted"
           ? holdMode
-            ? "按住即可说话"
+            ? "点按即可录音"
             : "已授权待命"
           : "等待麦克风"
       : "文字输入中",
-    inputMode === "voice" ? (holdMode ? "按住说话" : "自动识别") : "文字输入",
+    inputMode === "voice" ? (holdMode ? "点按录音" : "自动识别") : "文字输入",
     micEngineLabel,
     `最近一轮 ${Math.max(0, Number(session.lastFrameCount || 0))} 帧`,
     `已完成 ${Math.max(0, Number(session.rounds || 0))} 轮`,
@@ -28620,16 +28726,18 @@ const renderVideoSessionSheet = (state, role) => {
     inputMode === "voice"
       ? holdMode
         ? micIndicatorMeta.canSpeak
-          ? "按住麦克风说话"
-          : "按住等绿麦亮起"
+          ? "点麦克风开始录音"
+          : "等绿麦亮起"
         : micIndicatorMeta.canSpeak
           ? "绿麦亮起就开口"
           : "等绿麦亮起再说"
       : "当前是打字模式",
-    inputMode === "voice" ? `${micEngineLabel} · ${holdMode ? "按住说话" : "自动识别"}` : "键盘输入",
+    inputMode === "voice" ? `${micEngineLabel} · ${holdMode ? "点按录音" : "自动识别"}` : "键盘输入",
     inputMode === "voice" && active
       ? holdMode
-        ? "松开后立即发送"
+        ? session.micListening
+          ? "再点一次发送"
+          : "点一下开始录"
         : `停顿后 ${speechAutoSubmitDelayLabel} 自动发`
       : active
         ? "视频已接通"
@@ -28678,7 +28786,7 @@ const renderVideoSessionSheet = (state, role) => {
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
             <span>语音触发方式</span>
-            <b>${escapeHtml(holdMode ? "按住说话" : "自动识别")}</b>
+            <b>${escapeHtml(holdMode ? "点按录音" : "自动识别")}</b>
           </div>
           <div class="video-session-mode-switch">
             <button
@@ -28688,13 +28796,13 @@ const renderVideoSessionSheet = (state, role) => {
               data-video-mic-trigger-mode="auto"
             >自动识别</button>
             <button
-              class="video-session-mode-pill ${micTriggerMode === "hold" ? "is-active" : ""}"
+              class="video-session-mode-pill ${micTriggerMode === "tap" ? "is-active" : ""}"
               type="button"
               data-action="set-video-mic-trigger-mode"
-              data-video-mic-trigger-mode="hold"
-            >按住说话</button>
+              data-video-mic-trigger-mode="tap"
+            >点按录音</button>
           </div>
-          <p>${escapeHtml(holdMode ? "只有按住麦克风时才开始识别，松开就会发送。" : "不按按钮也会一直待命，检测到你说话就开始识别。")}</p>
+          <p>${escapeHtml(holdMode ? "点一下麦克风开始录音，再点一下结束并发送。" : "不按按钮也会一直待命，检测到你说话就开始识别。")}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -28711,7 +28819,7 @@ const renderVideoSessionSheet = (state, role) => {
             data-video-setting="speechAutoSubmitDelayMs"
             aria-label="设置你停顿多久后自动发送"
           />
-          <p>${escapeHtml(holdMode ? `当前是按住说话模式，松开发送；这个时长会保留给自动识别模式使用。` : "停到这个时长后，会自动送出这一轮；默认从 5 秒起。")}</p>
+          <p>${escapeHtml(holdMode ? `当前是点按录音模式，这个时长会保留给自动识别模式使用。` : "停到这个时长后，会自动送出这一轮；默认从 5 秒起。")}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -28728,7 +28836,7 @@ const renderVideoSessionSheet = (state, role) => {
             data-video-setting="roleAutoReplyDelayMs"
             aria-label="设置你一直没说话时角色多久主动接话"
           />
-          <p>${escapeHtml(holdMode ? `等角色回复结束后开始计时；你按住说话或松开发送后都会重新计时。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。` : `等回复结束且麦克风待命后开始计时；你一开口就重算。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。`)}</p>
+          <p>${escapeHtml(holdMode ? `等角色回复结束后开始计时；你开始录音或发送后都会重新计时。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。` : `等回复结束且麦克风待命后开始计时；你一开口就重算。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。`)}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -28864,12 +28972,14 @@ const renderVideoSessionSheet = (state, role) => {
                   type="button"
                   ${
                     active && inputMode === "voice" && holdMode
-                      ? 'data-video-hold-mic="true"'
+                      ? 'data-action="toggle-video-tap-record" data-video-hold-mic="true"'
                       : 'data-action="toggle-video-mic-input"'
                   }
                   aria-label="${escapeHtml(
                     active && inputMode === "voice" && holdMode
-                      ? "按住麦克风说话，松开后发送"
+                      ? session.micListening
+                        ? "结束录音并发送"
+                        : "开始录音"
                       : inputMode === "voice"
                       ? `${micIndicatorMeta.label}，点击切到文字输入`
                       : "当前是文字输入，点击切回麦克风",
@@ -29798,7 +29908,9 @@ const VIDEO_SESSION_LOCAL_ASR_TRAILING_MOOD_WORD_PATTERN =
 const VIDEO_SESSION_FRAME_CAPTURE_MIN_INTERVAL_MS = 8000;
 const VIDEO_SESSION_FRAME_BUFFER_LIMIT = 3;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
-const VIDEO_SESSION_MAX_OUTPUT_TOKENS = 65536;
+const VIDEO_SESSION_MAX_OUTPUT_TOKENS = 1200;
+const VIDEO_SESSION_REPLY_TIMEOUT_MS = 120_000;
+const VIDEO_CALL_SUMMARY_TIMEOUT_MS = 190_000;
 const VIDEO_SESSION_RESTART_DELAY_MS = 160;
 const VIDEO_SESSION_BROWSER_SPEECH_READY_GRACE_MS = 420;
 const VIDEO_SESSION_AUTO_SUBMIT_DELAY_MS = 5000;
@@ -29828,7 +29940,7 @@ const createVideoSessionState = () => ({
   startedAt: "",
   responseMode: "text",
   inputMode: "voice",
-  micTriggerMode: "auto",
+  micTriggerMode: "tap",
   cameraFacing: "user",
   minimalMode: true,
   captionSize: 13,
@@ -30346,8 +30458,12 @@ const normalizeVideoSessionSpeechAutoSubmitDelayMs = (value) => {
   return Math.min(VIDEO_SESSION_AUTO_SUBMIT_MAX_MS, Math.max(VIDEO_SESSION_AUTO_SUBMIT_MIN_MS, Math.round(nextValue)));
 };
 
-const normalizeVideoSessionMicTriggerMode = (value) =>
-  String(value || "").trim().toLowerCase() === "hold" ? "hold" : "auto";
+const normalizeVideoSessionMicTriggerMode = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "auto") return "auto";
+  if (normalized === "tap" || normalized === "hold") return "tap";
+  return "tap";
+};
 
 const normalizeVideoSessionRoleAutoReplyDelayMs = (value) => {
   const nextValue = Number(value);
@@ -30605,6 +30721,15 @@ const normalizeSessionState = () => {
     presets: presetEntries.map((entry) => entry.name),
     activePresetName: normalizedPrimaryPreset,
   };
+  if (!state.appConfig.videoTapRecordDefaultApplied) {
+    if (normalizeVideoSessionMicTriggerMode(state.videoSession?.micTriggerMode) === "auto") {
+      state.videoSession = {
+        ...(state.videoSession || createVideoSessionState()),
+        micTriggerMode: "tap",
+      };
+    }
+    state.appConfig.videoTapRecordDefaultApplied = true;
+  }
   state.appConfig.primary.preset = normalizedPrimaryPreset;
   state.appConfig.planner.preset = normalizedPrimaryPreset;
   state.recentStickerIds = [...new Set((Array.isArray(state.recentStickerIds) ? state.recentStickerIds : []).map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 30);
@@ -30710,6 +30835,7 @@ let videoSessionRuntime = {
   pendingVisualAutoReply: false,
   pendingVisualAutoReplyDelayMs: 0,
   roundSubmitting: false,
+  roundAbortController: null,
   pendingReadyCue: false,
   readyCueReason: "",
   readyCueTimer: 0,
@@ -31078,7 +31204,7 @@ const createPersistableVideoSessionSnapshot = (session = state.videoSession || {
     Boolean(session?.minimalMode) ||
     String(session?.responseMode || "").trim() === "voice" ||
     String(session?.inputMode || "").trim() === "text" ||
-    normalizeVideoSessionMicTriggerMode(session?.micTriggerMode) !== "auto" ||
+    normalizeVideoSessionMicTriggerMode(session?.micTriggerMode) !== "tap" ||
     String(session?.cameraFacing || "").trim() === "environment" ||
     Boolean(session?.captionDrawerOpen) ||
     Boolean(session?.historyOpen) ||
@@ -33758,7 +33884,7 @@ const queueVideoSessionReadyCue = (reason = "reply-finished") => {
   videoSessionRuntime.readyCueReason = String(reason || "reply-finished").trim() || "reply-finished";
 };
 
-const getVideoSessionReadyCueMessage = () => (isVideoSessionHoldToTalkMode() ? "按住麦克风说话" : "现在说话");
+const getVideoSessionReadyCueMessage = () => (isVideoSessionTapToRecordMode() ? "点麦克风开始录音" : "现在说话");
 
 const triggerVideoSessionReadyCue = (message = "现在说话") => {
   if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") {
@@ -33803,8 +33929,8 @@ const completeVideoSessionBrowserSpeechWarmup = (recognition) => {
   state.videoSession.speechSupported = true;
   videoSessionRuntime.lastInputReadyAt = Date.now();
   refreshVideoSessionMicHealth({
-    messageOverride: isVideoSessionHoldToTalkMode()
-      ? "绿麦已亮，继续按住说话，松开后发送"
+    messageOverride: isVideoSessionTapToRecordMode()
+      ? "绿麦已亮，正在录音，再点一次麦克风就发送"
       : "绿麦已亮，现在说话会被识别，停顿后自动发送",
     syncNow: true,
   });
@@ -34893,6 +35019,30 @@ const buildRoleTimeContext = (role, now = new Date()) => {
   };
 };
 
+const formatChatTimelineWindowItem = (item = {}) => ({
+  time: String(item?.time || "").trim(),
+  title: String(item?.title || "").trim(),
+  place: String(item?.place || "").trim(),
+  mood: String(item?.mood || "").trim(),
+  detail: truncateContextText(item?.detail || item?.summary || "", 80),
+  npcNames: Array.isArray(item?.npcNames) ? item.npcNames.slice(0, 3) : [],
+});
+
+const buildChatTimelineWindowContext = (role, now = new Date(), { itemLimit = 12 } = {}) => {
+  const todayKey = formatJourneyDayKey(now);
+  const dateKeys = [shiftDateKey(todayKey, -1), todayKey, shiftDateKey(todayKey, 1)];
+  const labels = ["昨天", "今天", "明天"];
+  return dateKeys.map((dateKey, index) => ({
+    key: dateKey,
+    label: labels[index],
+    dateLabel: formatJourneyDateLabel(dateKey),
+    items: getRoleTimelineForDate(role, dateKey)
+      .slice(0, Math.max(1, Number(itemLimit) || 1))
+      .map(formatChatTimelineWindowItem)
+      .filter((item) => item.time || item.title || item.place || item.detail),
+  }));
+};
+
 const WEATHER_SPECIAL_MENTION_RE = /暴雨|大雨|雷雨|雷暴|台风|暴雪|大雪|大风|冰雹|寒潮|高温|酷热|沙尘|强阵雨/i;
 const WEATHER_BAD_OUTDOOR_RE = /雨|雪|雷|风|雾|沙尘|暴/i;
 const WEATHER_OUTDOOR_TIMELINE_RE = /出门|外出|散步|遛|跑步|骑车|通勤|赶路|公园|广场|天台|晒太阳|拍照|取快递|买菜|逛|排队|路上/i;
@@ -35075,6 +35225,10 @@ const buildRoleGenerationContext = (
 
   const enabledWorldbookEntries = worldbookMode === "triggered" ? getTriggeredWorldbookEntries(role, userInput) : getActiveWorldbookSummary(role);
   const roleTimeContext = buildRoleTimeContext(role, now);
+  const chatTimelineWindow = buildChatTimelineWindowContext(role, now, {
+    itemLimit: isVideoMode ? 4 : 12,
+  });
+  const todayTimelineItems = chatTimelineWindow.find((item) => item.label === "今天")?.items || [];
   const compactGoals = getActiveRoleGoals(role).slice(0, isVideoMode ? 3 : 10).map((item) =>
     isVideoMode
       ? {
@@ -35100,18 +35254,12 @@ const buildRoleGenerationContext = (
           }
         : item,
     );
-  const compactTimeline = (role.timeline || []).slice(0, isVideoMode ? 4 : 12).map((item) =>
-    isVideoMode
-      ? {
-          time: String(item?.time || "").trim(),
-          title: String(item?.title || "").trim(),
-          place: String(item?.place || "").trim(),
-          mood: String(item?.mood || "").trim(),
-          detail: truncateContextText(item?.detail || "", 56),
-          npcNames: Array.isArray(item?.npcNames) ? item.npcNames.slice(0, 3) : [],
-        }
-      : item,
-  );
+  const compactTimeline = isVideoMode
+    ? todayTimelineItems.slice(0, 4).map((item) => ({
+        ...item,
+        detail: truncateContextText(item?.detail || "", 56),
+      }))
+    : todayTimelineItems;
   const compactNpcs = (role.npcs || []).slice(0, isVideoMode ? 5 : 16).map((item) =>
     isVideoMode
       ? {
@@ -35181,6 +35329,8 @@ const buildRoleGenerationContext = (
     goals: compactGoals,
     events: compactEvents,
     mapPlaces: compactMapPlaces,
+    timelineScope: "聊天只读取昨天、今天、明天三天行程；timeline 是今天，timelineWindow 是昨天/今天/明天；不要读取或引用更早/更晚日期的旧行程。",
+    timelineWindow: chatTimelineWindow,
     timeline: compactTimeline,
     npcs: compactNpcs,
     worldbook: buildWorldbookContextEntries(enabledWorldbookEntries, {
@@ -35588,7 +35738,7 @@ const buildJourneyGenerationContext = (role, userInput = "", targetDateKey = for
       holiday: getChinaHolidayInfo(normalizedTargetDate),
     },
     continuity: buildJourneyContinuityContext(role, normalizedTargetDate),
-    recentTimeline: (role?.timeline || []).slice(0, 2).map((item) => ({
+    recentTimeline: targetTimeline.slice(0, 2).map((item) => ({
       time: String(item?.time || "").trim(),
       title: String(item?.title || "").trim(),
       place: String(item?.place || "").trim(),
@@ -36249,6 +36399,7 @@ const normalizeModelUsage = (usage = {}) => {
 const estimatePromptTokensFromText = (value = "") => Math.max(0, Math.round(String(value || "").length / 2));
 
 const estimateSerializedChars = (value) => {
+  if (typeof value === "string") return value.length;
   try {
     const text = JSON.stringify(value);
     return typeof text === "string" ? text.length : 0;
@@ -36257,7 +36408,170 @@ const estimateSerializedChars = (value) => {
   }
 };
 
+const compactChatContextValue = (value, { textLimit = 180, itemLimit = 8 } = {}) =>
+  stringifyPlainGenerationContextValue(value, { textLimit, itemLimit });
+
+const buildChatFullArrayLines = (items = [], formatItem) =>
+  (Array.isArray(items) ? items : [])
+    .map((item, index) => formatItem(item, index))
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .join("\n");
+
+const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = null, imageAttachments = [], stickerCatalog = [] } = {}) => {
+  const profile = roleContext?.profile || {};
+  const roleProfileText = [
+    profile?.note || profile?.name,
+    profile?.bio,
+    profile?.publicCard ? `公开资料：${profile.publicCard}` : "",
+    profile?.onlineStyle ? `说话风格：${profile.onlineStyle}` : "",
+    profile?.memorySummary ? `重要记忆：${profile.memorySummary}` : "",
+    profile?.worldbookDraft ? `旧人设草稿：${profile.worldbookDraft}` : "",
+    profile?.currentPlace ? `当前地点：${profile.currentPlace}` : "",
+    profile?.realCityReference || profile?.location ? `城市参考：${profile.realCityReference || profile.location}` : "",
+    profile?.weatherLiveHint || profile?.weather ? `天气：${profile.weatherLiveHint || profile.weather}` : "",
+  ]
+    .filter(Boolean)
+    .join("；");
+
+  const lines = [
+    task ? `任务：${task}` : "",
+    "输出意图：普通聊天协议文本，第一行状态，后面 3 到 6 行消息",
+    roleProfileText ? `角色资料：${roleProfileText}` : "",
+    roleContext?.userProfile ? `用户设定：${compactChatContextValue(roleContext.userProfile, { textLimit: 240, itemLimit: 10 })}` : "",
+    roleContext?.status ? `当前状态：${compactChatContextValue(roleContext.status, { textLimit: 180, itemLimit: 10 })}` : "",
+    roleContext?.currentTime ? `状态与时间：${roleContext.currentTime}` : "",
+    roleContext?.timeContext ? `时间上下文：${compactChatContextValue(roleContext.timeContext, { textLimit: 180, itemLimit: 10 })}` : "",
+    Array.isArray(roleContext?.goals) && roleContext.goals.length
+      ? `目标：${compactChatContextValue(roleContext.goals, { textLimit: 220, itemLimit: 12 })}`
+      : "",
+    Array.isArray(roleContext?.events) && roleContext.events.length
+      ? `突发事件和余波：${compactChatContextValue(roleContext.events, { textLimit: 240, itemLimit: 10 })}`
+      : "",
+    Array.isArray(roleContext?.npcs) && roleContext.npcs.length
+      ? `NPC关系：${compactChatContextValue(roleContext.npcs, { textLimit: 180, itemLimit: 16 })}`
+      : "",
+    Array.isArray(roleContext?.worldbook) && roleContext.worldbook.length
+      ? `世界书：\n${buildChatFullArrayLines(
+          roleContext.worldbook,
+          (entry, index) =>
+            `${index + 1}. ${[entry?.title, entry?.keywords ? `关键词:${entry.keywords}` : "", entry?.content].filter(Boolean).join("｜")}`,
+        )}`
+      : "",
+    Array.isArray(roleContext?.mapPlaces) && roleContext.mapPlaces.length
+      ? `地图地点：${compactChatContextValue(roleContext.mapPlaces, { textLimit: 220, itemLimit: 18 })}`
+      : "",
+    roleContext?.timelineScope ? `行程读取范围：${roleContext.timelineScope}` : "",
+    Array.isArray(roleContext?.timelineWindow) && roleContext.timelineWindow.length
+      ? `聊天行程窗口：${compactChatContextValue(roleContext.timelineWindow, { textLimit: 240, itemLimit: 8 })}`
+      : "",
+    Array.isArray(roleContext?.timeline) && roleContext.timeline.length
+      ? `当天行程：${compactChatContextValue(roleContext.timeline, { textLimit: 220, itemLimit: 12 })}`
+      : "",
+    roleContext?.monitor ? `生活轨迹近况：${compactChatContextValue(roleContext.monitor, { textLimit: 240, itemLimit: 10 })}` : "",
+    roleContext?.dailyLifeMemory
+      ? `今日生活记忆：${compactChatContextValue(roleContext.dailyLifeMemory, { textLimit: 260, itemLimit: 10 })}`
+      : "",
+    Array.isArray(roleContext?.memory) && roleContext.memory.length
+      ? `重要记忆：\n${roleContext.memory.map((item, index) => `${index + 1}. ${String(item || "").trim()}`).join("\n")}`
+      : "",
+    Array.isArray(roleContext?.summaryArchive) && roleContext.summaryArchive.length
+      ? `自动总结：\n${roleContext.summaryArchive.map((item, index) => `${index + 1}. ${String(item || "").trim()}`).join("\n")}`
+      : "",
+    Array.isArray(roleContext?.videoCallSummaries) && roleContext.videoCallSummaries.length
+      ? `视频总结：${compactChatContextValue(roleContext.videoCallSummaries, { textLimit: 220, itemLimit: 6 })}`
+      : "",
+    Array.isArray(roleContext?.recentMessages) && roleContext.recentMessages.length
+      ? `最近聊天：\n${roleContext.recentMessages.join("\n")}`
+      : "",
+    userInput ? `本轮用户输入：${String(userInput || "").trim()}` : "",
+  ];
+
+  if (Array.isArray(imageAttachments) && imageAttachments.length) {
+    lines.push(
+      "图片附件：",
+      imageAttachments
+        .map((item, index) => `图片${index + 1} ${[item?.name || "", item?.timestamp || ""].filter(Boolean).join(" ")}`)
+        .join("\n"),
+    );
+  }
+
+  if (Array.isArray(stickerCatalog) && stickerCatalog.length) {
+    lines.push(
+      "表情目录：",
+      stickerCatalog
+        .map((item, index) =>
+          [
+            `${index + 1}. ${String(item?.description || "").trim()}`,
+            String(item?.groupName || "").trim() ? `分组:${String(item.groupName).trim()}` : "",
+            item?.recentlyUsed ? "最近用过" : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        )
+        .join("\n"),
+    );
+  }
+
+  return lines.filter(Boolean).join("\n\n");
+};
+
+const getPlainTextBreakdownMeta = (label = "") => {
+  const normalized = String(label || "").trim();
+  if (["任务", "输出意图", "本轮用户输入"].includes(normalized)) return { key: "task", label: "本轮任务" };
+  if (normalized === "角色资料") return { key: "profile", label: "角色资料" };
+  if (normalized === "用户设定") return { key: "userProfile", label: "用户资料" };
+  if (["当前状态", "生活轨迹近况"].includes(normalized)) return { key: "status", label: "状态与时间" };
+  if (["目标", "突发事件和余波", "概率设置"].includes(normalized)) return { key: "goals", label: "目标事件" };
+  if (["地图地点", "行程读取范围", "聊天行程窗口", "当天行程", "昨日与当日连续性"].includes(normalized)) {
+    return { key: "mapTimeline", label: "地图行程" };
+  }
+  if (normalized === "世界书") return { key: "worldbook", label: "世界书" };
+  if (normalized === "NPC关系") return { key: "npcs", label: "NPC" };
+  if (normalized === "最近聊天") return { key: "recentMessages", label: "最近消息" };
+  if (normalized === "自动总结") return { key: "summaryArchive", label: "总结记忆" };
+  if (normalized === "重要记忆") return { key: "memory", label: "长期记忆" };
+  if (normalized === "图片附件") return { key: "images", label: "图片附件" };
+  if (normalized === "表情目录") return { key: "stickers", label: "表情目录" };
+  return { key: "plainContext", label: "纯文本上下文" };
+};
+
+const buildPlainTextPromptBreakdown = (systemPromptText = "", contextPayload = {}) => {
+  const items = [];
+  const pushChars = (key, label, chars) => {
+    const safeChars = Math.max(0, Number(chars || 0) || 0);
+    if (!safeChars) return;
+    const existing = items.find((item) => item.key === key);
+    if (existing) {
+      existing.chars += safeChars;
+      return;
+    }
+    items.push({ key, label, chars: safeChars });
+  };
+
+  pushChars("rules", "规则文本", String(systemPromptText || "").length);
+  const plainText = String(contextPayload?.plainTextContext || "").trim();
+  if (plainText) {
+    plainText.split(/\n{2,}/).forEach((block) => {
+      const text = String(block || "").trim();
+      if (!text) return;
+      const labelMatch = text.match(/^([^：:\n]{1,24})[：:]/);
+      const meta = getPlainTextBreakdownMeta(labelMatch?.[1] || "");
+      pushChars(meta.key, meta.label, text.length);
+    });
+  }
+
+  return items;
+};
+
 const buildPromptBreakdown = (systemPromptText = "", contextPayload = {}) => {
+  if (
+    String(contextPayload?.outputRules?.contextFormat || "").trim() === "plain-text" &&
+    String(contextPayload?.plainTextContext || "").trim()
+  ) {
+    return buildPlainTextPromptBreakdown(systemPromptText, contextPayload);
+  }
+
   const roleContext = contextPayload?.roleContext || {};
   const sections = [
     { key: "rules", label: "规则文本", value: String(systemPromptText || "") },
@@ -36298,6 +36612,8 @@ const buildPromptBreakdown = (systemPromptText = "", contextPayload = {}) => {
       label: "地图行程",
       value: {
         mapPlaces: roleContext?.mapPlaces,
+        timelineScope: roleContext?.timelineScope,
+        timelineWindow: roleContext?.timelineWindow,
         timeline: roleContext?.timeline,
       },
     },
@@ -39599,7 +39915,7 @@ const flattenChatProtocolItemsToText = (items = []) =>
 
 const parseChatProtocolImageContent = (value = "") => {
   const segments = String(value || "")
-    .split(/[｜|]/g)
+    .split(/[｜|丨]/g)
     .map((item) => sanitizeChatLine(item))
     .filter(Boolean);
   if (!segments.length) return null;
@@ -39879,6 +40195,17 @@ const requestPrimaryChatReplyRescueRewrite = async (
     : [];
   const hasImageAttachments = normalizedImageAttachments.length > 0;
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role);
+  const roleContext = buildChatFullRoleContext(role, {
+    userInput,
+    generationMode: "chat",
+  });
+  const plainTextContext = buildChatPlainTextContext({
+    task: "把偏短或半截的聊天草稿重写成完整自然的 3 到 6 条聊天回复",
+    userInput,
+    roleContext,
+    imageAttachments: normalizedImageAttachments,
+    stickerCatalog,
+  });
   const response = await requestPrimaryModelText({
     systemPrompt: `你现在只负责把一轮偏短或半截的聊天草稿重写成完整版本
 不要输出 JSON 不要解释 不要标题 不要编号 不要项目符号
@@ -39898,11 +40225,11 @@ const requestPrimaryChatReplyRescueRewrite = async (
 问号和感叹号只在语气自然需要时使用 不要每条消息都带
 不要输出 emoji 颜文字或表情符号 不要单独一行只发一个 emoji
 不要把“我这会儿在线”“这会儿在线”“我还在这边”“在线中”这种报在线状态的话当成正式回复正文
-你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、当天行程 timeline/timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
+你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${hasImageAttachments ? "如果 payload.imageAttachments 里带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再重写回复 看不清的部分不要硬编" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
-${forceImageReply ? "这轮用户明确要看图或照片 后面的消息里必须至少有 1 行使用 [图片] 标签，格式写成 [图片] 上帝视角照片描述｜地点；把它当成文字版图片卡片，不需要真实图片文件" : ""}
+${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行消息里必须至少有 1 行使用 [图片] 标签，图片卡本身算一条消息，优先放在第 2 到第 4 行，格式写成 [图片] 上帝视角照片描述｜地点；必须由你根据当前角色和现场上下文新写具体照片描述，不能只写泛泛模板，也不能省略图片卡；把它当成文字版图片卡片，不需要真实图片文件" : ""}
 ${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从 payload.stickerCatalog 里挑一个最近没发过的现有描述" : ""}
 ${forceVoiceReply ? "这轮用户明确要求语音回复 所以后面的消息里必须至少有 1 行使用 [语音] 标签 并且内容适合直接念出来" : ""}
 ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你返回的消息里必须有一行严格等于这句原话：${JSON.stringify(explicitVoiceTargetText)}` : ""}
@@ -39916,11 +40243,10 @@ ${dailyLifeMemoryPrompt}
       draftReply: seedText,
       imageAttachments: normalizedImageAttachments,
       stickerCatalog,
-      roleContext: buildChatFullRoleContext(role, {
-        userInput,
-        generationMode: "chat",
-      }),
+      roleContext,
+      plainTextContext,
       outputRules: {
+        contextFormat: "plain-text",
         unbounded: true,
       },
     },
@@ -39976,6 +40302,17 @@ const requestPrimaryChatReplyTextFallback = async (
     : [];
   const hasImageAttachments = normalizedImageAttachments.length > 0;
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role);
+  const roleContext = buildChatFullRoleContext(role, {
+    userInput,
+    generationMode: "chat",
+  });
+  const plainTextContext = buildChatPlainTextContext({
+    task: "当结构化回复不稳定时 用纯文本格式生成同一轮聊天回复",
+    userInput,
+    roleContext,
+    imageAttachments: normalizedImageAttachments,
+    stickerCatalog,
+  });
   const response = await requestPrimaryModelText({
     systemPrompt: `你现在只负责生成聊天协议文本
 不要输出 JSON 不要解释 不要标题 不要编号 不要项目符号
@@ -39993,11 +40330,11 @@ const requestPrimaryChatReplyTextFallback = async (
 问号和感叹号只在语气自然需要时使用 不要每条消息都带
 不要输出 emoji 颜文字或表情符号 不要单独一行只发一个 emoji
 不要把“我这会儿在线”“这会儿在线”“我还在这边”“在线中”这种报在线状态的话当成正式回复正文
-你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、当天行程 timeline/timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
+你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${hasImageAttachments ? "如果 payload.imageAttachments 里带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再回复 看不清的部分不要硬编 更不能把没看到的食物 商品 地点或品牌说成看到了" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
-${forceImageReply ? "这轮用户明确要看图或照片 后面的消息里必须至少有 1 行使用 [图片] 标签，格式写成 [图片] 上帝视角照片描述｜地点；把它当成文字版图片卡片，不需要真实图片文件" : ""}
+${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行消息里必须至少有 1 行使用 [图片] 标签，图片卡本身算一条消息，优先放在第 2 到第 4 行，格式写成 [图片] 上帝视角照片描述｜地点；必须由你根据当前角色和现场上下文新写具体照片描述，不能只写泛泛模板，也不能省略图片卡；把它当成文字版图片卡片，不需要真实图片文件" : ""}
 ${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从 payload.stickerCatalog 里挑一个最近没发过的现有描述" : ""}
 ${forceVoiceReply ? "这轮用户明确要求语音回复 所以后面的消息里必须至少有 1 行使用 [语音] 标签 并且内容适合直接念出来" : ""}
 ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你返回的消息里必须有一行严格等于这句原话：${JSON.stringify(explicitVoiceTargetText)}` : ""}
@@ -40009,11 +40346,10 @@ ${dailyLifeMemoryPrompt}
       userInput,
       imageAttachments: normalizedImageAttachments,
       stickerCatalog,
-      roleContext: buildChatFullRoleContext(role, {
-        userInput,
-        generationMode: "chat",
-      }),
+      roleContext,
+      plainTextContext,
       outputRules: {
+        contextFormat: "plain-text",
         unbounded: true,
       },
     },
@@ -40067,7 +40403,7 @@ const requestAutonomousChatReplyTextFallback = async (
 不要JSON、解释、编号、旁白、括号动作、emoji、在线状态播报。
 每条消息行尾不要出现中文句号
 问号和感叹号只在语气自然需要时使用 不要每条消息都带
-必须读取 payload.roleContext 的完整上下文：用户人设、角色人设、世界书、重要记忆、自动总结、最近聊天、当天行程、生活轨迹、突发事件、地图、NPC 和目标。
+必须读取 payload.roleContext 的完整上下文：用户人设、角色人设、世界书、重要记忆、自动总结、最近聊天、行程只读取 timelineWindow 里的昨天/今天/明天三天（不要引用更早或更晚旧行程）、生活轨迹、突发事件、地图、NPC 和目标。
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
@@ -40127,7 +40463,7 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null } = {}) 
   const forceVoiceReply = explicitVoiceDirective.forceVoice && hasReadyVoiceConfig(role);
   const explicitVoiceTargetText = forceVoiceReply ? explicitVoiceDirective.targetText : "";
   const recentStickerDescriptions = getRecentAiStickerDescriptions(role, 4);
-  const stickers = (state.sharedStickers || []).slice(0, 40).map((item) => ({
+  const stickers = (state.sharedStickers || []).map((item) => ({
     description: item.description,
     url: item.url,
     groupName: String(item.groupName || "").trim(),
@@ -40159,6 +40495,12 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null } = {}) 
     const items = normalizeChatReplyItems(result);
     if (!items.length) return "没有生成有效消息";
     if (items.some((item) => item.type === "text" && !item.content)) return "存在空白文本消息";
+    if (
+      forceImageReply &&
+      !items.some((item) => item.type === "image" && item.content && typeof item.content === "object" && item.content.description)
+    ) {
+      return "用户明确要看图 但没有返回文字版图片卡";
+    }
     const promptLeakAnalysis = analyzeChatPromptLeakTexts([
       sanitizeChatLine(result?.status || ""),
       ...items.flatMap((item) => {
@@ -40928,6 +41270,25 @@ const shouldAllowAiImageMessage = (role, { userInput = "" } = {}) => {
   return Math.random() * 100 < chance;
 };
 
+const shouldKeepAiGeneratedImageMessage = (role, { userInput = "", force = false } = {}) => {
+  if (force || isExplicitImageRequest(userInput)) return true;
+  if (!role || !getRoleCurrentPlace(role)) return false;
+  const chance = clampValue(Number(role?.settings?.imageMessageChance ?? AI_IMAGE_REPLY_CHANCE * 100) || 0, 0, 100);
+  if (chance <= 0) return false;
+
+  const lastAiImage = (role?.chats?.messages || [])
+    .slice()
+    .reverse()
+    .find((item) => item?.role === "ai" && (item?.type === "image" || item?.type === "photo"));
+  const lastAiImageAt = parseValidTimestamp(lastAiImage?.timestamp || "");
+  if (lastAiImageAt && Date.now() - lastAiImageAt.getTime() < AI_IMAGE_REPLY_COOLDOWN_MS) {
+    return false;
+  }
+  if (hasRecentAiImageMessage(role)) return false;
+
+  return true;
+};
+
 const shouldAllowAiStickerMessage = (role, { matchedCount = 0, now = new Date(), force = false } = {}) => {
   if (!role || !state.sharedStickers?.length) return false;
   if (force) return true;
@@ -40982,7 +41343,7 @@ const applyAiImagePolicyToMessages = (role, messages, { userInput = "", forceIma
   if (!list.length) {
     return list;
   }
-  const allowImage = forceImage || shouldAllowAiImageMessage(role, { userInput });
+  const keepGeneratedImage = shouldKeepAiGeneratedImageMessage(role, { userInput, force: forceImage });
 
   let nextList = list;
   const imageMessages = list.filter((item) => item?.role === "ai" && item?.type === "image");
@@ -40990,22 +41351,10 @@ const applyAiImagePolicyToMessages = (role, messages, { userInput = "", forceIma
     let keptImage = false;
     nextList = list.filter((item) => {
       if (item?.role !== "ai" || item?.type !== "image") return true;
-      if (!allowImage || keptImage) return false;
+      if (!keepGeneratedImage || keptImage) return false;
       keptImage = true;
       return true;
     });
-  } else if (allowImage) {
-    const fallbackImage = maybeCreateAiImageReply(role, userInput, {
-      force: forceImage,
-      prechecked: true,
-    });
-    if (fallbackImage) {
-      attachMessageMediaDebug(fallbackImage, {
-        mediaType: "image",
-        trigger: getMediaDebugTrigger(forceImage),
-      });
-      nextList = insertReplyAtRandomPosition(list, fallbackImage);
-    }
   }
 
   if (preserveMinCount > 0 && nextList.length < preserveMinCount) {
@@ -42859,6 +43208,45 @@ const doesSummaryPromptRequestFullHistoryArchive = (prompt = "") => {
   return hitCount >= 2;
 };
 
+const buildSummaryGenerationRoleContext = (role, messages = [], { currentSummary = "" } = {}) => {
+  const firstTimestamp = messages.find((item) => String(item?.timestamp || "").trim())?.timestamp || "";
+  const lastTimestamp =
+    [...messages].reverse().find((item) => String(item?.timestamp || "").trim())?.timestamp || firstTimestamp || new Date().toISOString();
+  const anchorDate = new Date(lastTimestamp || firstTimestamp || Date.now());
+  const safeDate = Number.isFinite(anchorDate.getTime()) ? anchorDate : new Date();
+  const userName = String(state?.userProfile?.nickname || "用户").trim() || "用户";
+  const roleName = String(role?.profile?.note || role?.profile?.name || "角色").trim() || "角色";
+  const summaryBlocks = String(currentSummary || role?.chats?.summaryArchive || "")
+    .split("────────────────────────────────")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(-2)
+    .map((item) => truncateContextText(item, 500));
+  return {
+    profile: {
+      note: roleName,
+      name: roleName,
+    },
+    userProfile: {
+      nickname: userName,
+    },
+    summaryArchive: summaryBlocks,
+    currentTime: safeDate.toLocaleString("zh-CN", { hour12: false }),
+    currentTimePlainText: safeDate.toLocaleString("zh-CN", { hour12: false }),
+    currentDateKey: formatJourneyDayKey(safeDate),
+  };
+};
+
+const buildSummaryGenerationReferenceCatalog = (role, { currentSummary = "" } = {}) => ({
+  worldbookTitles: [],
+  npcNames: [],
+  mapPlaceNames: [],
+  timelineRefs: [],
+  goalTitles: [],
+  memorySnippets: [],
+  summarySnippets: buildSummaryReferenceSnippets(currentSummary || role?.chats?.summaryArchive || ""),
+});
+
 const normalizeSummaryGenerationErrorMessage = (error, prompt = "") => {
   const rawMessage = String(error?.message || "").trim();
   return rawMessage;
@@ -42866,11 +43254,12 @@ const normalizeSummaryGenerationErrorMessage = (error, prompt = "") => {
 
 const generateSummaryText = async ({ role, messages, currentSummary = "", promptText = "" }) => {
   const effectivePrompt = String(promptText || role.chats.summaryPrompt || DEFAULT_SUMMARY_PROMPT).trim();
-  const referenceCatalog = buildRoleReferenceCatalog(role, {
-    summaryArchive: currentSummary || role.chats.summaryArchive || "",
+  const referenceCatalog = buildSummaryGenerationReferenceCatalog(role, {
+    currentSummary,
   });
   const buildSummarySystemPrompt = () => `你是长期记忆总结器
-你只负责基于 payload.messages 里的这批聊天记录，以及 currentSummary 提供的已有总结上下文，按用户给出的自动总结提示词输出最终总结正文
+你只负责基于 payload.messages 里的这批聊天记录，以及 currentSummary 提供的少量已有总结上下文，按用户给出的自动总结提示词输出本轮对话归档正文
+自动总结的目标是归档“这最近一批消息都聊了什么”，不是提炼重要记忆，不是更新人物档案，也不是改写成全历史总结
 不要输出 JSON 不要解释过程 不要补充“以下是总结”之类套话
 只能根据现有输入总结，不允许编造新事实 新身份 新地点 新关系 新经历
 如果用户提示词没有指定格式，就输出自然的纯文本正文
@@ -42878,11 +43267,11 @@ const generateSummaryText = async ({ role, messages, currentSummary = "", prompt
 用户的自动总结提示词：
 ${effectivePrompt}`;
   const buildSummaryPayload = () => ({
-    task: currentSummary ? "根据已有总结重新精简和整理总结内容" : "根据最近对话生成新的长期记忆总结",
+    task: currentSummary ? "根据已有归档上下文整理这一批最近对话的归档总结" : "根据最近对话生成新的对话归档总结",
     summaryPrompt: effectivePrompt,
     currentSummary,
-    roleContext: buildRoleGenerationContext(role, {
-      generationMode: "summary",
+    roleContext: buildSummaryGenerationRoleContext(role, messages, {
+      currentSummary,
     }),
     referenceCatalog,
     hardConstraints: {
@@ -43692,7 +44081,7 @@ const runAutoSummaryForRole = async (roleId, { force = false } = {}) => {
     return;
   }
 
-  state.importantMemoryUpdateBusyRoleId = roleId;
+  state.summaryGenerationBusyRoleId = roleId;
   paint();
 
   try {
@@ -43708,7 +44097,7 @@ const runAutoSummaryForRole = async (roleId, { force = false } = {}) => {
     console.error("[summary] auto failed", error);
     setToast(error?.message || "副 API 调用失败，未生成总结");
   } finally {
-    state.importantMemoryUpdateBusyRoleId = null;
+    state.summaryGenerationBusyRoleId = null;
     paint();
   }
 };
@@ -43842,7 +44231,7 @@ const runSummaryArchiveRefine = async (roleId) => {
 const runImportantMemoryUpdateForRole = async (roleId) => {
   const role = getRoleById(state, roleId);
   if (!role) return;
-  if (state.summaryGenerationBusyRoleId) return;
+  if (state.summaryGenerationBusyRoleId || state.importantMemoryUpdateBusyRoleId) return;
 
   const currentSummary = String(role.chats?.summaryArchive || "").trim();
   if (!currentSummary) {
@@ -43851,7 +44240,7 @@ const runImportantMemoryUpdateForRole = async (roleId) => {
   }
 
   const currentImportantMemory = getRoleImportantMemoryText(role);
-  state.summaryGenerationBusyRoleId = roleId;
+  state.importantMemoryUpdateBusyRoleId = roleId;
   paint();
 
   try {
@@ -43874,7 +44263,7 @@ const runImportantMemoryUpdateForRole = async (roleId) => {
     console.error("[important-memory] run failed", error);
     setToast(error?.message || "重要记忆更新失败");
   } finally {
-    state.summaryGenerationBusyRoleId = null;
+    state.importantMemoryUpdateBusyRoleId = null;
     paint();
   }
 };
@@ -48773,6 +49162,8 @@ const buildPureTextGenerationContext = ({
   const contextMapPlaces = roleContext?.mapPlaces || journeyContext?.mapPlaces || slimContext?.placeOptions || [];
   const contextNpcs = roleContext?.npcs || journeyContext?.npcs || slimContext?.npcNames || [];
   const contextWorldbook = roleContext?.worldbook || journeyContext?.worldbook || [];
+  const contextTimelineScope = roleContext?.timelineScope || "";
+  const contextTimelineWindow = roleContext?.timelineWindow || [];
   const contextTimeline = journeyContext?.timeline || roleContext?.timeline || [];
   const contextContinuity = journeyContext?.continuity || slimContext?.continuity || {};
   const contextRecentMessages = roleContext?.recentMessages || [];
@@ -48802,6 +49193,8 @@ const buildPureTextGenerationContext = ({
     ["NPC关系", contextNpcs],
     ["世界书", contextWorldbook],
     ["地图地点", contextMapPlaces],
+    ["行程读取范围", contextTimelineScope],
+    ["聊天行程窗口", contextTimelineWindow],
     ["当天行程", contextTimeline],
     ["生活轨迹近况", contextMonitor],
     ["突发事件和余波", contextEvents],
@@ -49043,9 +49436,11 @@ const requestPrimaryVideoReplyFallback = async (
     referenceCatalog = buildRoleReferenceCatalog(role),
     roundContext = null,
     requestTrace = null,
+    signal = null,
   } = {},
 ) => {
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
+  if (signal?.aborted) throw createAbortRequestError();
   const stableVideoConfig = getStableVideoPrimaryApiConfig();
   const originalVideoConfig = getPrimaryApiConfig();
   const preferredVariantMode = shouldUseGeminiCompatibleMode(stableVideoConfig) ? "openai-fallback" : "openai-standard";
@@ -49126,6 +49521,7 @@ ${roundPromptBlock}
     preferredVariantMode,
     singleVariant: true,
     requestTrace,
+    signal,
   });
   const repaired = buildChatLikePayloadFromProtocolText(role, apiResponse?.text || "", {
     referenceCatalog,
@@ -49190,9 +49586,11 @@ const requestPrimaryVideoReplyTextRescue = async (
     referenceCatalog = buildRoleReferenceCatalog(role),
     roundContext = null,
     requestTrace = null,
+    signal = null,
   } = {},
 ) => {
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
+  if (signal?.aborted) throw createAbortRequestError();
   const primaryVideoConfig = getPrimaryApiConfig();
   const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryVideoConfig) ? "openai-fallback" : "openai-standard";
   const roleContext = buildRoleGenerationContext(role, {
@@ -49268,6 +49666,7 @@ ${roundPromptBlock}
     preferredVariantMode,
     singleVariant: true,
     requestTrace,
+    signal,
   });
   const repaired = buildChatLikePayloadFromProtocolText(role, response?.text || "", {
     referenceCatalog,
@@ -53768,22 +54167,6 @@ const formatCurrentPlacePresenceText = (currentPlace = "") => {
   return isJourneyLivingSpacePlace(safePlace) ? `这会在${safePlace}` : `还在${safePlace}`;
 };
 
-const buildAiImageReplyDescriptions = (role, currentPlace = "") => {
-  const roleName = role?.profile?.note || role?.profile?.name || "对方";
-  if (isJourneyLivingSpacePlace(currentPlace)) {
-    return [
-      `${roleName}回到${currentPlace}后顺手拍下的一张照片，灯光和呼吸都慢下来了，整个人像终于能把今天放回自己手里`,
-      `${roleName}在${currentPlace}留下的近景照片，外面的热气还没完全散掉，但情绪已经先一步安静下来`,
-      `${roleName}窝回${currentPlace}时拍的一张照片，画面里的细节很轻，像刚把门关上准备好好歇一会儿`,
-    ];
-  }
-  return [
-    `${roleName}在${currentPlace}随手拍下的一张照片，光线落在侧脸和手边的细节上，整个人看起来还带着刚刚那段情绪`,
-    `${roleName}停在${currentPlace}时留下的照片，画面里的人影被环境光轻轻包住，气氛安静得像刚说完一句真心话`,
-    `${roleName}此刻在${currentPlace}留下的近景照片，衣角和发梢都沾着现场的气味，状态看上去比嘴上说的更真实`,
-  ];
-};
-
 const buildLocalMomentFallback = (role) => {
   const leadGoal = role.goals?.[0]?.title || "今天的安排";
   const currentPlace = getRoleCurrentPlace(role);
@@ -54368,19 +54751,7 @@ const mergeAdjacentAiTextMessages = (messages = []) => {
 };
 
 const maybeCreateAiImageReply = (role, input, { force = false, prechecked = false } = {}) => {
-  const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前位置";
-  if (!force && !prechecked && !shouldAllowAiImageMessage(role, { userInput: input })) return null;
-
-  const descriptions = buildAiImageReplyDescriptions(role, currentPlace);
-
-  return createMessage({
-    role: "ai",
-    type: "image",
-    content: {
-      place: currentPlace,
-      description: pickRandomItem(descriptions),
-    },
-  });
+  return null;
 };
 
 const buildLocalReplyBatch = (role, content, { allowImage = true, allowSticker = true } = {}) => {
@@ -55140,46 +55511,6 @@ const repairPersistedReferenceCityStatusLeaks = () => {
 
 repairPersistedReferenceCityStatusLeaks();
 
-const buildVideoCallDeterministicSummary = (role, transcriptItems = []) => {
-  const items = (Array.isArray(transcriptItems) ? transcriptItems : []).filter((item) => String(item?.text || "").trim());
-  if (!items.length) return "";
-  const { userName, roleName } = getVideoCallSpeakerLabels(role);
-  const userTurns = items
-    .filter((item) => item.role !== "ai")
-    .map((item) => sanitizeChatLine(String(item.text || "").trim()))
-    .filter(Boolean);
-  const roleTurns = items
-    .filter((item) => item.role === "ai")
-    .map((item) => sanitizeChatLine(String(item.text || "").trim()))
-    .filter(Boolean);
-  const trimSnippet = (value = "", maxLength = 30) => {
-    const text = sanitizeChatLine(String(value || "").trim());
-    if (!text) return "";
-    return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
-  };
-  const userLead = trimSnippet(userTurns[0] || "");
-  const userFollow = trimSnippet(userTurns[1] || "");
-  const roleLead = trimSnippet(roleTurns[0] || "");
-  const roleFollow = trimSnippet(roleTurns[1] || "");
-
-  const summaryParts = [];
-  if (userLead) {
-    summaryParts.push(`${userName}先提到${userLead}`);
-  }
-  if (roleLead) {
-    summaryParts.push(`${roleName}回应了${roleLead}`);
-  }
-  if (userFollow) {
-    summaryParts.push(`${userName}后来又补充${userFollow}`);
-  }
-  if (roleFollow) {
-    summaryParts.push(`${roleName}接着说${roleFollow}`);
-  }
-
-  if (!summaryParts.length) return "";
-  return `${userName}和${roleName}进行了一次视频通话，${summaryParts.join("，")}。`;
-};
-
 const generateVideoCallSummaryText = async (role, transcriptItems = [], { forceApi = false } = {}) => {
   const items = (Array.isArray(transcriptItems) ? transcriptItems : []).filter((item) => String(item?.text || "").trim());
   if (!hasSecondaryApiConfig()) {
@@ -55189,8 +55520,10 @@ const generateVideoCallSummaryText = async (role, transcriptItems = [], { forceA
   const { userName, roleName } = getVideoCallSpeakerLabels(role);
 
   try {
-    const apiResponse = await requestSecondaryModelText({
-      systemPrompt: `你现在只负责整理一次已经结束的视频通话。
+    const apiResponse = await runAbortableTaskWithTimeout(
+      (timeoutSignal) =>
+        requestSecondaryModelText({
+          systemPrompt: `你现在只负责整理一次已经结束的视频通话。
 - 不要输出 JSON 不要解释过程 不要 Markdown
 - 不要编造记录里没有出现的新事实
 - 你必须明确区分用户和角色：用户名字是「${userName}」，角色名字是「${roleName}」
@@ -55201,27 +55534,31 @@ const generateVideoCallSummaryText = async (role, transcriptItems = [], { forceA
 - 不要写“总结如下”“本次通话中”这种机械开场
 - 如果记录里提到时间、地点、情绪或约定，可以保留
 直接输出最终总结正文`,
-      payload: {
-        task: "根据视频通话文字记录生成简短总结",
-        roleName,
-        userName,
-        transcriptItems: items.map((item) => ({
-          role: item.role === "ai" ? "ai" : "user",
-          speakerName: item.role === "ai" ? roleName : userName,
-          mode: item.mode === "voice" ? "voice" : "text",
-          timestamp: item.timestamp,
-          text: sanitizeChatLine(String(item.text || "").trim()),
-        })),
-        outputRules: {
-          maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
-          concise: true,
-        },
-      },
-      includeMeta: true,
-      rejectFinishReasonLength: false,
-      temperatureOverride: 0.2,
-      singleVariant: true,
-    });
+          payload: {
+            task: "根据视频通话文字记录生成简短总结",
+            roleName,
+            userName,
+            transcriptItems: items.map((item) => ({
+              role: item.role === "ai" ? "ai" : "user",
+              speakerName: item.role === "ai" ? roleName : userName,
+              mode: item.mode === "voice" ? "voice" : "text",
+              timestamp: item.timestamp,
+              text: sanitizeChatLine(String(item.text || "").trim()),
+            })),
+            outputRules: {
+              maxOutputTokens: 320,
+              concise: true,
+            },
+          },
+          includeMeta: true,
+          rejectFinishReasonLength: false,
+          temperatureOverride: 0.2,
+          singleVariant: true,
+          signal: timeoutSignal,
+        }),
+      VIDEO_CALL_SUMMARY_TIMEOUT_MS,
+      "视频通话总结超过 3 分钟未完成，已保留原始文字记录",
+    );
     const summary = normalizeVideoCallSummaryText(apiResponse?.text || "");
     if (!summary) {
       throw attachModelMetaToError(new Error("缺少视频通话总结"), apiResponse?.meta || null, {
@@ -55250,8 +55587,6 @@ const generateVideoCallSummaryText = async (role, transcriptItems = [], { forceA
       meta: error?.modelMeta || null,
       errorMessage: error?.message || "视频通话总结失败",
     });
-    const fallbackSummary = buildVideoCallDeterministicSummary(role, items);
-    if (fallbackSummary) return fallbackSummary;
     throw error;
   }
 };
@@ -55362,7 +55697,6 @@ const createVideoCallRecordMessage = (role, session = state.videoSession || {}, 
   const durationMs = Math.max(0, new Date(endedAt).getTime() - new Date(startedAt).getTime());
   const transcriptItems = getVideoSessionTranscriptItems(session);
   const { userName, roleName } = getVideoCallSpeakerLabels(role);
-  const localSummary = buildVideoCallDeterministicSummary(role, transcriptItems);
 
   return createMessage({
     role: "user",
@@ -55377,11 +55711,11 @@ const createVideoCallRecordMessage = (role, session = state.videoSession || {}, 
       durationLabel: formatVideoCallDurationLabel(durationMs),
       userDisplayName: userName,
       transcriptItems,
-      summary: localSummary,
-      summaryStatus: transcriptItems.length ? (localSummary ? "ready" : "pending") : "empty",
+      summary: "",
+      summaryStatus: transcriptItems.length ? "pending" : "empty",
       summaryError: "",
-      summarySource: localSummary ? "local" : "",
-      summaryUpdatedAt: localSummary ? endedAt : "",
+      summarySource: "",
+      summaryUpdatedAt: "",
     },
   });
 };
@@ -55435,7 +55769,9 @@ const requestVideoCallSummary = async (roleId, messageId, { force = false } = {}
   const transcriptItems = Array.isArray(existingContent.transcriptItems)
     ? existingContent.transcriptItems.filter((item) => String(item?.text || "").trim())
     : [];
-  const existingSummary = sanitizeChatLine(String(existingContent.summary || "").trim());
+  const existingSummarySource = String(existingContent.summarySource || "").trim();
+  const existingSummary =
+    existingSummarySource === "local" ? "" : sanitizeChatLine(String(existingContent.summary || "").trim());
 
   if (!transcriptItems.length) {
     updateVideoCallMessageContent(roleId, messageId, (content) => ({
@@ -55455,8 +55791,11 @@ const requestVideoCallSummary = async (roleId, messageId, { force = false } = {}
   setVideoCallSummaryBusy(messageId, true);
   updateVideoCallMessageContent(roleId, messageId, (content) => ({
     ...content,
+    summary: existingSummary,
     summaryStatus: existingSummary ? String(content?.summaryStatus || "").trim() || "ready" : "pending",
     summaryError: "",
+    summarySource: existingSummary ? String(content?.summarySource || "").trim() : "",
+    summaryUpdatedAt: existingSummary ? String(content?.summaryUpdatedAt || "").trim() : "",
   }));
   paint();
 
@@ -55485,8 +55824,11 @@ const requestVideoCallSummary = async (roleId, messageId, { force = false } = {}
   } catch (error) {
     updateVideoCallMessageContent(roleId, messageId, (content) => ({
       ...content,
+      summary: existingSummary,
       summaryStatus: "error",
       summaryError: error?.message || "这次通话总结暂时没整理出来",
+      summarySource: existingSummary ? String(content?.summarySource || "").trim() : "",
+      summaryUpdatedAt: existingSummary ? String(content?.summaryUpdatedAt || "").trim() : "",
     }));
     return false;
   } finally {
@@ -55539,18 +55881,33 @@ const getVideoSessionIdleStatus = () => {
   return state.videoSession?.speechSupported ? "listening" : "manual";
 };
 
-const isVideoSessionHoldToTalkMode = (session = state.videoSession) =>
-  normalizeVideoSessionMicTriggerMode(session?.micTriggerMode) === "hold";
+const isVideoSessionTapToRecordMode = (session = state.videoSession) =>
+  normalizeVideoSessionMicTriggerMode(session?.micTriggerMode) === "tap";
 
 const shouldAutoStartVideoSessionRecognition = (session = state.videoSession) => {
   const inputMode = String(session?.inputMode || "voice").trim() === "text" ? "text" : "voice";
-  return inputMode === "voice" && !isVideoSessionHoldToTalkMode(session);
+  return inputMode === "voice" && !isVideoSessionTapToRecordMode(session);
 };
 
-const resetVideoSessionHoldToTalkRuntime = () => {
+const resetVideoSessionTapToRecordRuntime = () => {
   videoSessionRuntime.holdToTalkActive = false;
   videoSessionRuntime.holdToTalkPointerId = null;
   videoSessionRuntime.holdToTalkReleasePending = false;
+};
+
+const isVideoSessionHoldToTalkMode = isVideoSessionTapToRecordMode;
+const resetVideoSessionHoldToTalkRuntime = resetVideoSessionTapToRecordRuntime;
+
+const cancelVideoSessionRoundRequest = (reason = "视频通话已结束") => {
+  const controller = videoSessionRuntime.roundAbortController;
+  videoSessionRuntime.roundAbortController = null;
+  if (!controller) return false;
+  try {
+    controller.abort(new Error(reason));
+  } catch {
+    controller.abort();
+  }
+  return true;
 };
 
 const setVideoSessionMicHealth = (
@@ -55581,12 +55938,12 @@ const getVideoSessionMicPermissionLabel = (session = state.videoSession || {}) =
 const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) => {
   const healthState = String(session?.micHealthState || "").trim().toLowerCase();
   const engine = String(session?.micEngine || "").trim().toLowerCase();
-  const holdMode = isVideoSessionHoldToTalkMode(session);
+  const holdMode = isVideoSessionTapToRecordMode(session);
   if (healthState === "checking") {
     return {
-      label: holdMode ? "按住启动中" : engine === "local" ? "转写中" : "正在检查",
+      label: holdMode ? "录音启动中" : engine === "local" ? "转写中" : "正在检查",
       message: holdMode
-        ? "继续按住，等绿色麦克风亮起再说"
+        ? "先等绿色麦克风亮起，亮起后开始录音"
         : engine === "local"
           ? "正在准备语音转写"
           : "正在检查麦克风",
@@ -55594,9 +55951,9 @@ const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) =>
   }
   if (healthState === "ready") {
     return {
-      label: holdMode ? "按住说话" : engine === "local" ? "本地已就绪" : "已授权待命",
+      label: holdMode ? "点按开始录音" : engine === "local" ? "本地已就绪" : "已授权待命",
       message: holdMode
-        ? "按住麦克风说话，松开后发送"
+        ? "点一下麦克风开始录音，再点一下结束并发送"
         : engine === "local"
           ? "开口后会自动转字"
           : "开口后会实时显示",
@@ -55604,9 +55961,9 @@ const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) =>
   }
   if (healthState === "listening") {
     return {
-      label: holdMode ? "按住说话中" : engine === "local" ? "录音中" : "识别中",
+      label: holdMode ? "录音中" : engine === "local" ? "录音中" : "识别中",
       message: holdMode
-        ? "继续按住说话，松开后发送"
+        ? "正在录音，再点一下麦克风就发送"
         : engine === "local"
           ? "正在收音，停顿后自动发送"
           : "正在实时转字",
@@ -55627,7 +55984,7 @@ const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) =>
   if (healthState === "busy") {
     return {
       label: "等待下一轮",
-      message: holdMode ? "这轮已送出，等角色回复后再按住麦克风" : "这轮已送出，回复后继续监听",
+      message: holdMode ? "这轮已送出，等角色回复后再点麦克风录音" : "这轮已送出，回复后继续监听",
     };
   }
   return { label: "未开始", message: "还没有开始本次视频" };
@@ -55662,7 +56019,7 @@ const clearVideoSessionMicPermissionWatcher = () => {
 const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, syncNow = false } = {}) => {
   if (!state.videoSession) return;
   const inputMode = String(state.videoSession?.inputMode || "voice").trim() === "text" ? "text" : "voice";
-  const holdMode = isVideoSessionHoldToTalkMode(state.videoSession);
+  const holdMode = isVideoSessionTapToRecordMode(state.videoSession);
   const permissionState = normalizeBootVideoMicPermissionState(state.videoSession?.micPermissionState);
   const busy = ["processing", "replying"].includes(String(state.videoSession?.status || "").trim());
   const accessIssue = getVideoSessionDeviceAccessIssue("麦克风");
@@ -55731,8 +56088,8 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
       messageOverride ||
       (holdMode
         ? currentEngine === "local"
-          ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 收音中，继续按住说话，松开后发送`
-          : "识别中，你说的话会实时显示，继续按住说话，松开后发送"
+          ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 收音中，再点麦克风结束并发送`
+          : "识别中，你说的话会实时显示，再点麦克风结束并发送"
         : currentEngine === "local"
           ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 收音中，新增内容会按字逐步显示，停顿后才会自动发送`
           : "识别中，你说的话会实时显示，停顿后才会自动发送这一轮");
@@ -55747,7 +56104,7 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
   if (busy) {
     setVideoSessionMicHealth(
       "busy",
-      messageOverride || (holdMode ? "这一轮已送出，等角色回复后再按住麦克风" : "这一轮已送出，等角色回复后会继续监听"),
+      messageOverride || (holdMode ? "这一轮已送出，等角色回复后再点麦克风录音" : "这一轮已送出，等角色回复后会继续监听"),
       {
       permissionState,
       paintNow,
@@ -55761,8 +56118,8 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
     messageOverride ||
     (holdMode
       ? currentEngine === "local"
-        ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 已就绪，按住麦克风说话，松开后发送`
-        : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已就绪，按住麦克风说话，松开后发送`
+        ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 已就绪，点一下麦克风开始录音`
+        : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已就绪，点一下麦克风开始录音`
       : currentEngine === "local"
         ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 已就绪，开口后新增内容会按字逐步显示`
         : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已就绪，开口后会实时显示`);
@@ -57061,6 +57418,7 @@ const destroyVideoSessionRecognition = () => {
 };
 
 const shutdownVideoSession = ({ preserveResponseMode = true, paintNow = true } = {}) => {
+  cancelVideoSessionRoundRequest();
   destroyVideoSessionRecognition();
   teardownVideoSessionLocalAsrCapture({ releaseStream: true });
   clearVideoSessionReadyCue({ paintNow: false });
@@ -57084,6 +57442,8 @@ const shutdownVideoSession = ({ preserveResponseMode = true, paintNow = true } =
   releaseVideoSessionStream();
   videoSessionRuntime.captureCanvas = null;
   videoSessionRuntime.captureVideo = null;
+  videoSessionRuntime.roundSubmitting = false;
+  removeBusyToken("apiGenerationBusy", "video-session");
   resetVideoSessionUiState({ preserveResponseMode });
   queueVideoSessionStateSync({ flush: !paintNow });
   if (paintNow) {
@@ -57520,6 +57880,10 @@ const setVideoSessionInputMode = async (mode = "voice") => {
 
 const setVideoSessionMicTriggerMode = async (mode = "auto") => {
   const nextMode = normalizeVideoSessionMicTriggerMode(mode);
+  state.appConfig = {
+    ...(state.appConfig || {}),
+    videoTapRecordDefaultApplied: true,
+  };
   state.videoSession = {
     ...(state.videoSession || createVideoSessionState()),
     micTriggerMode: nextMode,
@@ -57536,7 +57900,7 @@ const setVideoSessionMicTriggerMode = async (mode = "auto") => {
   }
 
   const busy = ["processing", "replying"].includes(String(state.videoSession?.status || "").trim()) || videoSessionRuntime.roundSubmitting;
-  if (nextMode === "hold") {
+  if (nextMode === "tap") {
     resetVideoSessionHoldToTalkRuntime();
     destroyVideoSessionRecognition();
     teardownVideoSessionLocalAsrCapture({ releaseStream: false });
@@ -57816,34 +58180,27 @@ const finishVideoSessionHoldToTalk = async ({ requestId = Number(videoSessionRun
   return submitVideoSessionHoldToTalkInput();
 };
 
-const beginVideoSessionHoldToTalk = (event) => {
-  const micButton = event.target.closest("[data-video-hold-mic]");
-  if (!(micButton instanceof HTMLElement)) return false;
+const beginVideoSessionHoldToTalk = (event = null) => {
+  if (event) return false;
   if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") return false;
-  if (!isVideoSessionHoldToTalkMode(state.videoSession)) return false;
+  if (!isVideoSessionTapToRecordMode(state.videoSession)) return false;
   if (["processing", "replying"].includes(String(state.videoSession?.status || "").trim()) || videoSessionRuntime.roundSubmitting) {
     return false;
   }
   videoSessionRuntime.holdToTalkActive = true;
-  videoSessionRuntime.holdToTalkPointerId = event.pointerId;
+  videoSessionRuntime.holdToTalkPointerId = null;
   videoSessionRuntime.holdToTalkRequestId = Math.max(0, Number(videoSessionRuntime.holdToTalkRequestId || 0)) + 1;
   videoSessionRuntime.holdToTalkReleasePending = false;
   clearVideoSessionAutoSubmitTimer();
   clearVideoSessionRestartTimer();
   clearVideoSessionVisualAutoReplyTimer();
   clearVideoSessionReadyCue({ paintNow: false });
-  try {
-    micButton.setPointerCapture?.(event.pointerId);
-  } catch {
-    // ignore
-  }
   if (!videoSessionRuntime.recognition && !isVideoSessionLocalRecorderActive()) {
-    setVideoSessionMicHealth("checking", "按住中，正在打开麦克风，等绿麦亮起再说", {
+    setVideoSessionMicHealth("checking", "正在打开麦克风，等绿麦亮起后开始录音", {
       syncNow: true,
     });
     paint();
   }
-  event.preventDefault();
   const requestId = Number(videoSessionRuntime.holdToTalkRequestId || 0);
   void startVideoSessionRecognition().then((started) => {
     if (requestId !== Number(videoSessionRuntime.holdToTalkRequestId || 0)) return;
@@ -57851,6 +58208,10 @@ const beginVideoSessionHoldToTalk = (event) => {
       if (videoSessionRuntime.holdToTalkActive) {
         setToast(state.videoSession?.error || state.videoSession?.micHealthMessage || "麦克风暂时不可用");
       }
+      resetVideoSessionTapToRecordRuntime();
+      refreshVideoSessionMicHealth({ syncNow: true });
+      paint();
+      queueVideoSessionStateSync();
       return;
     }
     if (!videoSessionRuntime.holdToTalkActive) {
@@ -57861,18 +58222,30 @@ const beginVideoSessionHoldToTalk = (event) => {
 };
 
 const finishVideoSessionHoldToTalkGesture = (event) => {
-  if (!isVideoSessionHoldToTalkMode(state.videoSession)) return false;
+  if (!isVideoSessionTapToRecordMode(state.videoSession)) return false;
   if (!videoSessionRuntime.holdToTalkActive) return false;
-  if (videoSessionRuntime.holdToTalkPointerId !== null && event.pointerId !== videoSessionRuntime.holdToTalkPointerId) {
+  if (event && videoSessionRuntime.holdToTalkPointerId === null) {
+    return false;
+  }
+  if (event && videoSessionRuntime.holdToTalkPointerId !== null && event.pointerId !== videoSessionRuntime.holdToTalkPointerId) {
     return false;
   }
   videoSessionRuntime.holdToTalkActive = false;
   videoSessionRuntime.holdToTalkPointerId = null;
   videoSessionRuntime.holdToTalkReleasePending = true;
   videoSessionRuntime.lastVoiceActivityAt = Date.now();
-  event.preventDefault();
+  event?.preventDefault?.();
   void finishVideoSessionHoldToTalk({ requestId: Number(videoSessionRuntime.holdToTalkRequestId || 0) });
   return true;
+};
+
+const toggleVideoSessionTapToRecord = (event = null) => {
+  if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") return false;
+  if (!isVideoSessionTapToRecordMode(state.videoSession)) return false;
+  if (videoSessionRuntime.holdToTalkActive || videoSessionRuntime.recognition || isVideoSessionLocalRecorderActive()) {
+    return finishVideoSessionHoldToTalkGesture();
+  }
+  return beginVideoSessionHoldToTalk();
 };
 
 const startVideoSessionRecognition = async () => {
@@ -58022,11 +58395,11 @@ const startVideoSessionRecognition = async () => {
       if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
         state.videoSession.status = getVideoSessionIdleStatus();
       }
-      const holdMode = isVideoSessionHoldToTalkMode(state.videoSession);
+      const holdMode = isVideoSessionTapToRecordMode(state.videoSession);
       setVideoSessionMicHealth(
         "checking",
         holdMode
-          ? `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 正在接管麦克风，继续按住，等绿麦亮起再说`
+          ? `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 正在接管麦克风，绿麦亮起后开始录音`
           : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 正在接管麦克风，等绿麦亮起再说`,
         {
           syncNow: true,
@@ -58042,11 +58415,11 @@ const startVideoSessionRecognition = async () => {
 
     recognition.onaudiostart = () => {
       if (videoSessionRuntime.browserReadyTimer) {
-        const holdMode = isVideoSessionHoldToTalkMode(state.videoSession);
+        const holdMode = isVideoSessionTapToRecordMode(state.videoSession);
         setVideoSessionMicHealth(
           "checking",
           holdMode
-            ? `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已听到麦克风，继续按住，马上可以说`
+            ? `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已听到麦克风，马上开始录音`
             : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已听到麦克风，正在进入识别`,
           {
             syncNow: true,
@@ -58233,10 +58606,12 @@ const requestPrimaryVideoReply = async (
     videoDialogLog = [],
     roundContext = null,
     requestTrace = null,
+    signal = null,
   } = {},
 ) => {
   const normalizedInput = sanitizeChatLine(String(userInput || "").trim());
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
+  if (signal?.aborted) throw createAbortRequestError();
   const forceVoiceReply = normalizedResponseMode === "voice" && hasReadyVoiceConfig(role);
   const triggeredWorldbookEntries = getTriggeredWorldbookEntries(role, normalizedInput);
   const referenceCatalog = buildRoleReferenceCatalog(role, {
@@ -58330,6 +58705,7 @@ const requestPrimaryVideoReply = async (
       referenceCatalog,
       roundContext,
       requestTrace,
+      signal,
     });
     const validationMessage = validateVideoResult(textResponse?.result);
     if (validationMessage) {
@@ -58354,10 +58730,11 @@ const requestPrimaryVideoReply = async (
         videoDialogLog,
         imageAttachments,
         requiredWorldbookTitles: triggeredWorldbookEntries.map((entry) => entry?.title),
-        referenceCatalog,
-        roundContext,
-        requestTrace,
-      });
+          referenceCatalog,
+          roundContext,
+          requestTrace,
+          signal,
+        });
       const rescueMessage = validateVideoResult(rescueResponse?.result);
       if (rescueMessage) {
         throw attachModelMetaToError(new Error(rescueMessage), rescueResponse?.meta || null);
@@ -58716,13 +59093,28 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
       recordVideoSessionPrimaryApiAttempt(trace);
     };
     const freshRole = getRoleById(state, role.id) || role;
-    const apiResponse = await requestPrimaryVideoReply(freshRole, promptText, {
+    const roundAbortController = new AbortController();
+    videoSessionRuntime.roundAbortController = roundAbortController;
+    const apiResponse = await runAbortableTaskWithTimeout(
+      (timeoutSignal) => {
+        const linked = createLinkedAbortController(roundAbortController.signal, timeoutSignal);
+        return requestPrimaryVideoReply(freshRole, promptText, {
       imageAttachments: frameAttachments,
       responseMode: wantsVoiceReply ? "voice" : "text",
       videoDialogLog: state.videoSession?.dialogLog || [],
       roundContext,
       requestTrace,
-    });
+          signal: linked.controller.signal,
+        }).finally(() => {
+          linked.dispose();
+        });
+      },
+      VIDEO_SESSION_REPLY_TIMEOUT_MS,
+      "视频通话这轮超时了，请重试",
+    );
+    if (videoSessionRuntime.roundAbortController === roundAbortController) {
+      videoSessionRuntime.roundAbortController = null;
+    }
 
     if (apiResponse?.meta) {
       persistPrimaryChatUsageSnapshot(role.id, {
@@ -58821,6 +59213,10 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     }
     return true;
   } catch (error) {
+    if (!keepSessionRunning()) {
+      return false;
+    }
+    videoSessionRuntime.roundAbortController = null;
     videoSessionRuntime.pendingReadyCue = false;
     videoSessionRuntime.readyCueReason = "";
     const friendlyError = getFriendlyVideoSessionErrorMessage(error);
@@ -61528,9 +61924,7 @@ eventRoot.addEventListener("click", async (event) => {
     const hasSummary = Boolean(String(message.content.summary || "").trim());
     const shouldRequestSummary =
       action === "retry-video-call-summary" ||
-      summaryStatus === "pending" ||
-      summaryStatus === "error" ||
-      !hasSummary;
+      (action === "open-video-call-summary" && (summaryStatus === "pending" || (!hasSummary && summaryStatus !== "error")));
     if (shouldRequestSummary && summaryStatus !== "empty" && !isVideoCallSummaryBusy(messageId)) {
       void requestVideoCallSummary(role.id, messageId, {
         force: action === "retry-video-call-summary" || summaryStatus === "error",
@@ -61788,6 +62182,11 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "set-video-mic-trigger-mode") {
     void setVideoSessionMicTriggerMode(button.dataset.videoMicTriggerMode || "auto");
+    return;
+  }
+
+  if (action === "toggle-video-tap-record") {
+    toggleVideoSessionTapToRecord(event);
     return;
   }
 
@@ -62170,9 +62569,6 @@ eventRoot.addEventListener("keydown", (event) => {
 });
 
 eventRoot.addEventListener("pointerdown", (event) => {
-  if (beginVideoSessionHoldToTalk(event)) {
-    return;
-  }
   if (beginVideoSessionHistoryDrawerDrag(event)) {
     return;
   }
