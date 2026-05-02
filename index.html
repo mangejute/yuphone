@@ -11213,6 +11213,473 @@ html.chat-composer-focused .ref-chat-composer {
   height: 20px !important;
 }
 
+.bubble-theme-switch {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.bubble-theme-option {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px solid #e8e8ec;
+  border-radius: 16px;
+  background: #fff;
+  color: #1c1c1e;
+  text-align: left;
+}
+
+.bubble-theme-option strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.bubble-theme-option span {
+  color: #8a8f99;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.bubble-theme-option.is-active {
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
+.bubble-theme-option.is-active span {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.bubble-control-card,
+.bubble-custom-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-screen.bubble-theme-default,
+.chat-screen.bubble-theme-qq,
+.chat-screen.bubble-theme-custom {
+  --chat-bubble-pad-y: 9px;
+  --chat-bubble-pad-x: 14px;
+  --chat-bubble-radius: 18px;
+  --chat-bubble-tail-w: 32px;
+  --chat-bubble-tail-h: 24px;
+  --chat-message-gap: 12px;
+  --chat-avatar-size: 42px;
+}
+
+.chat-screen.bubble-theme-default .chat-group-stack,
+.chat-screen.bubble-theme-default .chat-group-stack.align-right,
+.chat-screen.bubble-theme-qq .chat-group-stack,
+.chat-screen.bubble-theme-qq .chat-group-stack.align-right,
+.chat-screen.bubble-theme-custom .chat-group-stack,
+.chat-screen.bubble-theme-custom .chat-group-stack.align-right {
+  row-gap: var(--chat-message-gap);
+}
+
+.chat-screen.bubble-theme-default .chat-group-block,
+.chat-screen.bubble-theme-qq .chat-group-block,
+.chat-screen.bubble-theme-custom .chat-group-block {
+  margin-bottom: var(--chat-message-gap);
+}
+
+.chat-screen.bubble-theme-default {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 248, 252, 0.96) 100%),
+    #f7f8fb !important;
+}
+
+.chat-screen.bubble-theme-default .clean-chat-header {
+  min-height: 62px;
+  padding: 12px 16px 9px !important;
+  border-bottom: 1px solid rgba(70, 76, 86, 0.08) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.035) !important;
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.chat-screen.bubble-theme-default .modern-chat-body {
+  background: linear-gradient(180deg, #f8f9fc 0%, #f3f5fa 100%) !important;
+}
+
+.chat-screen.bubble-theme-default .chat-group-row {
+  grid-template-columns: var(--chat-avatar-size) minmax(0, 1fr);
+  gap: 11px;
+}
+
+.chat-screen.bubble-theme-default .chat-group-row.user {
+  grid-template-columns: var(--chat-avatar-size) minmax(0, 1fr);
+}
+
+.chat-screen.bubble-theme-default .group-avatar,
+.chat-screen.bubble-theme-default .chat-side-avatar {
+  width: var(--chat-avatar-size) !important;
+  height: var(--chat-avatar-size) !important;
+  border-radius: 14px !important;
+}
+
+.chat-screen.bubble-theme-default .chat-group-avatar-spacer {
+  width: var(--chat-avatar-size);
+}
+
+.chat-screen.bubble-theme-default .chat-message-line .chat-bubble-wrap {
+  max-width: min(62vw, 252px) !important;
+}
+
+.chat-screen.bubble-theme-default .chat-bubble {
+  padding: var(--chat-bubble-pad-y) var(--chat-bubble-pad-x) !important;
+  border: 1px solid rgba(17, 17, 17, 0.045) !important;
+  border-radius: var(--chat-bubble-radius) !important;
+  box-shadow: 0 6px 16px rgba(17, 17, 17, 0.055) !important;
+}
+
+.chat-screen.bubble-theme-default .ai-bubble {
+  background: #ffffff !important;
+  color: #17191f !important;
+}
+
+.chat-screen.bubble-theme-default .user-bubble {
+  background: #ffe16d !important;
+  color: #17191f !important;
+}
+
+.chat-screen.bubble-theme-default .bubble-tail {
+  width: var(--chat-bubble-tail-w) !important;
+  height: var(--chat-bubble-tail-h) !important;
+  opacity: 0.98;
+}
+
+.chat-screen.bubble-theme-default .composer-plain {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
+
+.chat-screen.bubble-theme-qq {
+  background: #ebeef4 !important;
+}
+
+.chat-screen.bubble-theme-qq.has-chat-background {
+  background:
+    linear-gradient(180deg, rgba(235, 238, 244, 0.72), rgba(235, 238, 244, 0.62)),
+    var(--chat-background-image) center/cover no-repeat !important;
+}
+
+.chat-screen.bubble-theme-qq .clean-chat-header {
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  column-gap: 8px;
+  align-items: center;
+  justify-content: stretch !important;
+  min-height: 68px;
+  padding: 12px 16px 9px !important;
+  border-bottom: 0 !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.035) !important;
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.chat-screen.bubble-theme-qq .white-back,
+.chat-screen.bubble-theme-qq .header-gear-btn {
+  color: #58b6e5 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.chat-screen.bubble-theme-qq .compact-chat-title.with-current-place {
+  justify-items: start;
+  gap: 2px;
+  text-align: left;
+}
+
+.chat-screen.bubble-theme-qq .compact-chat-title strong {
+  color: #b99150;
+  font-size: 18px;
+  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-screen.bubble-theme-qq .chat-header-meta {
+  justify-content: flex-start;
+  gap: 7px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  color: #343945;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chat-screen.bubble-theme-qq .chat-header-meta::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: -5px;
+  border-radius: 999px;
+  background: #21d37c;
+  box-shadow: 0 0 0 2px rgba(33, 211, 124, 0.18);
+}
+
+.chat-screen.bubble-theme-qq .chat-header-meta-group,
+.chat-screen.bubble-theme-qq .chat-header-meta-group.place {
+  justify-content: flex-start;
+  max-width: min(58%, 150px);
+}
+
+.chat-screen.bubble-theme-qq .modern-chat-body {
+  padding: 18px 14px var(--chat-overlay-reserve) !important;
+  background: #ebeef4 !important;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-block {
+  gap: 12px;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-row.user {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-row > .group-avatar,
+.chat-screen.bubble-theme-qq .chat-group-row > .chat-group-avatar-spacer,
+.chat-screen.bubble-theme-qq .chat-group-row > .chat-group-stack + div {
+  display: none !important;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-avatar-spacer {
+  width: var(--chat-avatar-size);
+}
+
+.chat-screen.bubble-theme-qq .group-avatar,
+.chat-screen.bubble-theme-qq .chat-side-avatar {
+  width: var(--chat-avatar-size) !important;
+  height: var(--chat-avatar-size) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+
+.chat-screen.bubble-theme-qq .chat-group-name {
+  display: none;
+}
+
+.qq-message-avatar-slot {
+  display: none;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-stack,
+.chat-screen.bubble-theme-qq .chat-group-stack.align-right {
+  justify-items: stretch;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line {
+  display: grid;
+  grid-template-columns: var(--chat-avatar-size) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  justify-items: stretch;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line {
+  grid-template-columns: minmax(0, 1fr) var(--chat-avatar-size);
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.with-selection {
+  grid-template-columns: 28px var(--chat-avatar-size) minmax(0, 1fr);
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line.with-selection {
+  grid-template-columns: 28px minmax(0, 1fr) var(--chat-avatar-size);
+}
+
+.chat-screen.bubble-theme-qq .qq-message-avatar-slot {
+  display: grid;
+  width: var(--chat-avatar-size);
+  min-width: var(--chat-avatar-size);
+  place-items: start center;
+}
+
+.chat-screen.bubble-theme-qq .qq-message-avatar {
+  margin-top: 0 !important;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line .qq-message-avatar-slot {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line .chat-bubble-wrap {
+  grid-column: 2;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line .chat-bubble-wrap {
+  grid-column: 1;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line .qq-message-avatar-slot {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.with-selection .message-select {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line.with-selection .qq-message-avatar-slot {
+  grid-column: 2;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line.with-selection .chat-bubble-wrap {
+  grid-column: 3;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line.with-selection .chat-bubble-wrap {
+  grid-column: 2;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line.with-selection .qq-message-avatar-slot {
+  grid-column: 3;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line .chat-bubble-wrap {
+  max-width: min(66vw, 282px) !important;
+  grid-row: 1;
+  justify-self: start;
+  overflow: visible;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line .chat-bubble-wrap {
+  margin-right: 0;
+  justify-self: end;
+}
+
+.chat-screen.bubble-theme-qq .chat-bubble {
+  padding: var(--chat-bubble-pad-y) var(--chat-bubble-pad-x) !important;
+  border: 0 !important;
+  border-radius: calc(var(--chat-bubble-radius) + 2px) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+  line-height: 1.46 !important;
+}
+
+.chat-screen.bubble-theme-qq .ai-bubble {
+  background: #ffffff !important;
+  color: #111111 !important;
+}
+
+.chat-screen.bubble-theme-qq .user-bubble {
+  background: #12a8e7 !important;
+  color: #ffffff !important;
+}
+
+.chat-screen.bubble-theme-qq .message-quote {
+  background: rgba(255, 255, 255, 0.28) !important;
+  border-left-color: rgba(255, 255, 255, 0.54) !important;
+}
+
+.chat-screen.bubble-theme-qq .ai-bubble .message-quote {
+  background: rgba(17, 17, 17, 0.045) !important;
+  border-left-color: rgba(17, 17, 17, 0.14) !important;
+}
+
+.chat-screen.bubble-theme-qq .bubble-tail {
+  top: 4px;
+  bottom: auto;
+  width: 7px !important;
+  height: 8px !important;
+  opacity: 1;
+  z-index: 2;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+}
+
+.chat-screen.bubble-theme-qq .bubble-tail-left {
+  left: -8px;
+  background-color: transparent !important;
+  background-image: url("./assets/qq-tail-ai-fill.png") !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+  transform: translateX(5px) rotate(-2deg);
+  transform-origin: center;
+}
+
+.chat-screen.bubble-theme-qq .bubble-tail-right {
+  right: -8px;
+  background-color: transparent !important;
+  background-image: url("./assets/qq-tail-user-fill.png") !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+  transform: translateX(-5px) rotate(2deg);
+  transform-origin: center;
+}
+
+.chat-screen.bubble-theme-qq .chat-group-time span {
+  background: transparent;
+  box-shadow: none;
+  color: #8b919c;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chat-screen.bubble-theme-qq .chat-bottom-overlay {
+  display: flex;
+  flex-direction: column;
+  background: rgba(235, 238, 244, 0.86) !important;
+  backdrop-filter: blur(14px) saturate(1.02);
+  -webkit-backdrop-filter: blur(14px) saturate(1.02);
+}
+
+.chat-screen.bubble-theme-qq .chat-toolbar.rich-toolbar {
+  order: 2;
+  padding: 6px 24px calc(9px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.chat-screen.bubble-theme-qq .ref-chat-composer {
+  order: 1;
+  padding: 8px 12px 5px !important;
+}
+
+.chat-screen.bubble-theme-qq .toolbar-chip,
+.chat-screen.bubble-theme-qq .toolbar-image-btn,
+.chat-screen.bubble-theme-qq .composer-emoji-btn {
+  color: #a5abb7 !important;
+}
+
+.chat-screen.bubble-theme-qq .composer-plain {
+  width: calc(100% - 10px);
+  padding: 7px 8px 7px 14px !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chat-screen.bubble-theme-qq .composer-plain::before {
+  content: none;
+}
+
+.chat-screen.bubble-theme-qq .composer-plain textarea {
+  color: #111111;
+}
+
+.chat-screen.bubble-theme-qq .composer-plain textarea::placeholder {
+  color: #b9bec8;
+}
+
 .wechat-comments {
   display: grid;
   gap: 0;
@@ -12629,6 +13096,30 @@ html.chat-composer-focused .ref-chat-composer {
   padding: 10px 4px 4px 0;
 }
 
+.video-session-error-status {
+  position: absolute;
+  left: max(16px, calc(16px + env(safe-area-inset-left, 0px)));
+  right: max(16px, calc(16px + env(safe-area-inset-right, 0px)));
+  bottom: calc(324px + env(safe-area-inset-bottom, 0px));
+  z-index: 9;
+  width: fit-content;
+  max-width: min(82vw, 420px);
+  margin: 0 auto;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.58);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(17, 17, 17, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  pointer-events: none;
+}
+
 .video-session-ai-stack::-webkit-scrollbar,
 .video-session-history-list::-webkit-scrollbar,
 .video-session-status-chips::-webkit-scrollbar {
@@ -13944,6 +14435,11 @@ body.video-session-history-dragging {
   .video-session-ai-stack {
     width: min(84%, 348px);
     max-height: min(40vh, 300px);
+  }
+
+  .video-session-error-status {
+    bottom: calc(304px + env(safe-area-inset-bottom, 0px));
+    max-width: min(86vw, 340px);
   }
 
   .video-session-dialog-bubble {
@@ -19064,11 +19560,51 @@ const createMonitorFortuneData = (value = {}) => {
     storyHooks: normalizeArray(safeValue.storyHooks).map((item) => String(item || "").trim()).filter(Boolean).slice(0, 3),
   };
 };
+const CHAT_BUBBLE_THEME_OPTIONS = Object.freeze([
+  {
+    id: "default",
+    label: "默认美化",
+    note: "干净柔和，沿用当前聊天的温和气质",
+  },
+  {
+    id: "qq",
+    label: "QQ 美化",
+    note: "浅灰底、蓝白气泡、轻量顶部和输入栏",
+  },
+  {
+    id: "custom",
+    label: "自定义",
+    note: "继续使用下面保存的 CSS 样式",
+  },
+]);
+const DEFAULT_CHAT_BUBBLE_THEME = "default";
+const normalizeChatBubbleTheme = (value, activeBubbleStyleId = "") => {
+  const normalized = String(value || "").trim();
+  if (CHAT_BUBBLE_THEME_OPTIONS.some((item) => item.id === normalized)) return normalized;
+  return activeBubbleStyleId ? "custom" : DEFAULT_CHAT_BUBBLE_THEME;
+};
+const getChatBubbleThemeLabel = (value) =>
+  CHAT_BUBBLE_THEME_OPTIONS.find((item) => item.id === normalizeChatBubbleTheme(value))?.label || "默认美化";
 
 const normalizeBubbleFontSize = (value) => {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return 14;
   return Math.min(24, Math.max(12, Math.round(nextValue)));
+};
+const normalizeChatBubbleSize = (value) => {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return 100;
+  return Math.min(124, Math.max(86, Math.round(nextValue)));
+};
+const normalizeChatBubbleAvatarSize = (value) => {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return 42;
+  return Math.min(52, Math.max(34, Math.round(nextValue)));
+};
+const normalizeChatBubbleGap = (value) => {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return 12;
+  return Math.min(28, Math.max(4, Math.round(nextValue)));
 };
 
 const SECONDARY_USAGE_FEATURE_KEYS = [
@@ -20320,7 +20856,14 @@ const createRole = (overrides = {}) => {
       quotedMessageId: overrides.chats?.quotedMessageId || null,
       selectedMessageIds: normalizeArray(overrides.chats?.selectedMessageIds),
       backgroundImage: overrides.chats?.backgroundImage || overrides.chatBackgroundImage || "",
+      bubbleTheme: normalizeChatBubbleTheme(
+        overrides.chats?.bubbleTheme ?? overrides.bubbleTheme,
+        overrides.chats?.activeBubbleStyleId || overrides.activeBubbleStyleId || "",
+      ),
       bubbleFontSize: normalizeBubbleFontSize(overrides.chats?.bubbleFontSize ?? overrides.bubbleFontSize),
+      bubbleSize: normalizeChatBubbleSize(overrides.chats?.bubbleSize ?? overrides.bubbleSize),
+      bubbleGap: normalizeChatBubbleGap(overrides.chats?.bubbleGap ?? overrides.bubbleGap),
+      bubbleAvatarSize: normalizeChatBubbleAvatarSize(overrides.chats?.bubbleAvatarSize ?? overrides.bubbleAvatarSize),
       bubbleStyles: normalizeArray(overrides.chats?.bubbleStyles || overrides.bubbleStyles).map((item) =>
         createBubbleStyleEntryData(item),
       ),
@@ -20460,7 +21003,16 @@ const mergeRole = (role, fallback) => {
       ...role.chats,
       unreadCount: Math.max(0, Number(role.chats?.unreadCount ?? fallback.chats.unreadCount ?? 0)),
       selectedMessageIds: normalizeArray(role.chats?.selectedMessageIds, fallback.chats.selectedMessageIds),
+      bubbleTheme: normalizeChatBubbleTheme(
+        role.chats?.bubbleTheme ?? role.bubbleTheme ?? fallback.chats.bubbleTheme,
+        role.chats?.activeBubbleStyleId || role.activeBubbleStyleId || fallback.chats.activeBubbleStyleId,
+      ),
       bubbleFontSize: normalizeBubbleFontSize(role.chats?.bubbleFontSize ?? role.bubbleFontSize ?? fallback.chats.bubbleFontSize),
+      bubbleSize: normalizeChatBubbleSize(role.chats?.bubbleSize ?? role.bubbleSize ?? fallback.chats.bubbleSize),
+      bubbleGap: normalizeChatBubbleGap(role.chats?.bubbleGap ?? role.bubbleGap ?? fallback.chats.bubbleGap),
+      bubbleAvatarSize: normalizeChatBubbleAvatarSize(
+        role.chats?.bubbleAvatarSize ?? role.bubbleAvatarSize ?? fallback.chats.bubbleAvatarSize,
+      ),
       summaryPrompt: resolveStoredSummaryPrompt(role.chats?.summaryPrompt ?? fallback.chats.summaryPrompt),
       summaryRefinePrompt: resolveStoredSummaryRefinePrompt(role.chats?.summaryRefinePrompt ?? fallback.chats.summaryRefinePrompt),
       bubbleStyles:
@@ -24788,8 +25340,24 @@ const renderSwitch = (checked, field, size = "mini") => `
 
 const getChatBackgroundStyle = (role) => {
   const image = String(role?.chats?.backgroundImage || "").trim();
-  if (!image) return "";
-  return ` style="--chat-background-image:url('${String(image).replaceAll("'", "%27")}');"`;
+  const bubbleSize = getChatBubbleSize(role);
+  const bubbleScale = bubbleSize / 100;
+  const bubbleGap = getChatBubbleGap(role);
+  const avatarSize = getChatBubbleAvatarSize(role);
+  const styleVars = [
+    `--chat-bubble-scale:${bubbleScale.toFixed(2)}`,
+    `--chat-bubble-pad-y:${Math.round(9 * bubbleScale)}px`,
+    `--chat-bubble-pad-x:${Math.round(14 * bubbleScale)}px`,
+    `--chat-bubble-radius:${Math.round(18 * bubbleScale)}px`,
+    `--chat-bubble-tail-w:${Math.round(32 * bubbleScale)}px`,
+    `--chat-bubble-tail-h:${Math.round(24 * bubbleScale)}px`,
+    `--chat-message-gap:${bubbleGap}px`,
+    `--chat-avatar-size:${avatarSize}px`,
+  ];
+  if (image) {
+    styleVars.push(`--chat-background-image:url('${String(image).replaceAll("'", "%27")}')`);
+  }
+  return ` style="${styleVars.join(";")};"`;
 };
 
 const panelHeader = (title, action = "pop-panel", dark = false, rightSlot = '<span class="header-spacer" aria-hidden="true"></span>') => `
@@ -24855,6 +25423,10 @@ const countUnsummarizedMessages = (role) => {
 const getActiveBubbleStyle = (role) =>
   (role?.chats?.bubbleStyles || []).find((item) => item.id === role?.chats?.activeBubbleStyleId) || null;
 
+const getChatBubbleTheme = (role) => normalizeChatBubbleTheme(role?.chats?.bubbleTheme, role?.chats?.activeBubbleStyleId);
+
+const isCustomBubbleTheme = (role) => getChatBubbleTheme(role) === "custom";
+
 const formatBubbleStyleTime = (iso) => {
   if (!iso) return "";
   const date = new Date(iso);
@@ -24874,10 +25446,38 @@ const getChatBubbleFontSize = (role) => {
   return Math.min(24, Math.max(12, Math.round(nextValue)));
 };
 
+const getChatBubbleSize = (role) => normalizeChatBubbleSize(role?.chats?.bubbleSize);
+
+const getChatBubbleGap = (role) => normalizeChatBubbleGap(role?.chats?.bubbleGap);
+
+const getChatBubbleAvatarSize = (role) => normalizeChatBubbleAvatarSize(role?.chats?.bubbleAvatarSize);
+
+const renderBubbleControlRange = ({ title, note, value, field, min, max, unit = "" }) => `
+  <section class="panel-card bubble-control-card">
+    <div class="list-title">${title} <span>${value}${unit}</span></div>
+    ${note ? `<p class="sheet-note">${note}</p>` : ""}
+    <div class="range-row bubble-font-range-row">
+      <input
+        type="range"
+        min="${min}"
+        max="${max}"
+        step="1"
+        value="${value}"
+        data-chat-field="${field}"
+      />
+      <strong>${value}${unit}</strong>
+    </div>
+  </section>
+`;
+
 const renderBubbleStylePanel = (role) => {
   const bubbleStyles = role?.chats?.bubbleStyles || [];
   const activeStyle = getActiveBubbleStyle(role);
+  const activeTheme = getChatBubbleTheme(role);
   const bubbleFontSize = getChatBubbleFontSize(role);
+  const bubbleSize = getChatBubbleSize(role);
+  const bubbleGap = getChatBubbleGap(role);
+  const bubbleAvatarSize = getChatBubbleAvatarSize(role);
 
   return `
     <div class="overlay-screen panel-overlay">
@@ -24885,31 +25485,74 @@ const renderBubbleStylePanel = (role) => {
         ${panelHeader("气泡样式")}
         <div class="panel-scroll" data-scroll-key="panel-bubble-styles">
           <section class="panel-card bubble-style-intro-card">
-            <div class="list-title">当前启用 <span>${escapeHtml(activeStyle?.name || "系统默认")}</span></div>
-            <p class="sheet-note">把 CSS 粘到样式代码里即可保存。建议在代码里使用 <code>{{scope}}</code> 作为作用域占位符，这样只会影响当前角色聊天界面</p>
-            <div class="helper-row">
-              <button class="soft-outline-btn" type="button" data-action="disable-bubble-style">系统默认</button>
-              <button class="soft-black-btn" type="button" data-action="add-bubble-style">新增样式</button>
+            <div class="list-title">当前启用 <span>${escapeHtml(getChatBubbleThemeLabel(activeTheme))}</span></div>
+            <p class="sheet-note">主题只影响聊天页的顶部、消息区和输入栏；头像继续使用当前用户和角色的全局头像</p>
+            <div class="bubble-theme-switch" role="group" aria-label="气泡主题">
+              ${CHAT_BUBBLE_THEME_OPTIONS.map(
+                (item) => `
+                  <button
+                    class="bubble-theme-option ${item.id === activeTheme ? "is-active" : ""}"
+                    type="button"
+                    data-action="set-bubble-theme"
+                    data-bubble-theme="${item.id}"
+                  >
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <span>${escapeHtml(item.note)}</span>
+                  </button>
+                `,
+              ).join("")}
             </div>
           </section>
 
-          <section class="panel-card bubble-font-card">
-            <div class="list-title">聊天气泡字号 <span>${bubbleFontSize}px</span></div>
-            <p class="sheet-note">会同步调整气泡内文字、行高、内边距和引用块比例</p>
-            <div class="range-row bubble-font-range-row">
-              <input
-                type="range"
-                min="12"
-                max="24"
-                step="1"
-                value="${bubbleFontSize}"
-                data-chat-field="bubbleFontSize"
-              />
-              <strong>${bubbleFontSize}px</strong>
-            </div>
-          </section>
+          ${renderBubbleControlRange({
+            title: "聊天气泡字号",
+            note: "会同步调整气泡内文字、行高和引用块比例",
+            value: bubbleFontSize,
+            field: "bubbleFontSize",
+            min: 12,
+            max: 24,
+            unit: "px",
+          })}
+          ${renderBubbleControlRange({
+            title: "气泡尺寸",
+            note: "控制气泡松紧、内边距、圆角和尾巴比例",
+            value: bubbleSize,
+            field: "bubbleSize",
+            min: 86,
+            max: 124,
+            unit: "%",
+          })}
+          ${renderBubbleControlRange({
+            title: "气泡间距",
+            note: "控制每条消息气泡之间的上下距离",
+            value: bubbleGap,
+            field: "bubbleGap",
+            min: 4,
+            max: 28,
+            unit: "px",
+          })}
+          ${renderBubbleControlRange({
+            title: "头像大小",
+            note: "头像来源不变，只调整聊天页里的显示尺寸",
+            value: bubbleAvatarSize,
+            field: "bubbleAvatarSize",
+            min: 34,
+            max: 52,
+            unit: "px",
+          })}
 
-          ${
+          ${activeTheme === "custom" ? `
+            <section class="panel-card bubble-custom-actions">
+              <div class="list-title">自定义 CSS <span>${escapeHtml(activeStyle?.name || "未启用样式")}</span></div>
+              <p class="sheet-note">使用 <code>{{scope}}</code> 作为作用域占位符，只会影响当前角色聊天界面</p>
+              <div class="helper-row">
+                <button class="soft-outline-btn" type="button" data-action="disable-bubble-style">停用自定义</button>
+                <button class="soft-black-btn" type="button" data-action="add-bubble-style">新增样式</button>
+              </div>
+            </section>
+          ` : ""}
+
+          ${activeTheme === "custom" ? (
             bubbleStyles.length
               ? bubbleStyles
                   .map(
@@ -24952,7 +25595,7 @@ const renderBubbleStylePanel = (role) => {
                   <p>点上面的新增样式，贴入 CSS 后保存并启用</p>
                 </section>
               `
-          }
+          ) : ""}
         </div>
       </section>
     </div>
@@ -26090,7 +26733,7 @@ const groupMessagesBySender = (messages) => {
   return groups;
 };
 
-const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked, showTail }) => {
+const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked, showTail, state = {} }) => {
   const bubbleExtra =
     message.type === "sticker"
       ? " sticker-bubble media-bubble"
@@ -26106,6 +26749,14 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
   const bubbleTag = ["voice", "videoCall"].includes(message.type) ? "div" : "button";
   const bubbleTypeAttr = bubbleTag === "button" ? ' type="button"' : "";
   const bubbleInteractiveAttr = "";
+  const isQqTheme = getChatBubbleTheme(role) === "qq";
+  const avatarProfile = isUser ? { avatar: "你", ...(state?.userProfile || {}) } : role?.profile || {};
+  const avatarAlt = isUser
+    ? avatarProfile.nickname || "我的头像"
+    : role?.profile?.note || role?.profile?.name || "角色头像";
+  const qqAvatar = isQqTheme
+    ? `<div class="qq-message-avatar-slot ${isUser ? "user-avatar-slot" : "ai-avatar-slot"}">${renderAvatar(avatarProfile, "chat-side-avatar qq-message-avatar", avatarAlt)}</div>`
+    : "";
 
   return `
     <div class="chat-message-line ${isUser ? "user-line" : "ai-line"} ${selectionMode ? "with-selection" : ""}">
@@ -26114,18 +26765,21 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
           ? `<button class="message-select ${checked ? "checked" : ""}" type="button" data-action="toggle-select-message" data-message-id="${message.id}">${checked ? "✓" : ""}</button>`
           : ""
       }
+      ${isUser ? "" : qqAvatar}
       <div class="chat-bubble-wrap ${isUser ? "user-wrap" : "ai-wrap"}" data-message-hit="${message.id}">
         ${showTail ? `<span class="bubble-tail ${isUser ? "bubble-tail-right bubble-tail-user" : "bubble-tail-left bubble-tail-ai"}" aria-hidden="true"></span>` : ""}
         <${bubbleTag} class="chat-bubble ${isUser ? "user-bubble" : "ai-bubble"}${bubbleExtra}${showTail ? "" : " no-tail"}"${bubbleTypeAttr}${bubbleInteractiveAttr} data-message-id="${message.id}">
           ${renderMessageContent(message, role, state)}
         </${bubbleTag}>
       </div>
+      ${isUser ? qqAvatar : ""}
     </div>
   `;
 };
 
-const renderChatGroupModern = (group, role) => {
+const renderChatGroupModern = (group, role, state = {}) => {
   const isUser = group.role === "user";
+  const isQqTheme = getChatBubbleTheme(role) === "qq";
   const selectionMode = role.chats.selectedMessageIds.length > 0;
   const firstMessage = group.messages[0];
   const firstIsTailless = isTaillessBubbleMessage(firstMessage);
@@ -26144,7 +26798,9 @@ const renderChatGroupModern = (group, role) => {
                 isUser,
                 selectionMode,
                 checked: role.chats.selectedMessageIds.includes(message.id),
-                showTail: index === 0 && !firstIsTailless && !isTaillessBubbleMessage(message),
+                showTail:
+                  (isQqTheme || (index === 0 && !firstIsTailless)) && !isTaillessBubbleMessage(message),
+                state,
               }),
             )
             .join("")}
@@ -26168,7 +26824,7 @@ const renderChatFeedModern = (role, state) => {
   }
 
   const groups = groupMessagesBySender(visibleMessages);
-  const content = groups.map((group) => renderChatGroupModern(group, role)).join("");
+  const content = groups.map((group) => renderChatGroupModern(group, role, state)).join("");
 
   return `${content}${isRoleReplyBusy(state, role.id) ? renderTypingRow(role) : ""}${endSpacer}`;
 };
@@ -28611,14 +29267,10 @@ const renderVideoSessionSheet = (state, role) => {
           `,
           extraClass: "is-typing",
         })
-      : session.error
-        ? renderVideoDialogBubble({
-          side: "ai",
-          title: role?.profile?.note || role?.profile?.name || "当前角色",
-          mode: replyModeLabel,
-          content: `<p>${escapeHtml(session.error).replaceAll("\n", "<br />")}</p>`,
-          extraClass: "is-hint",
-      })
+      : "";
+  const errorStatusToast =
+    !replyMessages.length && !busy && session.error
+      ? `<div class="video-session-error-status" role="status">${escapeHtml(session.error).replaceAll("\n", "<br />")}</div>`
       : "";
   const userBubble = userCaption
     ? renderVideoDialogBubble({
@@ -28677,6 +29329,7 @@ const renderVideoSessionSheet = (state, role) => {
   const micIndicatorMeta = getVideoSessionMicIndicatorMeta(session);
   const { permissionMeta: micPermissionMeta, healthMeta: micHealthMeta } = micIndicatorMeta;
   const roundApiMeta = getVideoRoundApiMeta(session);
+  const speechAutoSubmitEnabled = inputMode === "voice" && !holdMode;
   const roundApiCalls = Math.max(0, Number(session.roundPrimaryApiCalls || 0));
   const roundApiPromptTokens = Math.max(0, Number(session.roundPrimaryPromptTokens || 0));
   const roundApiCompletionTokens = Math.max(0, Number(session.roundPrimaryCompletionTokens || 0));
@@ -28804,23 +29457,35 @@ const renderVideoSessionSheet = (state, role) => {
           </div>
           <p>${escapeHtml(holdMode ? "点一下麦克风开始录音，再点一下结束并发送。" : "不按按钮也会一直待命，检测到你说话就开始识别。")}</p>
         </div>
-        <div class="video-session-debug-section">
-          <div class="video-session-debug-row">
-            <span>停顿后自动发送</span>
-            <b data-video-setting-display="speechAutoSubmitDelayMs">${escapeHtml(speechAutoSubmitDelayLabel)}</b>
-          </div>
-          <input
-            class="video-session-setting-slider voice-chance-slider"
-            type="range"
-            min="5000"
-            max="12000"
-            step="500"
-            value="${escapeHtml(String(Math.max(5000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 5000)))))}"
-            data-video-setting="speechAutoSubmitDelayMs"
-            aria-label="设置你停顿多久后自动发送"
-          />
-          <p>${escapeHtml(holdMode ? `当前是点按录音模式，这个时长会保留给自动识别模式使用。` : "停到这个时长后，会自动送出这一轮；默认从 5 秒起。")}</p>
-        </div>
+        ${
+          inputMode === "voice"
+            ? `
+              <div class="video-session-debug-section">
+                <div class="video-session-debug-row">
+                  <span>停顿后自动发送</span>
+                  <b data-video-setting-display="speechAutoSubmitDelayMs">${escapeHtml(speechAutoSubmitDelayLabel)}</b>
+                </div>
+                ${
+                  speechAutoSubmitEnabled
+                    ? `
+                      <input
+                        class="video-session-setting-slider voice-chance-slider"
+                        type="range"
+                        min="5000"
+                        max="12000"
+                        step="500"
+                        value="${escapeHtml(String(Math.max(5000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 5000)))))}"
+                        data-video-setting="speechAutoSubmitDelayMs"
+                        aria-label="设置你停顿多久后自动发送"
+                      />
+                      <p>${escapeHtml("只有自动识别模式会用这个时长；你说完停到这个时长后，会自动送出这一轮。")}</p>
+                    `
+                    : `<p>${escapeHtml("当前是点按录音模式，这个时长暂不生效；只有切回自动识别时，才会按这个停顿时长自动发送。")}</p>`
+                }
+              </div>
+            `
+            : ""
+        }
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
             <span>静默后角色主动开口</span>
@@ -28836,7 +29501,7 @@ const renderVideoSessionSheet = (state, role) => {
             data-video-setting="roleAutoReplyDelayMs"
             aria-label="设置你一直没说话时角色多久主动接话"
           />
-          <p>${escapeHtml(holdMode ? `等角色回复结束后开始计时；你开始录音或发送后都会重新计时。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。` : `等回复结束且麦克风待命后开始计时；你一开口就重算。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。`)}</p>
+          <p>${escapeHtml(inputMode === "text" ? "文字输入只看这个静默时长：你这边一直没继续发，角色才会主动接话。" : holdMode ? "点按录音不会按停顿自动发送，只看这个静默时长：你没再点麦克风继续说，角色才会主动接话。" : `自动识别先按停顿时长发送；如果这之后双方继续静默，才会按这里让角色主动接话。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。`)}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -28947,6 +29612,7 @@ const renderVideoSessionSheet = (state, role) => {
             ${userBubble}
             <div class="video-session-ai-stack">${aiBubbleStack}</div>
           </div>
+          ${errorStatusToast}
 
           ${debugMenu}
           ${historyPanel}
@@ -29183,7 +29849,7 @@ const renderImportantMemoryUpdatePreviewSheet = (state, role) => {
 
 const renderChatModalRefined = (role, state) => `
   <div class="overlay-screen page-overlay">
-    <section class="chat-screen ref-chat ${role?.chats?.backgroundImage ? "has-chat-background" : ""}" data-chat-role-id="${role.id}"${getChatBackgroundStyle(role)}>
+    <section class="chat-screen ref-chat bubble-theme-${escapeHtml(getChatBubbleTheme(role))} ${role?.chats?.backgroundImage ? "has-chat-background" : ""}" data-chat-role-id="${role.id}"${getChatBackgroundStyle(role)}>
       <header class="chat-header ref-chat-header clean-chat-header">
         <button class="back-btn white-back" type="button" data-action="close-chat">${icons.back}</button>
         <div class="chat-title-wrap compact-chat-title with-current-place">
@@ -29300,6 +29966,7 @@ const forceImportantBubbleStyleCss = (css = "") =>
   });
 
 const compileBubbleStyleCss = (role) => {
+  if (!isCustomBubbleTheme(role)) return "";
   const activeStyle = getActiveBubbleStyle(role);
   const rawCss = String(activeStyle?.css || "").trim();
   if (!rawCss || !role?.id) return "";
@@ -31031,9 +31698,12 @@ const resetVideoSessionUiState = ({ preserveResponseMode = true } = {}) => {
   state.videoSession = next;
 };
 const getActiveBubbleStyleNameForRole = (role) => {
+  const activeTheme = normalizeChatBubbleTheme(role?.chats?.bubbleTheme, role?.chats?.activeBubbleStyleId);
+  if (activeTheme !== "custom") return getChatBubbleThemeLabel(activeTheme);
   const styles = normalizeArray(role?.chats?.bubbleStyles);
   const activeId = role?.chats?.activeBubbleStyleId || null;
-  return styles.find((item) => item.id === activeId)?.name || "系统默认";
+  const styleName = styles.find((item) => item.id === activeId)?.name;
+  return styleName ? `自定义 · ${styleName}` : "自定义";
 };
 const clampJourneyDateKey = (dateKey, fallbackDateKey = formatJourneyDayKey()) =>
   clampDateKeyToCurrentMonth(dateKey || fallbackDateKey, fallbackDateKey);
@@ -37020,31 +37690,58 @@ const requestModelJsonWithConfig = async ({
 };
 
 const extractModelTextContent = (data = {}) => {
+  const normalizeCandidate = (value) => normalizeApiText(value);
+  const candidates = [];
+  const pushCandidate = (value) => {
+    const normalized = normalizeCandidate(value);
+    if (normalized) candidates.push(normalized);
+  };
   if (Array.isArray(data?.content)) {
-    return data.content
-      .map((item) => {
-        if (typeof item === "string") return item;
-        return item?.text || item?.content || "";
-      })
-      .join("\n")
-      .trim();
+    data.content.forEach((item) => {
+      if (typeof item === "string") {
+        pushCandidate(item);
+        return;
+      }
+      pushCandidate(item?.text);
+      pushCandidate(item?.content);
+      pushCandidate(item?.content?.text);
+    });
   }
   const choice = Array.isArray(data?.choices) ? data.choices[0] : null;
-  const content = choice?.message?.content ?? choice?.text ?? data?.output_text ?? data?.text ?? "";
+  const content = choice?.message?.content ?? choice?.text ?? data?.output_text ?? data?.text ?? data?.rawText ?? "";
   if (Array.isArray(content)) {
-    return content
-      .map((item) => {
-        if (typeof item === "string") return item;
-        return item?.text || item?.content || "";
-      })
-      .join("\n")
-      .trim();
+    content.forEach((item) => {
+      if (typeof item === "string") {
+        pushCandidate(item);
+        return;
+      }
+      pushCandidate(item?.text);
+      pushCandidate(item?.content);
+      pushCandidate(item?.content?.text);
+    });
   }
   if (content && typeof content === "object") {
-    return String(content?.text || content?.content || "").trim();
+    pushCandidate(content?.text);
+    pushCandidate(content?.content);
+    pushCandidate(content?.content?.text);
   }
-  return String(content || "").trim();
+  pushCandidate(content);
+  pushCandidate(data?.response?.output_text);
+  pushCandidate(data?.response?.text);
+  pushCandidate(data?.output?.[0]?.content?.[0]?.text);
+  pushCandidate(data?.output?.[0]?.content?.[0]?.content);
+  pushCandidate(data?.candidates?.[0]?.content?.parts);
+  pushCandidate(data?.candidates?.[0]?.content?.parts?.map((item) => item?.text || item?.content || "").join("\n"));
+  pushCandidate(data?.rawText);
+  return candidates.find(Boolean) || "";
 };
+
+const canUseVideoSessionSpeechAutoSubmit = (session = state.videoSession) =>
+  Boolean(
+    session?.active &&
+      String(session?.inputMode || "voice").trim() === "voice" &&
+      !isVideoSessionHoldToTalkMode(session),
+  );
 
 const requestModelTextWithConfig = async ({
   config,
@@ -50679,6 +51376,18 @@ const updateActiveRoleChatField = (field, value) => {
   if (!role) return;
   if (field === "bubbleFontSize") {
     role.chats[field] = clampValue(Number(value) || 14, 12, 24);
+  } else if (field === "bubbleSize") {
+    role.chats[field] = normalizeChatBubbleSize(value);
+  } else if (field === "bubbleGap") {
+    role.chats[field] = normalizeChatBubbleGap(value);
+  } else if (field === "bubbleAvatarSize") {
+    role.chats[field] = normalizeChatBubbleAvatarSize(value);
+  } else if (field === "bubbleTheme") {
+    const nextTheme = normalizeChatBubbleTheme(value, role.chats?.activeBubbleStyleId);
+    role.chats[field] = nextTheme;
+    if (nextTheme !== "custom") {
+      role.chats.activeBubbleStyleId = null;
+    }
   } else if (field === "summaryPrompt") {
     const normalized = String(value || "").trim();
     role.chats[field] = normalized || DEFAULT_SUMMARY_PROMPT;
@@ -50727,6 +51436,7 @@ const addBubbleStyleToActiveRole = () => {
   bubbleStyles.unshift(nextStyle);
   role.chats.bubbleStyles = bubbleStyles;
   role.chats.activeBubbleStyleId = nextStyle.id;
+  role.chats.bubbleTheme = "custom";
   syncPersistentState();
   paint();
 };
@@ -50738,6 +51448,7 @@ const toggleBubbleStyleForActiveRole = (bubbleStyleId) => {
   const target = bubbleStyles.find((item) => item.id === bubbleStyleId);
   if (!target) return;
   role.chats.activeBubbleStyleId = role.chats.activeBubbleStyleId === bubbleStyleId ? null : bubbleStyleId;
+  role.chats.bubbleTheme = role.chats.activeBubbleStyleId ? "custom" : "default";
   target.updatedAt = new Date().toISOString();
   syncPersistentState();
   paint();
@@ -50749,9 +51460,27 @@ const deleteBubbleStyleFromActiveRole = (bubbleStyleId) => {
   role.chats.bubbleStyles = getBubbleStylesForRole(role).filter((item) => item.id !== bubbleStyleId);
   if (role.chats.activeBubbleStyleId === bubbleStyleId) {
     role.chats.activeBubbleStyleId = null;
+    role.chats.bubbleTheme = "default";
   }
   syncPersistentState();
   paint();
+};
+
+const setBubbleThemeForActiveRole = (themeId) => {
+  const role = getActiveChatRole() || getCurrentRole();
+  if (!role) return false;
+  const normalizedTheme = normalizeChatBubbleTheme(themeId, role.chats?.activeBubbleStyleId);
+  if (!CHAT_BUBBLE_THEME_OPTIONS.some((item) => item.id === normalizedTheme)) return false;
+  role.chats.bubbleTheme = normalizedTheme;
+  if (normalizedTheme !== "custom") {
+    role.chats.activeBubbleStyleId = null;
+  } else if (!role.chats.activeBubbleStyleId) {
+    const firstStyleId = getBubbleStylesForRole(role)[0]?.id || null;
+    role.chats.activeBubbleStyleId = firstStyleId;
+  }
+  syncPersistentState();
+  paint();
+  return true;
 };
 
 const updateWorldbookField = (worldbookId, field, value) => {
@@ -57753,8 +58482,11 @@ const setVideoSessionTimingSetting = (field, value) => {
   if (!state.videoSession?.active) return;
   refreshVideoSessionFrameCapturePlan();
   if (normalizedField === "speechAutoSubmitDelayMs") {
-    if (String(state.videoSession?.inputMode || "voice").trim() !== "voice") return;
-    queueVideoSessionSpeechAutoSubmit();
+    if (canUseVideoSessionSpeechAutoSubmit(state.videoSession)) {
+      queueVideoSessionSpeechAutoSubmit();
+    } else {
+      clearVideoSessionAutoSubmitTimer();
+    }
     return;
   }
   queueVideoSessionVisualAutoReply({ delayMs: normalizedValue });
@@ -57997,6 +58729,7 @@ const setVideoSessionInputMode = async (mode = "voice") => {
     destroyVideoSessionRecognition();
     teardownVideoSessionLocalAsrCapture({ releaseStream: false });
     clearVideoSessionReadyCue({ paintNow: false });
+    clearVideoSessionAutoSubmitTimer();
     releaseVideoSessionAudioStream();
     void closeVideoSessionLocalAudioContext();
     state.videoSession.micListening = false;
@@ -58015,6 +58748,7 @@ const setVideoSessionInputMode = async (mode = "voice") => {
 
   blurVideoSessionTextInput();
   clearVideoSessionReadyCue({ paintNow: false });
+  clearVideoSessionAutoSubmitTimer();
   state.videoSession.status = getVideoSessionIdleStatus();
   await syncVideoSessionMicPermissionState({ syncNow: true });
   paint();
@@ -58185,8 +58919,7 @@ const queueVideoSessionSpeechAutoSubmit = () => {
   clearVideoSessionAutoSubmitTimer();
   clearVideoSessionVisualAutoReplyTimer();
   if (!state.videoSession?.active || !isVideoSessionPanelOpen() || isDocumentHidden()) return;
-  if (String(state.videoSession?.inputMode || "voice").trim() !== "voice") return;
-  if (isVideoSessionHoldToTalkMode(state.videoSession)) return;
+  if (!canUseVideoSessionSpeechAutoSubmit(state.videoSession)) return;
   if (state.videoSession.status === "processing" || state.videoSession.status === "replying") return;
   const mergedText = mergeVideoSessionTextParts(state.videoSession.transcript, state.videoSession.interimTranscript);
   if (!mergedText || state.videoSession.interimTranscript) return;
@@ -59128,6 +59861,8 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
   if (videoSessionRuntime.roundSubmitting) return false;
   videoSessionRuntime.roundSubmitting = true;
   const sessionToken = String(state.videoSession?.startedAt || "").trim();
+  let inputMode = String(state.videoSession.inputMode || "voice").trim() === "text" ? "text" : "voice";
+  let promptText = "";
   const keepSessionRunning = () =>
     Boolean(
       state.videoSession?.active &&
@@ -59142,9 +59877,9 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     clearVideoSessionFrameTimer();
     flushVideoSessionLocalTranscriptReveal({ queueSubmit: false, paintNow: false });
     videoSessionRuntime.lastInputReadyAt = 0;
-    const inputMode = String(state.videoSession.inputMode || "voice").trim() === "text" ? "text" : "voice";
+    inputMode = String(state.videoSession.inputMode || "voice").trim() === "text" ? "text" : "voice";
     const allowPassiveVisualRound = allowVisualOnly && source === "visual-auto";
-    let promptText = getVideoSessionPendingInputText(state.videoSession, { mode: inputMode });
+    promptText = getVideoSessionPendingInputText(state.videoSession, { mode: inputMode });
     if (inputMode === "voice") {
       promptText = await finalizeVideoSessionLocalVoiceTranscript({ silent: true });
     }
@@ -59389,6 +60124,14 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     setToast(friendlyError);
     if (keepSessionRunning()) {
       state.videoSession.error = friendlyError;
+      if (promptText && !getVideoSessionPendingInputText(state.videoSession, { mode: inputMode })) {
+        if (inputMode === "text") {
+          state.videoSession.manualText = promptText;
+        } else {
+          state.videoSession.transcript = promptText;
+          state.videoSession.interimTranscript = "";
+        }
+      }
       state.videoSession.roundPrimaryStatus =
         Math.max(0, Number(state.videoSession.roundPrimaryApiCalls || 0)) > 0 ? "error" : "idle";
       state.videoSession.status = getVideoSessionIdleStatus();
@@ -60454,10 +61197,10 @@ eventRoot.addEventListener("input", (event) => {
     const field = target.dataset.chatField;
     const value = target.type === "number" || target.type === "range" ? Number(target.value) : target.value;
     updateActiveRoleChatField(field, value);
-    if (field === "bubbleFontSize" && target.type === "range") {
+    if (["bubbleFontSize", "bubbleSize", "bubbleGap", "bubbleAvatarSize"].includes(field) && target.type === "range") {
       return;
     }
-    if (field === "bubbleFontSize" || target.type === "range") {
+    if (["bubbleFontSize", "bubbleSize", "bubbleGap", "bubbleAvatarSize"].includes(field) || target.type === "range") {
       paint();
     }
     return;
@@ -60641,7 +61384,7 @@ eventRoot.addEventListener("change", (event) => {
     return;
   }
 
-  if (target.dataset.chatField === "bubbleFontSize") {
+  if (["bubbleFontSize", "bubbleSize", "bubbleGap", "bubbleAvatarSize"].includes(target.dataset.chatField)) {
     updateActiveRoleChatField(target.dataset.chatField, Number(target.value));
     paint();
     return;
@@ -61438,6 +62181,13 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "set-bubble-theme") {
+    const themeId = String(button.dataset.bubbleTheme || "").trim();
+    if (!setBubbleThemeForActiveRole(themeId)) return;
+    setToast(`已切换到${getChatBubbleThemeLabel(themeId)}`);
+    return;
+  }
+
   if (action === "add-bubble-style") {
     addBubbleStyleToActiveRole();
     setToast("已新增一套气泡样式");
@@ -61456,9 +62206,10 @@ eventRoot.addEventListener("click", async (event) => {
     const role = getActiveChatRole() || getCurrentRole();
     if (!role) return;
     role.chats.activeBubbleStyleId = null;
+    role.chats.bubbleTheme = "default";
     syncPersistentState();
     paint();
-    setToast("已切回系统默认样式");
+    setToast("已切回默认美化");
     return;
   }
 
@@ -62285,7 +63036,7 @@ eventRoot.addEventListener("click", async (event) => {
     queueVideoSessionStateSync({ flush: true });
     if (state.videoSession?.active) {
       refreshVideoSessionFrameCapturePlan();
-      if (shouldAutoStartVideoSessionRecognition(state.videoSession)) {
+      if (canUseVideoSessionSpeechAutoSubmit(state.videoSession)) {
         queueVideoSessionSpeechAutoSubmit();
       } else {
         clearVideoSessionAutoSubmitTimer();
