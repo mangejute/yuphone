@@ -2149,6 +2149,46 @@ select {
   margin-left: auto;
 }
 
+.chat-screen.bubble-theme-wechat .voice-card,
+.chat-screen.bubble-theme-custom .voice-card {
+  max-width: 260px;
+}
+
+.chat-screen.bubble-theme-wechat .voice-pill,
+.chat-screen.bubble-theme-custom .voice-pill {
+  min-width: 174px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 4px;
+  background: var(--chat-ai-bubble-color);
+  box-shadow: none;
+}
+
+.chat-screen.bubble-theme-wechat .voice-card.user-voice-card .voice-pill,
+.chat-screen.bubble-theme-custom .voice-card.user-voice-card .voice-pill {
+  background: var(--chat-user-bubble-color);
+}
+
+.chat-screen.bubble-theme-wechat .voice-actions,
+.chat-screen.bubble-theme-custom .voice-actions {
+  display: none;
+}
+
+.chat-screen.bubble-theme-wechat .voice-wave-track,
+.chat-screen.bubble-theme-custom .voice-wave-track {
+  height: 22px;
+}
+
+.chat-screen.bubble-theme-wechat .voice-waveform,
+.chat-screen.bubble-theme-custom .voice-waveform {
+  height: 20px;
+}
+
+.chat-screen.bubble-theme-wechat .voice-wave-icon,
+.chat-screen.bubble-theme-custom .voice-wave-icon {
+  height: 19px;
+}
+
 .voice-action-btn {
   display: inline-flex;
   align-items: center;
@@ -2222,12 +2262,40 @@ select {
 }
 
 .voice-transcript {
+  position: relative;
   padding: 10px 14px 12px;
   border-radius: 18px;
   background: #f2f2f4;
   color: #2f3137;
   font-size: 12px;
   line-height: 1.62;
+}
+
+.voice-transcript-actions {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.voice-transcript-actions button {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(17, 17, 17, 0.08);
+}
+
+.voice-transcript-actions button:disabled {
+  opacity: 0.42;
+}
+
+.voice-transcript-text {
+  padding-right: 68px;
 }
 
 .voice-card.user-voice-card .voice-transcript {
@@ -11259,8 +11327,226 @@ html.chat-composer-focused .ref-chat-composer {
   gap: 10px;
 }
 
+.panel-save-text-btn {
+  padding: 0 6px;
+  color: #2d7ef7;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.bubble-preview-card {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.bubble-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bubble-preview-head strong {
+  font-size: 16px;
+}
+
+.bubble-preview-head span {
+  color: #8c93a0;
+  font-size: 12px;
+}
+
+.bubble-preview-stage {
+  display: grid;
+  gap: var(--preview-gap);
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #edf2fb 0%, #f8fafc 100%);
+}
+
+.bubble-preview-wechat .bubble-preview-stage {
+  background: #ededed;
+}
+
+.bubble-preview-line {
+  display: grid;
+  align-items: start;
+  gap: var(--preview-avatar-gap);
+}
+
+.bubble-preview-line.ai {
+  grid-template-columns: var(--preview-avatar-size) minmax(0, 1fr);
+  justify-items: start;
+}
+
+.bubble-preview-line.user {
+  grid-template-columns: minmax(0, 1fr) var(--preview-avatar-size);
+  justify-items: end;
+}
+
+.bubble-preview-avatar {
+  width: var(--preview-avatar-size) !important;
+  height: var(--preview-avatar-size) !important;
+  border-radius: 50% !important;
+}
+
+.bubble-preview-wechat .bubble-preview-avatar {
+  border-radius: 6px !important;
+}
+
+.bubble-preview-bubble {
+  position: relative;
+  max-width: 190px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(17, 17, 17, 0.06);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.bubble-preview-wechat .bubble-preview-bubble {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.ai-bubble-preview {
+  background: var(--preview-ai-color);
+  color: #111111;
+}
+
+.user-bubble-preview {
+  background: var(--preview-user-color);
+  color: #111111;
+}
+
+.bubble-preview-qq .user-bubble-preview {
+  color: #ffffff;
+}
+
+.bubble-preview-tail {
+  position: absolute;
+  top: 12px;
+  width: 11px;
+  height: 14px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+.bubble-preview-tail.left {
+  left: -9px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 18'%3E%3Cpath fill='white' d='M18 1.4C13.2 1.9 9.3 4.2 7 7.9C5.6 10.2 3.3 13.4 0.4 16.8C6 16.1 10.5 14.5 13.5 12C16.6 9.4 18.1 5.9 18 1.4Z'/%3E%3C/svg%3E");
+}
+
+.bubble-preview-tail.right {
+  right: -9px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 18'%3E%3Cpath fill='white' d='M2 1.4C6.8 1.9 10.7 4.2 13 7.9C14.4 10.2 16.7 13.4 19.6 16.8C14 16.1 9.5 14.5 6.5 12C3.4 9.4 1.9 5.9 2 1.4Z'/%3E%3C/svg%3E");
+}
+
+.bubble-preview-sticker {
+  width: min(var(--preview-sticker-size), 45vw);
+  height: calc(min(var(--preview-sticker-size), 45vw) * 0.82);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 28% 30%, #fff 0 9px, transparent 10px),
+    radial-gradient(circle at 62% 38%, #fff 0 7px, transparent 8px),
+    linear-gradient(135deg, #ffd28f 0%, #ffb37f 100%);
+}
+
+.bubble-saved-theme-card,
+.bubble-color-card {
+  display: grid;
+  gap: 12px;
+}
+
+.bubble-saved-theme-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bubble-saved-theme-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.bubble-saved-theme-row > button:first-child {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f7f8fb;
+}
+
+.bubble-saved-theme-row.is-active > button:first-child {
+  background: #111111;
+  color: #ffffff;
+}
+
+.bubble-saved-theme-row span {
+  color: #8b919c;
+  font-size: 12px;
+}
+
+.bubble-saved-theme-row.is-active span {
+  color: rgba(255, 255, 255, 0.64);
+}
+
+.bubble-color-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.bubble-color-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bubble-color-head strong {
+  display: block;
+  font-size: 15px;
+}
+
+.bubble-color-head span {
+  display: block;
+  margin-top: 4px;
+  color: #8b919c;
+  font-size: 12px;
+}
+
+.bubble-color-picker {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.bubble-color-sliders {
+  display: grid;
+  gap: 10px;
+}
+
+.bubble-color-sliders label {
+  display: grid;
+  gap: 6px;
+}
+
+.bubble-color-sliders span {
+  color: #727887;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .chat-screen.bubble-theme-default,
 .chat-screen.bubble-theme-qq,
+.chat-screen.bubble-theme-wechat,
 .chat-screen.bubble-theme-custom {
   --chat-bubble-pad-y: 9px;
   --chat-bubble-pad-x: 14px;
@@ -11269,12 +11555,19 @@ html.chat-composer-focused .ref-chat-composer {
   --chat-bubble-tail-h: 24px;
   --chat-message-gap: 12px;
   --chat-avatar-size: 42px;
+  --chat-avatar-gap: 10px;
+  --chat-sticker-size: 128px;
+  --chat-image-size: 210px;
+  --chat-ai-bubble-color: #ffffff;
+  --chat-user-bubble-color: #ffe16d;
 }
 
 .chat-screen.bubble-theme-default .chat-group-stack,
 .chat-screen.bubble-theme-default .chat-group-stack.align-right,
 .chat-screen.bubble-theme-qq .chat-group-stack,
 .chat-screen.bubble-theme-qq .chat-group-stack.align-right,
+.chat-screen.bubble-theme-wechat .chat-group-stack,
+.chat-screen.bubble-theme-wechat .chat-group-stack.align-right,
 .chat-screen.bubble-theme-custom .chat-group-stack,
 .chat-screen.bubble-theme-custom .chat-group-stack.align-right {
   row-gap: var(--chat-message-gap);
@@ -11282,6 +11575,7 @@ html.chat-composer-focused .ref-chat-composer {
 
 .chat-screen.bubble-theme-default .chat-group-block,
 .chat-screen.bubble-theme-qq .chat-group-block,
+.chat-screen.bubble-theme-wechat .chat-group-block,
 .chat-screen.bubble-theme-custom .chat-group-block {
   margin-bottom: var(--chat-message-gap);
 }
@@ -11330,6 +11624,25 @@ html.chat-composer-focused .ref-chat-composer {
   max-width: min(62vw, 252px) !important;
 }
 
+.chat-screen.bubble-theme-default .bubble-tail {
+  top: 4px !important;
+  bottom: auto !important;
+  width: 7px !important;
+  height: 8px !important;
+  opacity: 1;
+  z-index: 2;
+}
+
+.chat-screen.bubble-theme-default .bubble-tail-left {
+  left: -8px;
+  transform: translateX(5px) rotate(-2deg);
+}
+
+.chat-screen.bubble-theme-default .bubble-tail-right {
+  right: -8px;
+  transform: translateX(-5px) rotate(2deg);
+}
+
 .chat-screen.bubble-theme-default .chat-bubble {
   padding: var(--chat-bubble-pad-y) var(--chat-bubble-pad-x) !important;
   border: 1px solid rgba(17, 17, 17, 0.045) !important;
@@ -11338,12 +11651,12 @@ html.chat-composer-focused .ref-chat-composer {
 }
 
 .chat-screen.bubble-theme-default .ai-bubble {
-  background: #ffffff !important;
+  background: var(--chat-ai-bubble-color) !important;
   color: #17191f !important;
 }
 
 .chat-screen.bubble-theme-default .user-bubble {
-  background: #ffe16d !important;
+  background: var(--chat-user-bubble-color) !important;
   color: #17191f !important;
 }
 
@@ -11474,6 +11787,7 @@ html.chat-composer-focused .ref-chat-composer {
   display: none;
 }
 
+.theme-message-avatar-slot,
 .qq-message-avatar-slot {
   display: none;
 }
@@ -11483,15 +11797,19 @@ html.chat-composer-focused .ref-chat-composer {
   justify-items: stretch;
 }
 
-.chat-screen.bubble-theme-qq .chat-message-line {
+.chat-screen.bubble-theme-qq .chat-message-line,
+.chat-screen.bubble-theme-wechat .chat-message-line,
+.chat-screen.bubble-theme-custom .chat-message-line {
   display: grid;
   grid-template-columns: var(--chat-avatar-size) minmax(0, 1fr);
-  gap: 10px;
+  gap: var(--chat-avatar-gap);
   align-items: start;
   justify-items: stretch;
 }
 
-.chat-screen.bubble-theme-qq .chat-message-line.user-line {
+.chat-screen.bubble-theme-qq .chat-message-line.user-line,
+.chat-screen.bubble-theme-wechat .chat-message-line.user-line,
+.chat-screen.bubble-theme-custom .chat-message-line.user-line {
   grid-template-columns: minmax(0, 1fr) var(--chat-avatar-size);
 }
 
@@ -11503,6 +11821,9 @@ html.chat-composer-focused .ref-chat-composer {
   grid-template-columns: 28px minmax(0, 1fr) var(--chat-avatar-size);
 }
 
+.chat-screen.bubble-theme-qq .theme-message-avatar-slot,
+.chat-screen.bubble-theme-wechat .theme-message-avatar-slot,
+.chat-screen.bubble-theme-custom .theme-message-avatar-slot,
 .chat-screen.bubble-theme-qq .qq-message-avatar-slot {
   display: grid;
   width: var(--chat-avatar-size);
@@ -11510,24 +11831,35 @@ html.chat-composer-focused .ref-chat-composer {
   place-items: start center;
 }
 
+.chat-screen.bubble-theme-qq .theme-message-avatar,
+.chat-screen.bubble-theme-wechat .theme-message-avatar,
+.chat-screen.bubble-theme-custom .theme-message-avatar,
 .chat-screen.bubble-theme-qq .qq-message-avatar {
   margin-top: 0 !important;
 }
 
-.chat-screen.bubble-theme-qq .chat-message-line.ai-line .qq-message-avatar-slot {
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line .theme-message-avatar-slot,
+.chat-screen.bubble-theme-wechat .chat-message-line.ai-line .theme-message-avatar-slot,
+.chat-screen.bubble-theme-custom .chat-message-line.ai-line .theme-message-avatar-slot {
   grid-column: 1;
   grid-row: 1;
 }
 
-.chat-screen.bubble-theme-qq .chat-message-line.ai-line .chat-bubble-wrap {
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-wechat .chat-message-line.ai-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-custom .chat-message-line.ai-line .chat-bubble-wrap {
   grid-column: 2;
 }
 
-.chat-screen.bubble-theme-qq .chat-message-line.user-line .chat-bubble-wrap {
+.chat-screen.bubble-theme-qq .chat-message-line.user-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-wechat .chat-message-line.user-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-custom .chat-message-line.user-line .chat-bubble-wrap {
   grid-column: 1;
 }
 
-.chat-screen.bubble-theme-qq .chat-message-line.user-line .qq-message-avatar-slot {
+.chat-screen.bubble-theme-qq .chat-message-line.user-line .theme-message-avatar-slot,
+.chat-screen.bubble-theme-wechat .chat-message-line.user-line .theme-message-avatar-slot,
+.chat-screen.bubble-theme-custom .chat-message-line.user-line .theme-message-avatar-slot {
   grid-column: 2;
   grid-row: 1;
 }
@@ -11574,12 +11906,12 @@ html.chat-composer-focused .ref-chat-composer {
 }
 
 .chat-screen.bubble-theme-qq .ai-bubble {
-  background: #ffffff !important;
+  background: var(--chat-ai-bubble-color) !important;
   color: #111111 !important;
 }
 
 .chat-screen.bubble-theme-qq .user-bubble {
-  background: #12a8e7 !important;
+  background: var(--chat-user-bubble-color) !important;
   color: #ffffff !important;
 }
 
@@ -11608,7 +11940,6 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-qq .bubble-tail-left {
   left: -8px;
   background-color: transparent !important;
-  background-image: url("data:image/png;base64,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") !important;
   -webkit-mask: none !important;
   mask: none !important;
   transform: translateX(5px) rotate(-2deg);
@@ -11618,7 +11949,6 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-qq .bubble-tail-right {
   right: -8px;
   background-color: transparent !important;
-  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKwAAADPCAYAAABoUTosAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAvISURBVHhe7d1rrFxVFQdwvvKQklVL1KClWokiiZFQREV8IIpi0CgPKxHEqJEoEaQqgiUBg/hCQg1KgIjhQ11giIJYaBQRBUWjqNWG+CI2RZdUieUpD7FmhzOL6dpr7p0zcx57n/3/8Ev+2ffeOfux0s7MOWefXXbs2LELQC6iBoCURQ0AqSGWdaMc/RAgFcTyDGLZQCwPjNqiXwJIAbHsSyybiGUHsfxz1B79IkDfiOU1xLKtKtbgrtHPol8G6BOxfJhYHh8r1uCHo59HfwDQF2K5whTqyDWj34n+CKBrxPI8YvmFU6gjF49+N/pjgC4Ry+Hm/apnzej3oxcA6AqxrCWW/zoFah0z+pvoRQDaRizLiGWjU5iTvGz0t9GLAbSp+srqHqcoJ/kfsew++vvoBQHaQiznT/kWYNxfx18jelGAphHLSmL5uVOM09gw/lrRiwM0iVjeG64FcApxWp8ff73oAABNIJa9iOVqpwDrOn78daMDAcyr+m51i1N8s9hv/LWjgwHMqroc8NLqk70tvFnoZYUj0UEBZkEsbwyf6J2im8cP7HGiAwPUQSxLiOXyBv9VHXeuPV7UAYBpEcuRxLLVKbSmvNkeM+oEwGKIZW9iucopsCY9Gf71tseOOgOwEGJ5H7Hc5xRY035tjx1EDQAeYjmAWG51CqstX7B9CKIGgHHEsgexXEgsTzhF1abo/WsQNQCMEMtqYvm7U0xte2z8Cq1xUQMAsRxCLD9zCqkrP7Z9GokaoFzVvVXrW/pOtY4zbd9GogYoD7HsSiznEcsjTvH04UW2jyNRA5SFWE5u8EKVJvzZ9nFc1ABlIJZ3EMtmp2D6prd0e6IGGDZieR2x3OEUSiqOsH0eFzXAMBHLgTXvVO2Dbvo2SdQAwxJukSaWbyfwyX8al9n+W1EDDAOxHEQs12VSqCNvsOOwogbIG7G8nFhucIohddvsWDxRA+SJWA4jlhudQsjFpXZMnqgB8hL2nZrjnv+UHGbH5okaIH3EshuxnEIsf3IWPkcLniwYFzVAuqpN1M4hlnudRc/ZWjvWSaIGSE/1if8bxPKos9i5C7fC7GvHPEnUAOkglnf3fJlfF/T5BdOIGqBfxPKccHszsYizuEN0op2DhUQN0A9ieSuxfGeG7ShzFm5m3NXOxUKiBugOsSyvrkOts8HvkHzJzsliogZoH7EcSyw3VR847CKWIox9pZ2bxUQN0I7qTNRlxLLdWbwS3WTnaBpRAzQnbBVZ/Zd/t7NgpTvaztc0ogaYT/W+9IyBnC5tyxY7b9OKGqA+YtmHWE4nlp9mdjlfX/RBcXVFDTAdYllBLKcRy22Ff3iq699hNxk7n9OKGmCy6jaT8KX+b5yFgOm4e2ZNK2qAnVU7S38lsVuhcxW2IHq2neM6oobShQsxiOVD1Vmnh5xJh9ldaee7rqihNNW1pW8ili8Ty13OJEMzwofR/e381xU1lIBYXkksnyaWW6r/puzkQvO+a9dhFlHDEBHLKmL5GLFcTyz3O5MJ7Vtl12UWUUPuqo3NwmnQtdXGEQ86kwfdutGu06yihtxUZ5bCxrsXVVvwDPGq/Ny9yq7brKKGlBHLs6pH7Xyq2s2klIucczbTRS6TRA2pqC4cOY5YLqjut0dx5id8M3CwXdt5RA19qM4gvZ9YLiGW2/G+czCut2s9r6ihLcSyZ/Vp/SRi+Vy171O4r76kW0JKEq6veKmtg3lFDfMglqXVbnlhN5KziOXr4QELxPIPZ0AwbFfZ+mhC1LAQYnkusRxKLCdUH3y+Rizfq3ZyxmlMGAnf1Kyw9dMEDdWud0dVe96Hs0Dhgo9rq/eU4bHiXT9YDPJ1kS20pmhwDgowi3C961JbaE3R4BwYYBZn2CJrkgbnwAB1/cUWWNM0OAcHqOvttsCapsE5OEAdG21xtUGD0wGAaYVriic+brNJGpxOAEzrAltYbdHgdAJgGmEju5lv265Lg9MRgGmstkXVJg1ORwAWU2v37CZocDoDsJDwQesltqDapsHpEMBCzrXF1AUNTocAJtlsC6krGpxOAXjChdmvsIXUFQ1OxwA862wRdUmD0zEAK1wX3dl3rh4NTucArCNtAXVNg9M5gHGt3KNVlwangwAj4fQr2eLpgwankwBB2AzjCFs4fdHgdBQguNgWTZ80OB0FCLfv13oWbNs0OJ2FsoVrBQ60BdM3DU6HoWxn2WJJgQanw1Cu22yhpEKD02koU9hS//m2UFKhwek4lOldtkhSosHpOJTnq7ZAUqPB6TyU5U5bHCnS4AwAyhHet660xZEiDc4goBzH2cJIlQZnEFCGS2xRpEyDMxAYvl/ZgkidBmcwMGzbieUFtiBSp8EZEAxXeHLPUbYYcqDBGRQM19m2EHKhwRkUDNM1tghyosEZGAzPb4llN1sEOdHgDA6GZVtbz87qkgZngDAc4UPW6+3i50iDM0gYjo/ahc+VBmeQMAxX2kXPmQZnoJC/m+2C506DM1jI2x+JZYld8NxpcAYM+QrfCGRxuWBdGpxBQ54eDk9mtws9FBqcgUN+wtdXR9tFHhINzuAhP6faBR4aDc7gIS/J30DYBA3OBEA+rrMLO1QanEmAPNyR+wUtdWhwJgLSt4lYltlFHTINzmRA2rYSyz52QYdOgzMhkK5wYmA/u5gl0OBMCqQpbHox2BMDi9HgTAykJ5zFeq1dxJJocCYH0hJ2xH6LXcDSaHAmCNIRTrkeYxevRBqcSYI0hMcOnWQXrlQanImC/oVi/aBdtJJpcCYL+hWK9SN2wUqnwZkw6NdpdrEABZuqj9uFgqdocCYN+nGmXSR4mgZn4qB7a+wCwc40OJMH3QkfsE63iwMxDc4kQjfwbUANGpyJhPaFYj3FLgpMpsGZTGhXON16ol0QWJgGZ0KhPeFClmPtYsDiNDiTCu34T67PF0iBBmdioXkPDWWf1r5ocCYXmnVfyXcKNEWDM8HQnHuIZX87+VCfBmeSoRl/IJblduJhNhqciYb5/ZJY9raTDrPT4Ew2zOdmYtnTTjjMR4Mz4TC79XaioRkanEmH2XzRTjI0R4Mz8VDPk0N6vFCqNDgLANN7FKdau6HBWQSYzr+I5VA7sdAODc5CwOLCo4VeaCcV2qPBWQxY2E+I5Zl2QqFdGpwFgcm+aScSuqHBWRSIhTsEzrOTCN3R4CwO7Cxcx7raTiB0S4OzQPA0waWBadDgLBI85c4SnyWQKg3OQgHLtcSyu5006I8GZ7FKFj5cnWMnC/qnwVm0Uj1ALG+zEwVp0OAsXInC3QEvtpME6dDgLF5pNhDLXnaCIC0anAUsRXi/er6dGEiTBmchS7Ad71fzosFZzKH7Ha60yo8GZ0GHbD2x7GEnA9KnwVnUIXoct7HkTYOzuEOzhVgOsRMAedHgLPCQ3EAsS+3gIT8anEUegieI5ZN20JAvDc5i5y5swPZqO2DImwZnwXO2kViW2cFC/jQ4i56j8C3AJ+wgYTg0OIufm7txV8DwaXAKICdXE8sSOzgYHg1OEeTgYWL5gB0UDJcGpxhSF+61wrWrhdHgFESqwi6B2NKyUBqcwkjRVmI53A4CyqHBKY7UfItYyA4AyqLBKZBU3E8sJ9uOQ5k0OIWSgh8RywrbaSiXBqdY+hT2sVpjOwugwSmavoSvq/DUQHBpcAqna+FSwM/YDgKM0+AUUJc2E8vBtnMAlganiLoQ/lX9rO0UwCQanGJq2++JZZXtEMBCNDgF1Zbwryp2WoGZaHAKqw2biOUg2wmAaWlwiqtJj2G/VWiCBqfImnI7LgOEpmhwCm1eDxLLqfaAAPPQ4BTcPMJeq8vtwQDmpcEpulncSywn2IMANEWDU3x1hE2BL8f1qtA2DU4RTiucVsXj16ETGpxCXMwjxHK2fUGANmlwCnIh3yeWlfbFANqmwSlKz9+I5Xj7IgBd0eAU57hw/v9CbLMOfdPgFOnIrcRygP1DgD5ocAo1PHL9PfYPAPqkwfz3vw5PBYQUaaiK9RbcAAgp00As77Q/BEhN1ACQsqgBIGX/B4of7P7uAFc3AAAAAElFTkSuQmCC") !important;
   -webkit-mask: none !important;
   mask: none !important;
   transform: translateX(-5px) rotate(2deg);
@@ -11678,6 +12008,333 @@ html.chat-composer-focused .ref-chat-composer {
 
 .chat-screen.bubble-theme-qq .composer-plain textarea::placeholder {
   color: #b9bec8;
+}
+
+.chat-screen.bubble-theme-wechat,
+.chat-screen.bubble-theme-custom {
+  background: #ededed !important;
+}
+
+.chat-screen.bubble-theme-wechat.has-chat-background,
+.chat-screen.bubble-theme-custom.has-chat-background {
+  background:
+    linear-gradient(180deg, rgba(237, 237, 237, 0.58), rgba(237, 237, 237, 0.56)),
+    var(--chat-background-image) center/cover no-repeat !important;
+}
+
+.chat-screen.bubble-theme-wechat .clean-chat-header,
+.chat-screen.bubble-theme-custom .clean-chat-header {
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 14px 9px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+  background: #ededed !important;
+  box-shadow: none !important;
+}
+
+.chat-screen.bubble-theme-wechat .white-back,
+.chat-screen.bubble-theme-wechat .header-gear-btn,
+.chat-screen.bubble-theme-custom .white-back,
+.chat-screen.bubble-theme-custom .header-gear-btn {
+  color: #111111 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.chat-screen.bubble-theme-wechat .white-back svg,
+.chat-screen.bubble-theme-custom .white-back svg {
+  width: 27px;
+  height: 27px;
+}
+
+.chat-screen.bubble-theme-wechat .header-gear-btn svg,
+.chat-screen.bubble-theme-custom .header-gear-btn svg {
+  width: 28px;
+  height: 28px;
+}
+
+.chat-screen.bubble-theme-wechat .compact-chat-title.with-current-place,
+.chat-screen.bubble-theme-custom .compact-chat-title.with-current-place {
+  justify-items: center;
+  text-align: center;
+}
+
+.chat-screen.bubble-theme-wechat .compact-chat-title strong,
+.chat-screen.bubble-theme-custom .compact-chat-title strong {
+  color: #111111;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.chat-screen.bubble-theme-wechat .chat-header-meta,
+.chat-screen.bubble-theme-custom .chat-header-meta {
+  display: none;
+}
+
+.chat-screen.bubble-theme-wechat .modern-chat-body,
+.chat-screen.bubble-theme-custom .modern-chat-body {
+  padding: 18px 12px var(--chat-overlay-reserve) !important;
+  background: #ededed !important;
+}
+
+.chat-screen.bubble-theme-wechat .chat-group-row,
+.chat-screen.bubble-theme-wechat .chat-group-row.user,
+.chat-screen.bubble-theme-custom .chat-group-row,
+.chat-screen.bubble-theme-custom .chat-group-row.user {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.chat-screen.bubble-theme-wechat .chat-group-row > .group-avatar,
+.chat-screen.bubble-theme-wechat .chat-group-row > .chat-group-avatar-spacer,
+.chat-screen.bubble-theme-wechat .chat-group-row > .chat-group-stack + div,
+.chat-screen.bubble-theme-custom .chat-group-row > .group-avatar,
+.chat-screen.bubble-theme-custom .chat-group-row > .chat-group-avatar-spacer,
+.chat-screen.bubble-theme-custom .chat-group-row > .chat-group-stack + div {
+  display: none !important;
+}
+
+.chat-screen.bubble-theme-wechat .group-avatar,
+.chat-screen.bubble-theme-wechat .chat-side-avatar,
+.chat-screen.bubble-theme-custom .group-avatar,
+.chat-screen.bubble-theme-custom .chat-side-avatar {
+  width: var(--chat-avatar-size) !important;
+  height: var(--chat-avatar-size) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+.chat-screen.bubble-theme-wechat .chat-group-name,
+.chat-screen.bubble-theme-custom .chat-group-name {
+  display: none;
+}
+
+.chat-screen.bubble-theme-wechat .chat-message-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-custom .chat-message-line .chat-bubble-wrap {
+  max-width: min(66vw, 282px) !important;
+  grid-row: 1;
+  justify-self: start;
+  overflow: visible;
+}
+
+.chat-screen.bubble-theme-wechat .chat-message-line.user-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-custom .chat-message-line.user-line .chat-bubble-wrap {
+  justify-self: end;
+}
+
+.chat-screen.bubble-theme-wechat .chat-bubble,
+.chat-screen.bubble-theme-custom .chat-bubble {
+  padding: calc(var(--chat-bubble-pad-y) + 1px) var(--chat-bubble-pad-x) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  color: #111111 !important;
+  line-height: 1.48 !important;
+}
+
+.chat-screen.bubble-theme-wechat .ai-bubble,
+.chat-screen.bubble-theme-custom .ai-bubble {
+  background: var(--chat-ai-bubble-color) !important;
+}
+
+.chat-screen.bubble-theme-wechat .user-bubble,
+.chat-screen.bubble-theme-custom .user-bubble {
+  background: var(--chat-user-bubble-color) !important;
+}
+
+.chat-screen.bubble-theme-wechat .bubble-tail,
+.chat-screen.bubble-theme-custom .bubble-tail {
+  top: 50% !important;
+  width: 10px !important;
+  height: 14px !important;
+  opacity: 1;
+  z-index: 2;
+}
+
+.chat-screen.bubble-theme-wechat .bubble-tail-left,
+.chat-screen.bubble-theme-custom .bubble-tail-left {
+  left: -8px;
+  transform: translateY(-50%) rotate(0deg);
+}
+
+.chat-screen.bubble-theme-wechat .bubble-tail-right,
+.chat-screen.bubble-theme-custom .bubble-tail-right {
+  right: -8px;
+  transform: translateY(-50%) rotate(0deg);
+}
+
+.chat-screen.bubble-theme-wechat .chat-group-time span,
+.chat-screen.bubble-theme-custom .chat-group-time span {
+  background: rgba(255, 255, 255, 0.68);
+  color: #7a7a7a;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: none;
+}
+
+.chat-screen.bubble-theme-wechat .chat-bottom-overlay,
+.chat-screen.bubble-theme-custom .chat-bottom-overlay {
+  display: flex;
+  flex-direction: column;
+  background: #f6f6f6 !important;
+  border-top: 1px solid #d8d8d8;
+}
+
+.chat-screen.bubble-theme-wechat .ref-chat-composer,
+.chat-screen.bubble-theme-custom .ref-chat-composer {
+  padding: 7px 8px calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+  background: #f6f6f6 !important;
+}
+
+.wechat-composer-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px 40px;
+  align-items: end;
+  gap: 6px;
+}
+
+.wechat-side-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111111;
+}
+
+.wechat-side-btn svg {
+  width: 27px;
+  height: 27px;
+  stroke-width: 1.55;
+}
+
+.wechat-voice-toggle svg {
+  width: 29px;
+  height: 29px;
+  stroke-width: 1.45;
+}
+
+.wechat-composer-pill {
+  width: 100% !important;
+  min-height: 38px;
+  margin: 0 !important;
+  padding: 7px 9px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.wechat-composer-pill::before {
+  content: none !important;
+}
+
+.wechat-composer-pill textarea {
+  min-height: 24px;
+  color: #111111;
+  font-size: 16px;
+  line-height: 1.42 !important;
+}
+
+.wechat-plus-panel.quick-plus-menu {
+  position: static;
+  width: 100%;
+  margin: 14px 0 0;
+  padding: 22px 18px 26px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px 14px;
+  border: 0;
+  border-radius: 0;
+  background: #f2f2f2;
+  box-shadow: none;
+}
+
+.wechat-plus-panel .quick-plus-item {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 7px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #111111;
+}
+
+.wechat-plus-panel .quick-plus-item::before,
+.wechat-plus-panel .quick-plus-item + .quick-plus-item::before {
+  content: none !important;
+  display: none !important;
+}
+
+.wechat-plus-panel .quick-plus-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 0 !important;
+  border-radius: 12px;
+  background: #ffffff !important;
+  color: #111111;
+  box-shadow: none !important;
+}
+
+.wechat-plus-panel .quick-plus-icon svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 1.55;
+}
+
+.wechat-plus-panel .quick-plus-copy {
+  display: block;
+  text-align: center;
+}
+
+.wechat-plus-panel .quick-plus-copy strong {
+  color: #666666;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.wechat-plus-panel .quick-plus-copy small,
+.wechat-plus-panel .quick-plus-arrow {
+  display: none;
+}
+
+.qq-toolbar {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+.qq-send-btn {
+  flex: 0 0 auto;
+  min-width: 54px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: #12a8e7;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chat-screen.bubble-theme-qq .composer-plain.qq-composer-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 7px !important;
+}
+
+.chat-screen.bubble-theme-qq .composer-plain.qq-composer-pill textarea {
+  min-height: 26px;
+  max-height: 72px;
 }
 
 .wechat-comments {
@@ -19572,16 +20229,21 @@ const CHAT_BUBBLE_THEME_OPTIONS = Object.freeze([
     note: "浅灰底、蓝白气泡、轻量顶部和输入栏",
   },
   {
+    id: "wechat",
+    label: "微信美化",
+    note: "灰白顶栏、方气泡、微信式输入栏和九宫格加号面板",
+  },
+  {
     id: "custom",
     label: "自定义",
-    note: "继续使用下面保存的 CSS 样式",
+    note: "使用下面保存的主题美化，也兼容旧 CSS 样式",
   },
 ]);
 const DEFAULT_CHAT_BUBBLE_THEME = "default";
-const normalizeChatBubbleTheme = (value, activeBubbleStyleId = "") => {
+const normalizeChatBubbleTheme = (value, activeBubbleStyleId = "", activeBubbleSavedThemeId = "") => {
   const normalized = String(value || "").trim();
   if (CHAT_BUBBLE_THEME_OPTIONS.some((item) => item.id === normalized)) return normalized;
-  return activeBubbleStyleId ? "custom" : DEFAULT_CHAT_BUBBLE_THEME;
+  return activeBubbleStyleId || activeBubbleSavedThemeId ? "custom" : DEFAULT_CHAT_BUBBLE_THEME;
 };
 const getChatBubbleThemeLabel = (value) =>
   CHAT_BUBBLE_THEME_OPTIONS.find((item) => item.id === normalizeChatBubbleTheme(value))?.label || "默认美化";
@@ -19605,6 +20267,189 @@ const normalizeChatBubbleGap = (value) => {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return 12;
   return Math.min(28, Math.max(4, Math.round(nextValue)));
+};
+const normalizeChatBubbleAvatarGap = (value) => {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return 10;
+  return Math.min(24, Math.max(2, Math.round(nextValue)));
+};
+const normalizeChatStickerSize = (value) => {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return 128;
+  return Math.min(220, Math.max(72, Math.round(nextValue)));
+};
+const normalizeChatImageSize = (value) => {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return 210;
+  return Math.min(320, Math.max(120, Math.round(nextValue)));
+};
+
+const normalizeHexColor = (value, fallback = "#ffffff") => {
+  const raw = String(value || "").trim();
+  if (/^#[0-9a-f]{6}$/iu.test(raw)) return raw.toLowerCase();
+  if (/^#[0-9a-f]{3}$/iu.test(raw)) {
+    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`.toLowerCase();
+  }
+  return fallback;
+};
+const CHAT_BUBBLE_THEME_COLOR_PRESETS = Object.freeze({
+  default: {
+    ai: "#ffffff",
+    user: "#ffe16d",
+  },
+  qq: {
+    ai: "#ffffff",
+    user: "#12a8e7",
+  },
+  wechat: {
+    ai: "#ffffff",
+    user: "#95ec69",
+  },
+  custom: {
+    ai: "#ffffff",
+    user: "#12a8e7",
+  },
+});
+const BUILTIN_CHAT_BUBBLE_THEME_IDS = Object.freeze(["default", "qq", "wechat"]);
+const getDefaultChatBubbleColors = (theme = DEFAULT_CHAT_BUBBLE_THEME) => {
+  const normalizedTheme = normalizeChatBubbleTheme(theme);
+  return CHAT_BUBBLE_THEME_COLOR_PRESETS[normalizedTheme] || CHAT_BUBBLE_THEME_COLOR_PRESETS.default;
+};
+const normalizeChatBubbleColorSet = (value = {}, theme = DEFAULT_CHAT_BUBBLE_THEME) => {
+  const fallback = getDefaultChatBubbleColors(theme);
+  const safeValue = value && typeof value === "object" ? value : {};
+  return {
+    ai: normalizeHexColor(safeValue.ai ?? safeValue.role ?? safeValue.roleBubbleColor, fallback.ai),
+    user: normalizeHexColor(safeValue.user ?? safeValue.me ?? safeValue.userBubbleColor, fallback.user),
+  };
+};
+const normalizeChatBubbleSavedTheme = (value = {}) => {
+  const safeValue = value && typeof value === "object" ? value : {};
+  const baseTheme = normalizeChatBubbleTheme(safeValue.baseTheme || safeValue.theme || "qq");
+  return {
+    id: String(safeValue.id || uid("bubble-theme")).trim() || uid("bubble-theme"),
+    name: repairKnownText(safeValue.name) || "新主题美化",
+    baseTheme,
+    colors: normalizeChatBubbleColorSet(safeValue.colors, baseTheme),
+    bubbleFontSize: normalizeBubbleFontSize(safeValue.bubbleFontSize),
+    bubbleSize: normalizeChatBubbleSize(safeValue.bubbleSize),
+    bubbleGap: normalizeChatBubbleGap(safeValue.bubbleGap),
+    bubbleAvatarSize: normalizeChatBubbleAvatarSize(safeValue.bubbleAvatarSize),
+    bubbleAvatarGap: normalizeChatBubbleAvatarGap(safeValue.bubbleAvatarGap),
+    stickerSize: normalizeChatStickerSize(safeValue.stickerSize),
+    imageSize: normalizeChatImageSize(safeValue.imageSize),
+    css: String(safeValue.css || "").trim(),
+    createdAt: safeValue.createdAt || nowIso(),
+    updatedAt: safeValue.updatedAt || nowIso(),
+  };
+};
+const normalizeChatBubbleThemeProfile = (value = {}, theme = DEFAULT_CHAT_BUBBLE_THEME, fallback = {}) => {
+  const safeValue = value && typeof value === "object" ? value : {};
+  const safeFallback = fallback && typeof fallback === "object" ? fallback : {};
+  const normalizedTheme = BUILTIN_CHAT_BUBBLE_THEME_IDS.includes(normalizeChatBubbleTheme(theme))
+    ? normalizeChatBubbleTheme(theme)
+    : DEFAULT_CHAT_BUBBLE_THEME;
+  return {
+    bubbleFontSize: normalizeBubbleFontSize(safeValue.bubbleFontSize ?? safeFallback.bubbleFontSize),
+    bubbleSize: normalizeChatBubbleSize(safeValue.bubbleSize ?? safeFallback.bubbleSize),
+    bubbleGap: normalizeChatBubbleGap(safeValue.bubbleGap ?? safeFallback.bubbleGap),
+    bubbleAvatarSize: normalizeChatBubbleAvatarSize(safeValue.bubbleAvatarSize ?? safeFallback.bubbleAvatarSize),
+    bubbleAvatarGap: normalizeChatBubbleAvatarGap(safeValue.bubbleAvatarGap ?? safeFallback.bubbleAvatarGap),
+    stickerSize: normalizeChatStickerSize(safeValue.stickerSize ?? safeFallback.stickerSize),
+    imageSize: normalizeChatImageSize(safeValue.imageSize ?? safeFallback.imageSize),
+    colors: normalizeChatBubbleColorSet(
+      safeValue.colors || {
+        ai: safeValue.ai ?? safeValue.role ?? safeValue.roleBubbleColor,
+        user: safeValue.user ?? safeValue.me ?? safeValue.userBubbleColor,
+      },
+      normalizedTheme,
+    ),
+  };
+};
+
+const createChatBubbleThemeProfilesData = (overrides = {}) => {
+  const incomingProfiles =
+    overrides.chats?.bubbleThemeProfiles && typeof overrides.chats.bubbleThemeProfiles === "object"
+      ? overrides.chats.bubbleThemeProfiles
+      : overrides.bubbleThemeProfiles && typeof overrides.bubbleThemeProfiles === "object"
+        ? overrides.bubbleThemeProfiles
+        : {};
+  const legacyFallback = {
+    bubbleFontSize: overrides.chats?.bubbleFontSize ?? overrides.bubbleFontSize,
+    bubbleSize: overrides.chats?.bubbleSize ?? overrides.bubbleSize,
+    bubbleGap: overrides.chats?.bubbleGap ?? overrides.bubbleGap,
+    bubbleAvatarSize: overrides.chats?.bubbleAvatarSize ?? overrides.bubbleAvatarSize,
+    bubbleAvatarGap: overrides.chats?.bubbleAvatarGap ?? overrides.bubbleAvatarGap,
+    stickerSize: overrides.chats?.stickerSize ?? overrides.stickerSize,
+    imageSize: overrides.chats?.imageSize ?? overrides.imageSize,
+    colors:
+      overrides.chats?.bubbleColors ||
+      overrides.bubbleColors || {
+        ai: overrides.chats?.roleBubbleColor ?? overrides.roleBubbleColor,
+        user: overrides.chats?.userBubbleColor ?? overrides.userBubbleColor,
+      },
+  };
+  return Object.fromEntries(
+    BUILTIN_CHAT_BUBBLE_THEME_IDS.map((themeId) => [
+      themeId,
+      normalizeChatBubbleThemeProfile(incomingProfiles?.[themeId], themeId, legacyFallback),
+    ]),
+  );
+};
+const getRoleChatBubbleProfile = (role, themeId = null) => {
+  const activeSavedThemeId = String(role?.chats?.activeBubbleSavedThemeId || role?.activeBubbleSavedThemeId || "").trim();
+  const activeTheme = normalizeChatBubbleTheme(
+    themeId ?? role?.chats?.bubbleTheme ?? role?.bubbleTheme,
+    role?.chats?.activeBubbleStyleId || role?.activeBubbleStyleId || "",
+    activeSavedThemeId,
+  );
+  const savedThemes = normalizeArray(role?.chats?.bubbleSavedThemes || role?.bubbleSavedThemes).map((item) =>
+    normalizeChatBubbleSavedTheme(item),
+  );
+  if (activeTheme === "custom" && activeSavedThemeId) {
+    const savedTheme = savedThemes.find((item) => item.id === activeSavedThemeId);
+    if (savedTheme) {
+      return {
+        theme: "custom",
+        skin: BUILTIN_CHAT_BUBBLE_THEME_IDS.includes(savedTheme.baseTheme) ? savedTheme.baseTheme : "qq",
+        savedTheme,
+        profile: normalizeChatBubbleThemeProfile(savedTheme, savedTheme.baseTheme),
+      };
+    }
+  }
+  if (BUILTIN_CHAT_BUBBLE_THEME_IDS.includes(activeTheme)) {
+    const profiles = createChatBubbleThemeProfilesData(role?.chats ? role : { chats: role?.chats || {} });
+    return {
+      theme: activeTheme,
+      skin: activeTheme,
+      savedTheme: null,
+      profile: normalizeChatBubbleThemeProfile(profiles[activeTheme], activeTheme),
+    };
+  }
+  const fallbackProfile = normalizeChatBubbleThemeProfile(
+    {
+      bubbleFontSize: role?.chats?.bubbleFontSize ?? role?.bubbleFontSize,
+      bubbleSize: role?.chats?.bubbleSize ?? role?.bubbleSize,
+      bubbleGap: role?.chats?.bubbleGap ?? role?.bubbleGap,
+      bubbleAvatarSize: role?.chats?.bubbleAvatarSize ?? role?.bubbleAvatarSize,
+      bubbleAvatarGap: role?.chats?.bubbleAvatarGap ?? role?.bubbleAvatarGap,
+      stickerSize: role?.chats?.stickerSize ?? role?.stickerSize,
+      imageSize: role?.chats?.imageSize ?? role?.imageSize,
+      colors:
+        role?.chats?.bubbleColors ||
+        role?.bubbleColors || {
+          ai: role?.chats?.roleBubbleColor ?? role?.roleBubbleColor,
+          user: role?.chats?.userBubbleColor ?? role?.userBubbleColor,
+        },
+    },
+    "qq",
+  );
+  return {
+    theme: activeTheme,
+    skin: "qq",
+    savedTheme: null,
+    profile: fallbackProfile,
+  };
 };
 
 const SECONDARY_USAGE_FEATURE_KEYS = [
@@ -20343,6 +21188,25 @@ const createBubbleStyleEntryData = (overrides = {}) => ({
   updatedAt: overrides.updatedAt || nowIso(),
 });
 
+const resolveChatBubbleBaseThemeForColors = (overrides = {}) =>
+  normalizeChatBubbleTheme(overrides.chats?.bubbleTheme ?? overrides.bubbleTheme ?? "default");
+
+const createChatBubbleThemeStylesData = (overrides = {}) => {
+  const baseTheme = resolveChatBubbleBaseThemeForColors(overrides);
+  const colorSource =
+    overrides.chats?.bubbleColors ||
+    overrides.bubbleColors || {
+      ai: overrides.chats?.roleBubbleColor ?? overrides.roleBubbleColor,
+      user: overrides.chats?.userBubbleColor ?? overrides.userBubbleColor,
+    };
+  return {
+    colors: normalizeChatBubbleColorSet(colorSource, baseTheme),
+    savedThemes: normalizeArray(overrides.chats?.bubbleSavedThemes || overrides.bubbleSavedThemes).map((item) =>
+      normalizeChatBubbleSavedTheme(item),
+    ),
+  };
+};
+
 const createNpcEntryData = (overrides = {}) => ({
   id: overrides.id || uid("npc"),
   name: repairKnownText(overrides.name) || "新 NPC",
@@ -20864,6 +21728,13 @@ const createRole = (overrides = {}) => {
       bubbleSize: normalizeChatBubbleSize(overrides.chats?.bubbleSize ?? overrides.bubbleSize),
       bubbleGap: normalizeChatBubbleGap(overrides.chats?.bubbleGap ?? overrides.bubbleGap),
       bubbleAvatarSize: normalizeChatBubbleAvatarSize(overrides.chats?.bubbleAvatarSize ?? overrides.bubbleAvatarSize),
+      bubbleAvatarGap: normalizeChatBubbleAvatarGap(overrides.chats?.bubbleAvatarGap ?? overrides.bubbleAvatarGap),
+      stickerSize: normalizeChatStickerSize(overrides.chats?.stickerSize ?? overrides.stickerSize),
+      imageSize: normalizeChatImageSize(overrides.chats?.imageSize ?? overrides.imageSize),
+      bubbleThemeProfiles: createChatBubbleThemeProfilesData(overrides),
+      bubbleColors: createChatBubbleThemeStylesData(overrides).colors,
+      bubbleSavedThemes: createChatBubbleThemeStylesData(overrides).savedThemes,
+      activeBubbleSavedThemeId: overrides.chats?.activeBubbleSavedThemeId || overrides.activeBubbleSavedThemeId || null,
       bubbleStyles: normalizeArray(overrides.chats?.bubbleStyles || overrides.bubbleStyles).map((item) =>
         createBubbleStyleEntryData(item),
       ),
@@ -21013,6 +21884,33 @@ const mergeRole = (role, fallback) => {
       bubbleAvatarSize: normalizeChatBubbleAvatarSize(
         role.chats?.bubbleAvatarSize ?? role.bubbleAvatarSize ?? fallback.chats.bubbleAvatarSize,
       ),
+      bubbleAvatarGap: normalizeChatBubbleAvatarGap(
+        role.chats?.bubbleAvatarGap ?? role.bubbleAvatarGap ?? fallback.chats.bubbleAvatarGap,
+      ),
+      stickerSize: normalizeChatStickerSize(role.chats?.stickerSize ?? role.stickerSize ?? fallback.chats.stickerSize),
+      imageSize: normalizeChatImageSize(role.chats?.imageSize ?? role.imageSize ?? fallback.chats.imageSize),
+      bubbleColors: normalizeChatBubbleColorSet(
+        role.chats?.bubbleColors ||
+          role.bubbleColors || {
+            ai: role.chats?.roleBubbleColor ?? role.roleBubbleColor,
+            user: role.chats?.userBubbleColor ?? role.userBubbleColor,
+          },
+        role.chats?.bubbleTheme ?? role.bubbleTheme ?? fallback.chats.bubbleTheme,
+      ),
+      bubbleSavedThemes:
+        normalizeArray(role.chats?.bubbleSavedThemes || role.bubbleSavedThemes).length > 0
+          ? normalizeArray(role.chats?.bubbleSavedThemes || role.bubbleSavedThemes).map((item) =>
+              normalizeChatBubbleSavedTheme(item),
+            )
+          : fallback.chats.bubbleSavedThemes,
+      bubbleThemeProfiles: createChatBubbleThemeProfilesData({
+        chats: {
+          ...(fallback.chats || {}),
+          ...(role.chats || {}),
+        },
+      }),
+      activeBubbleSavedThemeId:
+        role.chats?.activeBubbleSavedThemeId || role.activeBubbleSavedThemeId || fallback.chats.activeBubbleSavedThemeId || null,
       summaryPrompt: resolveStoredSummaryPrompt(role.chats?.summaryPrompt ?? fallback.chats.summaryPrompt),
       summaryRefinePrompt: resolveStoredSummaryRefinePrompt(role.chats?.summaryRefinePrompt ?? fallback.chats.summaryRefinePrompt),
       bubbleStyles:
@@ -22449,7 +23347,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.03-life-track-yesterday-today-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.03-life-track-triggered-3to5-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -22511,6 +23409,8 @@ const icons = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9.1" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="15.8" cy="10.1" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.8 17.8c.4-2.3 2.2-3.7 4.2-3.7s3.8 1.4 4.2 3.7M13.3 17.5c.3-1.8 1.7-2.9 3.4-2.9 1.1 0 2.1.5 2.8 1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   mic:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="4.8" width="6" height="10.1" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.8 11.6a5.2 5.2 0 0 0 10.4 0M12 16.8v3M8.8 19.8h6.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  wechatVoice:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.45"/><path d="M8.2 9.7c.95 1.2.95 3.4 0 4.6M10.6 8.3c1.7 2.1 1.7 5.3 0 7.4M13 7.1c2.35 2.75 2.35 7.05 0 9.8" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg>',
   play:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7.2 7.3 4.8L9 16.8Z" fill="currentColor"/></svg>',
   playCircle:
@@ -25066,7 +25966,19 @@ const renderMessageContent = (message, role = null, state = {}) => {
             </button>
           </div>
         </div>
-        ${voiceExpanded ? `<div class="voice-transcript">${nlToBr(message.content)}</div>` : ""}
+        ${
+          voiceExpanded
+            ? `
+              <div class="voice-transcript">
+                <div class="voice-transcript-actions">
+                  <button type="button" data-action="play-voice" data-message-id="${message.id}">生成</button>
+                  <button type="button" data-action="download-voice" data-message-id="${message.id}" ${voiceLoading || !voiceReady ? "disabled" : ""}>下载</button>
+                </div>
+                <div class="voice-transcript-text">${nlToBr(message.content)}</div>
+              </div>
+            `
+            : ""
+        }
       </div>
     `;
   }
@@ -25245,26 +26157,121 @@ const renderComposerCancelReplyButton = (state, role) => {
   `;
 };
 
+const renderChatToolbarByTheme = (state, role) => {
+  const chatSkin = getChatBubbleSkin(role);
+  if (chatSkin === "wechat") return "";
+  if (chatSkin === "qq") {
+    return `
+      <div class="chat-toolbar rich-toolbar qq-toolbar">
+        <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="open-video-session" aria-label="视频通话" title="视频通话">${icons.video}</button>
+        <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="pick-image" aria-label="图片" title="图片">${icons.gallery}</button>
+        <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="pick-camera-image" aria-label="相机" title="相机">${icons.camera}</button>
+        <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="open-sticker-sheet" aria-label="表情包" title="表情包">${icons.smile}</button>
+        <div class="toolbar-plus-slot">
+          ${renderQuickPlusMenu(state, role)}
+          <button type="button" class="toolbar-chip toolbar-icon-btn ${state.quickPlusMenuOpen ? "is-active" : ""}" data-action="toggle-quick-plus-menu" aria-label="更多功能" title="更多功能">${icons.plus}</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="chat-toolbar rich-toolbar">
+      <div class="toolbar-plus-slot">
+        ${renderQuickPlusMenu(state, role)}
+        <button type="button" class="toolbar-chip toolbar-icon-btn ${state.quickPlusMenuOpen ? "is-active" : ""}" data-action="toggle-quick-plus-menu" aria-label="更多功能" title="更多功能">${icons.plus}</button>
+      </div>
+      <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="pick-image" aria-label="图片" title="图片">${icons.gallery}</button>
+      <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="pick-camera-image" aria-label="相机" title="相机">${icons.camera}</button>
+      <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="open-journey-sheet" aria-label="行程" title="行程">${icons.journey}</button>
+      <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="open-video-session" aria-label="视频通话" title="视频通话">${icons.video}</button>
+    </div>
+  `;
+};
+
+const renderChatComposerByTheme = (state, role) => {
+  const chatSkin = getChatBubbleSkin(role);
+  const cancelButton = renderComposerCancelReplyButton(state, role);
+  if (chatSkin === "wechat") {
+    return `
+      <div class="chat-composer ref-chat-composer wechat-chat-composer">
+        ${renderComposerQuotePreview(role)}
+        <div class="wechat-composer-row">
+          <button class="wechat-side-btn wechat-voice-toggle" type="button" aria-label="语音模式占位">${icons.wechatVoice}</button>
+          <div class="chat-input-pill composer-plain wechat-composer-pill${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
+            <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+            ${cancelButton}
+          </div>
+          <button class="wechat-side-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
+          <button class="wechat-side-btn ${state.quickPlusMenuOpen ? "is-active" : ""}" type="button" data-action="toggle-quick-plus-menu" aria-label="更多功能">${icons.plus}</button>
+        </div>
+        ${renderQuickPlusMenu(state, role)}
+      </div>
+    `;
+  }
+  if (chatSkin === "qq") {
+    return `
+      <div class="chat-composer ref-chat-composer qq-chat-composer">
+        ${renderComposerQuotePreview(role)}
+        <div class="chat-input-pill composer-plain qq-composer-pill${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
+          <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+          ${cancelButton}
+          <button class="qq-send-btn" type="button" data-action="send-message" data-send-mode="direct-ai" aria-label="发送并让角色回复">发送</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="chat-composer ref-chat-composer">
+      ${renderComposerQuotePreview(role)}
+      <div class="chat-input-pill composer-plain${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
+        <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+        ${cancelButton}
+        <button class="composer-emoji-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
+      </div>
+    </div>
+  `;
+};
+
 const renderQuickPlusMenu = (state, role) => {
   if (!state?.quickPlusMenuOpen) return "";
   const lastTotalTokens = Number(role?.usage?.lastPrimaryChat?.totalTokens || 0);
+  const chatSkin = getChatBubbleSkin(role);
 
-  const items = [
-    { label: "NPC", key: "npc", action: "open-npc-sheet", icon: icons.people },
-    { label: "地图", key: "map", action: "open-map-sheet", icon: icons.map },
-    {
-      label: "Token 控制台",
-      key: "token-console",
-      action: "open-token-console",
-      icon: icons.token,
-      detail: lastTotalTokens > 0 ? `最近 ${formatTokenValue(lastTotalTokens)} tokens` : "查看上一轮 usage",
-    },
-    { label: "语音", key: "voice", action: "quick-plus-placeholder", icon: icons.mic, secondary: true },
-    { label: "文件", key: "file", action: "quick-plus-placeholder", icon: icons.document, secondary: true },
-  ];
+  const items =
+    chatSkin === "wechat"
+      ? [
+          { label: "图片", key: "image", action: "pick-image", icon: icons.gallery },
+          { label: "相机", key: "camera", action: "pick-camera-image", icon: icons.camera },
+          { label: "日程", key: "journey", action: "open-journey-sheet", icon: icons.journey },
+          { label: "视频", key: "video", action: "open-video-session", icon: icons.video },
+          { label: "地图", key: "map", action: "open-map-sheet", icon: icons.map, secondary: true },
+          { label: "NPC", key: "npc", action: "open-npc-sheet", icon: icons.people, secondary: true },
+          {
+            label: "Token",
+            key: "token-console",
+            action: "open-token-console",
+            icon: icons.token,
+            detail: lastTotalTokens > 0 ? `${formatTokenValue(lastTotalTokens)}` : "",
+            secondary: true,
+          },
+          { label: "文件", key: "file", action: "quick-plus-placeholder", icon: icons.document, secondary: true },
+        ]
+      : [
+          { label: "NPC", key: "npc", action: "open-npc-sheet", icon: icons.people },
+          { label: "地图", key: "map", action: "open-map-sheet", icon: icons.map },
+          {
+            label: "Token 控制台",
+            key: "token-console",
+            action: "open-token-console",
+            icon: icons.token,
+            detail: lastTotalTokens > 0 ? `最近 ${formatTokenValue(lastTotalTokens)} tokens` : "查看上一轮 usage",
+          },
+          { label: "语音", key: "voice", action: "quick-plus-placeholder", icon: icons.mic, secondary: true },
+          { label: "文件", key: "file", action: "quick-plus-placeholder", icon: icons.document, secondary: true },
+        ];
 
   return `
-    <div class="quick-plus-menu" data-quick-plus-menu role="menu" aria-label="更多功能">
+    <div class="quick-plus-menu ${chatSkin === "wechat" ? "wechat-plus-panel" : ""}" data-quick-plus-menu role="menu" aria-label="更多功能">
       ${items
         .map(
           (item) => `
@@ -25344,6 +26351,10 @@ const getChatBackgroundStyle = (role) => {
   const bubbleScale = bubbleSize / 100;
   const bubbleGap = getChatBubbleGap(role);
   const avatarSize = getChatBubbleAvatarSize(role);
+  const avatarGap = getChatBubbleAvatarGap(role);
+  const stickerSize = getChatStickerSize(role);
+  const imageSize = getChatImageSize(role);
+  const colors = getChatBubbleColors(role);
   const styleVars = [
     `--chat-bubble-scale:${bubbleScale.toFixed(2)}`,
     `--chat-bubble-pad-y:${Math.round(9 * bubbleScale)}px`,
@@ -25353,6 +26364,11 @@ const getChatBackgroundStyle = (role) => {
     `--chat-bubble-tail-h:${Math.round(24 * bubbleScale)}px`,
     `--chat-message-gap:${bubbleGap}px`,
     `--chat-avatar-size:${avatarSize}px`,
+    `--chat-avatar-gap:${avatarGap}px`,
+    `--chat-sticker-size:${stickerSize}px`,
+    `--chat-image-size:${imageSize}px`,
+    `--chat-ai-bubble-color:${colors.ai}`,
+    `--chat-user-bubble-color:${colors.user}`,
   ];
   if (image) {
     styleVars.push(`--chat-background-image:url('${String(image).replaceAll("'", "%27")}')`);
@@ -25427,6 +26443,10 @@ const getChatBubbleTheme = (role) => normalizeChatBubbleTheme(role?.chats?.bubbl
 
 const isCustomBubbleTheme = (role) => getChatBubbleTheme(role) === "custom";
 
+const getChatBubbleSkin = (role) => getRoleChatBubbleProfile(role).skin || getChatBubbleTheme(role);
+
+const getChatBubbleProfile = (role) => getRoleChatBubbleProfile(role).profile;
+
 const formatBubbleStyleTime = (iso) => {
   if (!iso) return "";
   const date = new Date(iso);
@@ -25441,16 +26461,85 @@ const formatBubbleStyleTime = (iso) => {
 };
 
 const getChatBubbleFontSize = (role) => {
-  const nextValue = Number(role?.chats?.bubbleFontSize ?? 14);
+  const nextValue = Number(getChatBubbleProfile(role).bubbleFontSize ?? role?.chats?.bubbleFontSize ?? 14);
   if (!Number.isFinite(nextValue)) return 14;
   return Math.min(24, Math.max(12, Math.round(nextValue)));
 };
 
-const getChatBubbleSize = (role) => normalizeChatBubbleSize(role?.chats?.bubbleSize);
+const getChatBubbleSize = (role) => normalizeChatBubbleSize(getChatBubbleProfile(role).bubbleSize);
 
-const getChatBubbleGap = (role) => normalizeChatBubbleGap(role?.chats?.bubbleGap);
+const getChatBubbleGap = (role) => normalizeChatBubbleGap(getChatBubbleProfile(role).bubbleGap);
 
-const getChatBubbleAvatarSize = (role) => normalizeChatBubbleAvatarSize(role?.chats?.bubbleAvatarSize);
+const getChatBubbleAvatarSize = (role) => normalizeChatBubbleAvatarSize(getChatBubbleProfile(role).bubbleAvatarSize);
+
+const getChatBubbleAvatarGap = (role) => normalizeChatBubbleAvatarGap(getChatBubbleProfile(role).bubbleAvatarGap);
+
+const getChatStickerSize = (role) => normalizeChatStickerSize(getChatBubbleProfile(role).stickerSize);
+
+const getChatImageSize = (role) => normalizeChatImageSize(getChatBubbleProfile(role).imageSize);
+
+const getChatBubbleColors = (role) => normalizeChatBubbleColorSet(getChatBubbleProfile(role).colors, getChatBubbleSkin(role));
+
+const getChatBubbleSavedThemes = (role) => (role?.chats?.bubbleSavedThemes || []).filter(Boolean);
+
+const renderBubbleThemePreview = (role) => {
+  const profile = getChatBubbleProfile(role);
+  const colors = getChatBubbleColors(role);
+  const skin = getChatBubbleSkin(role);
+  const style = [
+    `--preview-ai-color:${colors.ai}`,
+    `--preview-user-color:${colors.user}`,
+    `--preview-avatar-size:${normalizeChatBubbleAvatarSize(profile.bubbleAvatarSize)}px`,
+    `--preview-avatar-gap:${normalizeChatBubbleAvatarGap(profile.bubbleAvatarGap)}px`,
+    `--preview-gap:${normalizeChatBubbleGap(profile.bubbleGap)}px`,
+    `--preview-sticker-size:${normalizeChatStickerSize(profile.stickerSize)}px`,
+    `--preview-image-size:${normalizeChatImageSize(profile.imageSize)}px`,
+  ].join(";");
+  return `
+    <section class="panel-card bubble-preview-card bubble-preview-${escapeHtml(skin)}" style="${style}">
+      <div class="bubble-preview-head">
+        <strong>当前预览</strong>
+        <span>${escapeHtml(getChatBubbleThemeLabel(getChatBubbleTheme(role)))}</span>
+      </div>
+      <div class="bubble-preview-stage">
+        <div class="bubble-preview-line ai">
+          ${renderAvatar(role.profile || {}, "chat-side-avatar bubble-preview-avatar", role.profile?.note || "角色")}
+          <div class="bubble-preview-bubble ai-bubble-preview"><span class="bubble-preview-tail left"></span>晚上再聊两句就睡</div>
+        </div>
+        <div class="bubble-preview-line user">
+          <div class="bubble-preview-bubble user-bubble-preview"><span class="bubble-preview-tail right"></span>这个样子舒服多了</div>
+          ${renderAvatar({ avatar: "你" }, "chat-side-avatar bubble-preview-avatar", "我的头像")}
+        </div>
+        <div class="bubble-preview-line ai">
+          ${renderAvatar(role.profile || {}, "chat-side-avatar bubble-preview-avatar", role.profile?.note || "角色")}
+          <div class="bubble-preview-sticker"></div>
+        </div>
+      </div>
+    </section>
+  `;
+};
+
+const renderBubbleColorControl = ({ title, field, color }) => `
+  <section class="panel-card bubble-color-card">
+    <div class="bubble-color-head">
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(color)}</span>
+      </div>
+      <input class="bubble-color-picker" type="color" value="${escapeHtml(color)}" data-chat-field="${field}" />
+    </div>
+    <div class="bubble-color-sliders">
+      <label>
+        <span>明度</span>
+        <input type="range" min="18" max="96" value="${hexToHsl(color).l}" data-bubble-color-lightness="${field}" />
+      </label>
+      <label>
+        <span>饱和度</span>
+        <input type="range" min="0" max="100" value="${hexToHsl(color).s}" data-bubble-color-saturation="${field}" />
+      </label>
+    </div>
+  </section>
+`;
 
 const renderBubbleControlRange = ({ title, note, value, field, min, max, unit = "" }) => `
   <section class="panel-card bubble-control-card">
@@ -25478,12 +26567,25 @@ const renderBubbleStylePanel = (role) => {
   const bubbleSize = getChatBubbleSize(role);
   const bubbleGap = getChatBubbleGap(role);
   const bubbleAvatarSize = getChatBubbleAvatarSize(role);
+  const bubbleAvatarGap = getChatBubbleAvatarGap(role);
+  const stickerSize = getChatStickerSize(role);
+  const imageSize = getChatImageSize(role);
+  const colors = getChatBubbleColors(role);
+  const savedThemes = getChatBubbleSavedThemes(role);
+  const activeSavedThemeId = String(role?.chats?.activeBubbleSavedThemeId || "").trim();
 
   return `
     <div class="overlay-screen panel-overlay">
       <section class="panel-screen page-enter">
-        ${panelHeader("气泡样式")}
+        ${panelHeader(
+          "气泡样式",
+          "pop-panel",
+          false,
+          '<button class="panel-save-text-btn" type="button" data-action="save-current-bubble-theme">保存</button>',
+        )}
         <div class="panel-scroll" data-scroll-key="panel-bubble-styles">
+          ${renderBubbleThemePreview(role)}
+
           <section class="panel-card bubble-style-intro-card">
             <div class="list-title">当前启用 <span>${escapeHtml(getChatBubbleThemeLabel(activeTheme))}</span></div>
             <p class="sheet-note">主题只影响聊天页的顶部、消息区和输入栏；头像继续使用当前用户和角色的全局头像</p>
@@ -25502,6 +26604,36 @@ const renderBubbleStylePanel = (role) => {
                 `,
               ).join("")}
             </div>
+          </section>
+
+          ${
+            savedThemes.length
+              ? `
+                <section class="panel-card bubble-saved-theme-card">
+                  <div class="list-title">已保存主题 <span>${savedThemes.length} 套</span></div>
+                  <div class="bubble-saved-theme-list">
+                    ${savedThemes
+                      .map(
+                        (item) => `
+                          <div class="bubble-saved-theme-row ${item.id === activeSavedThemeId ? "is-active" : ""}">
+                            <button type="button" data-action="apply-saved-bubble-theme" data-bubble-saved-theme-id="${escapeHtml(item.id)}">
+                              <strong>${escapeHtml(item.name || "主题美化")}</strong>
+                              <span>${escapeHtml(getChatBubbleThemeLabel(item.baseTheme || "qq"))} · ${formatBubbleStyleTime(item.updatedAt || item.createdAt)}</span>
+                            </button>
+                            <button class="tiny-btn danger-fill" type="button" data-action="delete-saved-bubble-theme" data-bubble-saved-theme-id="${escapeHtml(item.id)}">删除</button>
+                          </div>
+                        `,
+                      )
+                      .join("")}
+                  </div>
+                </section>
+              `
+              : ""
+          }
+
+          <section class="bubble-color-grid">
+            ${renderBubbleColorControl({ title: "角色气泡颜色", field: "roleBubbleColor", color: colors.ai })}
+            ${renderBubbleColorControl({ title: "用户气泡颜色", field: "userBubbleColor", color: colors.user })}
           </section>
 
           ${renderBubbleControlRange({
@@ -25538,6 +26670,33 @@ const renderBubbleStylePanel = (role) => {
             field: "bubbleAvatarSize",
             min: 34,
             max: 52,
+            unit: "px",
+          })}
+          ${renderBubbleControlRange({
+            title: "头像与气泡距离",
+            note: "控制每条消息里头像和气泡之间的横向间距",
+            value: bubbleAvatarGap,
+            field: "bubbleAvatarGap",
+            min: 2,
+            max: 24,
+            unit: "px",
+          })}
+          ${renderBubbleControlRange({
+            title: "表情包大小",
+            note: "控制聊天里表情包消息的显示宽度",
+            value: stickerSize,
+            field: "stickerSize",
+            min: 72,
+            max: 220,
+            unit: "px",
+          })}
+          ${renderBubbleControlRange({
+            title: "发送图片大小",
+            note: "控制聊天里图片消息的显示宽度和最大高度",
+            value: imageSize,
+            field: "imageSize",
+            min: 120,
+            max: 320,
             unit: "px",
           })}
 
@@ -26050,13 +27209,13 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
   const syncMeta = getLifeStreamJourneySyncMeta(role);
   const latestEventTitle = String(latestFeed?.eventTitle || "").trim();
   const statusNote = buildLifeMonitorStatusNote(role, fortune);
-  const recentEventTitle = latestEventTitle || (fortune.eventTriggered ? fortune.tierLabel : "近期风平浪静");
+  const recentEventTitle = latestEventTitle || (fortune.eventTriggered ? fortune.tierLabel : "");
   const recentEventText =
     String(latestFeed?.text || "").trim() ||
-    (fortune.eventTriggered ? fortune.summary || "今天的命运已经开始掀起涟漪" : "近期风平浪静，还没有新的突发事件");
-  const overviewStatus = role.status?.liveHeaderText || role.status?.headerText || role.status?.physical || "状态稳定";
-  const overviewTitle = role.monitor?.headline || recentEventTitle || "最近状态平稳";
-  const overviewSummary = role.monitor?.summary || statusNote || recentEventText || "当前还没有新的波动";
+    (fortune.eventTriggered ? fortune.summary || "今天已经有一条生活轨迹在推进" : "");
+  const overviewStatus = role.status?.liveHeaderText || role.status?.headerText || role.status?.physical || "";
+  const overviewTitle = role.monitor?.headline || recentEventTitle || "生活轨迹";
+  const overviewSummary = role.monitor?.summary || statusNote || recentEventText || "当前日期若未触发生活轨迹，这里会保持空白，不再生成占位故事";
   const overviewPlace = getRoleCurrentPlace(role) || role.profile.location || "未知地点";
   const overviewWeather = role.profile.weather || "天气未知";
   const overviewFortune = fortune.tierLabel || "平平无奇";
@@ -26086,7 +27245,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
             <p class="sheet-note" style="margin-top:10px;">${escapeHtml(syncMeta.note)}</p>
             <div class="life-monitor-chip-row life-stream-overview-chip-row" style="margin-top:14px;">
               <span class="life-monitor-fortune-pill tone-${escapeHtml(fortune.tone || "neutral")}">今日运势 · ${escapeHtml(fortune.tierLabel || "平平无奇")}</span>
-              <span class="life-monitor-fortune-pill is-muted">${fortune.eventTriggered ? "已触发意外" : "今日风平浪静"}</span>
+              <span class="life-monitor-fortune-pill is-muted">${fortune.eventTriggered ? "已触发生活轨迹" : "今日未触发"}</span>
               <span class="life-monitor-fortune-pill is-muted">${escapeHtml(syncMeta.badge)}</span>
             </div>
             <div class="life-stream-overview-metrics" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
@@ -26749,13 +27908,14 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
   const bubbleTag = ["voice", "videoCall"].includes(message.type) ? "div" : "button";
   const bubbleTypeAttr = bubbleTag === "button" ? ' type="button"' : "";
   const bubbleInteractiveAttr = "";
-  const isQqTheme = getChatBubbleTheme(role) === "qq";
+  const chatSkin = getChatBubbleSkin(role);
+  const perMessageAvatar = chatSkin === "qq" || chatSkin === "wechat";
   const avatarProfile = isUser ? { avatar: "你", ...(state?.userProfile || {}) } : role?.profile || {};
   const avatarAlt = isUser
     ? avatarProfile.nickname || "我的头像"
     : role?.profile?.note || role?.profile?.name || "角色头像";
-  const qqAvatar = isQqTheme
-    ? `<div class="qq-message-avatar-slot ${isUser ? "user-avatar-slot" : "ai-avatar-slot"}">${renderAvatar(avatarProfile, "chat-side-avatar qq-message-avatar", avatarAlt)}</div>`
+  const messageAvatar = perMessageAvatar
+    ? `<div class="theme-message-avatar-slot ${isUser ? "user-avatar-slot" : "ai-avatar-slot"}">${renderAvatar(avatarProfile, "chat-side-avatar theme-message-avatar", avatarAlt)}</div>`
     : "";
 
   return `
@@ -26765,21 +27925,22 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
           ? `<button class="message-select ${checked ? "checked" : ""}" type="button" data-action="toggle-select-message" data-message-id="${message.id}">${checked ? "✓" : ""}</button>`
           : ""
       }
-      ${isUser ? "" : qqAvatar}
+      ${isUser ? "" : messageAvatar}
       <div class="chat-bubble-wrap ${isUser ? "user-wrap" : "ai-wrap"}" data-message-hit="${message.id}">
         ${showTail ? `<span class="bubble-tail ${isUser ? "bubble-tail-right bubble-tail-user" : "bubble-tail-left bubble-tail-ai"}" aria-hidden="true"></span>` : ""}
         <${bubbleTag} class="chat-bubble ${isUser ? "user-bubble" : "ai-bubble"}${bubbleExtra}${showTail ? "" : " no-tail"}"${bubbleTypeAttr}${bubbleInteractiveAttr} data-message-id="${message.id}">
           ${renderMessageContent(message, role, state)}
         </${bubbleTag}>
       </div>
-      ${isUser ? qqAvatar : ""}
+      ${isUser ? messageAvatar : ""}
     </div>
   `;
 };
 
 const renderChatGroupModern = (group, role, state = {}) => {
   const isUser = group.role === "user";
-  const isQqTheme = getChatBubbleTheme(role) === "qq";
+  const chatSkin = getChatBubbleSkin(role);
+  const isPerMessageAvatarTheme = chatSkin === "qq" || chatSkin === "wechat";
   const selectionMode = role.chats.selectedMessageIds.length > 0;
   const firstMessage = group.messages[0];
   const firstIsTailless = isTaillessBubbleMessage(firstMessage);
@@ -26791,7 +27952,7 @@ const renderChatGroupModern = (group, role, state = {}) => {
       <div class="chat-group-row ${isUser ? "user" : "ai"}">
         ${isUser ? '<div class="chat-group-avatar-spacer"></div>' : renderAvatar(role.profile, "chat-side-avatar group-avatar", role.profile.note)}
         <div class="chat-group-stack ${isUser ? "align-right" : ""}">
-          ${groupName}
+          ${isPerMessageAvatarTheme ? "" : groupName}
           ${group.messages
             .map((message, index) =>
               renderChatMessageBubble(message, role, {
@@ -26799,7 +27960,7 @@ const renderChatGroupModern = (group, role, state = {}) => {
                 selectionMode,
                 checked: role.chats.selectedMessageIds.includes(message.id),
                 showTail:
-                  (isQqTheme || (index === 0 && !firstIsTailless)) && !isTaillessBubbleMessage(message),
+                  (isPerMessageAvatarTheme || (index === 0 && !firstIsTailless)) && !isTaillessBubbleMessage(message),
                 state,
               }),
             )
@@ -27262,7 +28423,7 @@ const clampIosAppearanceNumber = (value, min, max, fallback) => {
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, parsed));
 };
-const normalizeHexColor = (value = "", fallback = "#e5eefc") => {
+const normalizeRenderHexColor = (value = "", fallback = "#e5eefc") => {
   const normalized = String(value || "").trim().toLowerCase();
   if (/^#[0-9a-f]{6}$/.test(normalized)) return normalized;
   if (/^#[0-9a-f]{3}$/.test(normalized)) {
@@ -27304,6 +28465,30 @@ const hslToHex = (hue = 0, saturation = 0, lightness = 100) => {
   const toHex = (channel) => Math.round(channel * 255).toString(16).padStart(2, "0");
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
+const hexToHsl = (value = "#ffffff") => {
+  const hex = normalizeRenderHexColor(value, "#ffffff").replace("#", "");
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+};
 const normalizeIosHeroGradient = (gradient = {}) => ({
   hue: clampIosAppearanceNumber(gradient.hue, 0, 360, DEFAULT_IOS_HERO_GRADIENT.hue),
   brightness: clampIosAppearanceNumber(gradient.brightness, 72, 100, DEFAULT_IOS_HERO_GRADIENT.brightness),
@@ -27311,7 +28496,7 @@ const normalizeIosHeroGradient = (gradient = {}) => ({
 });
 const convertIosHeroGradientToHex = (gradient = {}) => {
   const { hue, saturation, brightness } = normalizeIosHeroGradient(gradient);
-  return normalizeHexColor(hslToHex(hue, saturation, brightness));
+  return normalizeRenderHexColor(hslToHex(hue, saturation, brightness));
 };
 const buildIosHeroGradientStyle = (gradient = {}) => {
   const { hue, brightness, saturation } = normalizeIosHeroGradient(gradient);
@@ -29849,7 +31034,7 @@ const renderImportantMemoryUpdatePreviewSheet = (state, role) => {
 
 const renderChatModalRefined = (role, state) => `
   <div class="overlay-screen page-overlay">
-    <section class="chat-screen ref-chat bubble-theme-${escapeHtml(getChatBubbleTheme(role))} ${role?.chats?.backgroundImage ? "has-chat-background" : ""}" data-chat-role-id="${role.id}"${getChatBackgroundStyle(role)}>
+    <section class="chat-screen ref-chat bubble-theme-${escapeHtml(getChatBubbleSkin(role))} bubble-theme-active-${escapeHtml(getChatBubbleTheme(role))} ${role?.chats?.backgroundImage ? "has-chat-background" : ""}" data-chat-role-id="${role.id}"${getChatBackgroundStyle(role)}>
       <header class="chat-header ref-chat-header clean-chat-header">
         <button class="back-btn white-back" type="button" data-action="close-chat">${icons.back}</button>
         <div class="chat-title-wrap compact-chat-title with-current-place">
@@ -29874,25 +31059,8 @@ const renderChatModalRefined = (role, state) => `
             : ""
         }
 
-        <div class="chat-toolbar rich-toolbar">
-          <div class="toolbar-plus-slot">
-            ${renderQuickPlusMenu(state, role)}
-            <button type="button" class="toolbar-chip toolbar-icon-btn ${state.quickPlusMenuOpen ? "is-active" : ""}" data-action="toggle-quick-plus-menu" aria-label="更多功能" title="更多功能">${icons.plus}</button>
-          </div>
-          <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="pick-image" aria-label="图片" title="图片">${icons.gallery}</button>
-          <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="pick-camera-image" aria-label="相机" title="相机">${icons.camera}</button>
-          <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="open-journey-sheet" aria-label="行程" title="行程">${icons.journey}</button>
-          <button type="button" class="toolbar-chip toolbar-icon-btn" data-action="open-video-session" aria-label="视频通话" title="视频通话">${icons.video}</button>
-        </div>
-
-        <div class="chat-composer ref-chat-composer">
-          ${renderComposerQuotePreview(role)}
-          <div class="chat-input-pill composer-plain${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
-            <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
-            ${renderComposerCancelReplyButton(state, role)}
-            <button class="composer-emoji-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
-          </div>
-        </div>
+        ${renderChatToolbarByTheme(state, role)}
+        ${renderChatComposerByTheme(state, role)}
       </div>
     </section>
   </div>
@@ -30012,6 +31180,72 @@ ${scope} .message-quote p {
 `);
 };
 
+const buildBubbleTailDataUrl = (side = "left", color = "#ffffff", skin = "qq") => {
+  const fill = normalizeRenderHexColor(color).replace("#", "%23");
+  const isWechat = skin === "wechat";
+  const viewBox = isWechat ? "0 0 10 14" : "0 0 20 18";
+  const path = isWechat
+    ? side === "right"
+      ? "M0 0L10 7L0 14Z"
+      : "M10 0L0 7L10 14Z"
+    : side === "right"
+      ? "M2 1.4C6.8 1.9 10.7 4.2 13 7.9C14.4 10.2 16.7 13.4 19.6 16.8C14 16.1 9.5 14.5 6.5 12C3.4 9.4 1.9 5.9 2 1.4Z"
+      : "M18 1.4C13.2 1.9 9.3 4.2 7 7.9C5.6 10.2 3.3 13.4 0.4 16.8C6 16.1 10.5 14.5 13.5 12C16.6 9.4 18.1 5.9 18 1.4Z";
+  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='${viewBox}'%3E%3Cpath fill='${fill}' d='${path}'/%3E%3C/svg%3E")`;
+};
+
+const compileBubbleThemeCss = (role) => {
+  if (!role?.id) return "";
+  const scope = `.chat-screen[data-chat-role-id="${role.id}"]`;
+  const colors = getChatBubbleColors(role);
+  const skin = getChatBubbleSkin(role);
+  const bubbleRadius = skin === "wechat" ? 4 : skin === "qq" ? "calc(var(--chat-bubble-radius) + 2px)" : "var(--chat-bubble-radius)";
+  const tailTop = skin === "wechat" ? "50%" : skin === "qq" ? "4px" : "4px";
+  const tailWidth = skin === "wechat" ? "10px" : "7px";
+  const tailHeight = skin === "wechat" ? "14px" : "8px";
+  const aiTail = buildBubbleTailDataUrl("left", colors.ai, skin);
+  const userTail = buildBubbleTailDataUrl("right", colors.user, skin);
+
+  return escapeStyleTagText(`
+${scope} {
+  --chat-ai-bubble-color: ${colors.ai};
+  --chat-user-bubble-color: ${colors.user};
+}
+${scope} .ai-bubble {
+  background: var(--chat-ai-bubble-color) !important;
+}
+${scope} .user-bubble {
+  background: var(--chat-user-bubble-color) !important;
+}
+${scope} .chat-bubble {
+  border-radius: ${bubbleRadius} !important;
+}
+${scope} .bubble-tail {
+  top: ${tailTop} !important;
+  width: ${tailWidth} !important;
+  height: ${tailHeight} !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+${scope} .bubble-tail-left {
+  background-image: ${aiTail} !important;
+}
+${scope} .bubble-tail-right {
+  background-image: ${userTail} !important;
+}
+${scope} .sticker-preview {
+  width: min(var(--chat-sticker-size), 58vw) !important;
+}
+${scope} .image-real {
+  width: min(var(--chat-image-size), 66vw) !important;
+}
+${scope} .image-real img {
+  max-height: var(--chat-image-size) !important;
+}
+`);
+};
+
 const renderBubbleStyleTag = (role) => {
   const css = compileBubbleStyleCss(role);
   return css ? `<style id="active-bubble-style">${css}</style>` : "";
@@ -30020,6 +31254,11 @@ const renderBubbleStyleTag = (role) => {
 const renderBubbleTypographyTag = (role) => {
   const css = compileBubbleTypographyCss(role);
   return css ? `<style id="active-bubble-typography">${css}</style>` : "";
+};
+
+const renderBubbleThemeTag = (role) => {
+  const css = compileBubbleThemeCss(role);
+  return css ? `<style id="active-bubble-theme">${css}</style>` : "";
 };
 
 const resolveToastText = (state) => {
@@ -30148,6 +31387,7 @@ const renderApp = (root, state, currentRole, activeChatRole) => {
 
   root.innerHTML = `
     ${renderBubbleStyleTag(surfaceRole)}
+    ${renderBubbleThemeTag(surfaceRole)}
     ${renderBubbleTypographyTag(surfaceRole)}
     <div class="ios-device-scene ${chromeClass} active-tab-${activeTabKey} theme-${escapeHtml(appearance.theme)} mode-${escapeHtml(resolvedMode)} ${appearance.showPhoneFrame ? "show-phone-frame" : "hide-phone-frame"} ${appearance.showStatusBar ? "show-status-bar" : "hide-status-bar"}"${wallpaperAttr}>
       <div class="ios-device-frame">
@@ -31073,7 +32313,7 @@ const DZZI_LEGACY_KEYS = new Set([
   "sk-4NkbjwUREJ06W3CMg9nyLoArRLMLk0Z0m7vjyrzUpnHVlnFT",
 ]);
 const MODEL_OUTPUT_TOKEN_BUDGET = 65536;
-const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 16000;
+const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 8000;
 
 const MINIMAX_VOICE_DEFAULTS = Object.freeze({
   url: "https://api.minimaxi.com/v1",
@@ -31700,6 +32940,11 @@ const resetVideoSessionUiState = ({ preserveResponseMode = true } = {}) => {
 const getActiveBubbleStyleNameForRole = (role) => {
   const activeTheme = normalizeChatBubbleTheme(role?.chats?.bubbleTheme, role?.chats?.activeBubbleStyleId);
   if (activeTheme !== "custom") return getChatBubbleThemeLabel(activeTheme);
+  const savedThemeId = String(role?.chats?.activeBubbleSavedThemeId || "").trim();
+  if (savedThemeId) {
+    const savedName = (role?.chats?.bubbleSavedThemes || []).find((item) => item.id === savedThemeId)?.name;
+    return savedName ? `自定义 · ${savedName}` : "自定义主题";
+  }
   const styles = normalizeArray(role?.chats?.bubbleStyles);
   const activeId = role?.chats?.activeBubbleStyleId || null;
   const styleName = styles.find((item) => item.id === activeId)?.name;
@@ -31743,21 +32988,28 @@ const normalizeJourneyLinkedSnapshotGoal = (goal = {}) => {
 };
 const normalizeJourneyLinkedSnapshotMonitor = (monitor = {}, targetDateKey = formatDateKey()) => {
   const safeMonitor = monitor && typeof monitor === "object" ? monitor : {};
-  const timeline = (Array.isArray(safeMonitor.timeline) ? safeMonitor.timeline : [])
+  const normalizeSnapshotTimeline = (items = [], prefix = "journey-snapshot-monitor") =>
+    (Array.isArray(items) ? items : [])
     .map((item, index) => {
       const text = String(item?.text || item?.summary || "").trim();
       if (!text) return null;
       const time = String(item?.time || "").trim();
       return {
-        id: String(item?.id || `journey-snapshot-monitor-${targetDateKey}-${index}`).trim(),
+        id: String(item?.id || `${prefix}-${targetDateKey}-${index}`).trim(),
         journeyDateKey: formatDateKey(item?.journeyDateKey || targetDateKey),
         createdAt: String(item?.createdAt || buildMonitorBeatCreatedAt(targetDateKey, time, index)).trim(),
         time,
+        title: String(item?.title || "").trim(),
         text,
         tag: String(item?.tag || "").trim(),
       };
     })
     .filter(Boolean);
+  const timeline = normalizeSnapshotTimeline(safeMonitor.timeline, "journey-snapshot-monitor");
+  const plannedTimeline = normalizeSnapshotTimeline(
+    Array.isArray(safeMonitor.plannedTimeline) && safeMonitor.plannedTimeline.length ? safeMonitor.plannedTimeline : safeMonitor.timeline,
+    "journey-snapshot-monitor-planned",
+  );
   const fortune = safeMonitor?.fortune && typeof safeMonitor.fortune === "object"
     ? {
         dateKey: formatDateKey(safeMonitor.fortune?.dateKey || targetDateKey),
@@ -31766,6 +33018,10 @@ const normalizeJourneyLinkedSnapshotMonitor = (monitor = {}, targetDateKey = for
         summary: String(safeMonitor.fortune?.summary || "").trim(),
         eventTriggered: Boolean(safeMonitor.fortune?.eventTriggered),
         triggerChance: clampValue(Number(safeMonitor.fortune?.triggerChance ?? 0), 0, 100),
+        effectiveTriggerChance: clampValue(Number(safeMonitor.fortune?.effectiveTriggerChance ?? safeMonitor.fortune?.triggerChance ?? 0), 0, 100),
+        variationScore: clampValue(Number(safeMonitor.fortune?.variationScore ?? 0), 0, 100),
+        requiredConcreteMoments: Math.max(0, Number(safeMonitor.fortune?.requiredConcreteMoments || 0)),
+        dramaDirective: String(safeMonitor.fortune?.dramaDirective || "").trim(),
         storyHooks: normalizeReferenceItems(safeMonitor.fortune?.storyHooks || [], 4),
       }
     : null;
@@ -31775,6 +33031,7 @@ const normalizeJourneyLinkedSnapshotMonitor = (monitor = {}, targetDateKey = for
     explicitOnly: Boolean(safeMonitor?.explicitOnly),
     fortune,
     timeline,
+    plannedTimeline,
   };
 };
 const normalizeJourneyLinkedSnapshotEvent = (event = {}, targetDateKey = formatDateKey()) => {
@@ -36045,7 +37302,7 @@ const getRoleDailyMonitorTimelineForChat = (role, targetDateKey = formatJourneyD
     }))
     .filter((item) => item.text);
 
-const getRoleDailyEventContextForChat = (role, targetDateKey = formatJourneyDayKey(), { limit = 5, textLimit = 360 } = {}) =>
+const getRoleDailyEventContextForChat = (role, targetDateKey = formatJourneyDayKey(), { limit = 5, textLimit = 360, now = new Date() } = {}) =>
   (Array.isArray(role?.events) ? role.events : [])
     .filter((event) => {
       const eventDateKey = getLiveEventDateKey(event);
@@ -36056,6 +37313,12 @@ const getRoleDailyEventContextForChat = (role, targetDateKey = formatJourneyDayK
     .slice(-Math.max(1, Number(limit) || 1))
     .map((event) => {
       const beats = (Array.isArray(event?.beats) ? event.beats : [])
+        .filter((beat) => {
+          const beatDate =
+            parseValidTimestamp(beat?.createdAt || "") ||
+            buildDateKeyClockDate(getLiveEventDateKey(event) || targetDateKey, beat?.time || "");
+          return !beatDate || beatDate.getTime() - now.getTime() <= LIFE_MONITOR_FUTURE_TOLERANCE_MS;
+        })
         .slice(-3)
         .map((beat) => ({
           time: String(beat?.time || "").trim(),
@@ -36078,7 +37341,7 @@ const getRoleDailyEventContextForChat = (role, targetDateKey = formatJourneyDayK
 const buildRoleDailyLifeMemoryContext = (role, now = new Date(), { timelineLimit = 6, eventLimit = 5, textLimit = 360 } = {}) => {
   const targetDateKey = formatJourneyDayKey(now);
   const timeline = getRoleDailyMonitorTimelineForChat(role, targetDateKey, { limit: timelineLimit, textLimit });
-  const events = getRoleDailyEventContextForChat(role, targetDateKey, { limit: eventLimit, textLimit });
+  const events = getRoleDailyEventContextForChat(role, targetDateKey, { limit: eventLimit, textLimit, now });
   return {
     dateKey: targetDateKey,
     dateLabel: formatJourneyDateLabel(targetDateKey),
@@ -41450,6 +42713,111 @@ const getRoleLatestMonitorActivityAt = (role, targetDateKey = formatDateKey()) =
   return latest;
 };
 
+const getMonitorPlannedTimelineForDate = (role, targetDateKey = formatJourneyDayKey()) => {
+  const normalizedTargetDate = formatDateKey(targetDateKey || new Date());
+  const snapshot = getJourneyLinkedSnapshotForDateApp(role, normalizedTargetDate);
+  const monitorPreview = snapshot?.monitorPreview && typeof snapshot.monitorPreview === "object" ? snapshot.monitorPreview : null;
+  const plannedSource =
+    Array.isArray(monitorPreview?.plannedTimeline) && monitorPreview.plannedTimeline.length
+      ? monitorPreview.plannedTimeline
+      : Array.isArray(monitorPreview?.timeline)
+        ? monitorPreview.timeline
+        : [];
+  return plannedSource
+    .map((item, index) => {
+      const text = String(item?.text || item?.summary || "").trim();
+      if (!text) return null;
+      const time = String(item?.time || "").trim();
+      return {
+        id: String(item?.id || `planned-life-${normalizedTargetDate}-${index}`).trim(),
+        journeyDateKey: normalizedTargetDate,
+        createdAt: String(item?.createdAt || buildMonitorBeatCreatedAt(normalizedTargetDate, time, index)).trim(),
+        time,
+        title: String(item?.title || "").trim(),
+        text,
+        tag: String(item?.tag || "").trim(),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => getChatLifeMemorySortValue(left, normalizedTargetDate) - getChatLifeMemorySortValue(right, normalizedTargetDate));
+};
+
+const syncRolePlannedLifeMonitorNodes = (role, now = new Date()) => {
+  if (!role) return false;
+  const targetDateKey = formatJourneyDayKey(now);
+  const plannedTimeline = getMonitorPlannedTimelineForDate(role, targetDateKey);
+  if (!plannedTimeline.length) return false;
+
+  const visibleTimeline = filterMonitorPayloadItemsByCutoff(plannedTimeline, targetDateKey, buildLifeMonitorCutoffDate(targetDateKey, now));
+  if (!visibleTimeline.length) return false;
+
+  const existingTimeline = Array.isArray(role.monitor?.timeline) ? role.monitor.timeline : [];
+  const existingKeys = new Set(
+    existingTimeline.map((item) =>
+      [
+        formatDateKey(item?.journeyDateKey || item?.createdAt || targetDateKey),
+        String(item?.time || "").trim(),
+        String(item?.title || "").trim(),
+        String(item?.text || item?.summary || "").trim(),
+      ].join("|"),
+    ),
+  );
+  const newItems = visibleTimeline.filter((item) => {
+    const key = [
+      formatDateKey(item?.journeyDateKey || item?.createdAt || targetDateKey),
+      String(item?.time || "").trim(),
+      String(item?.title || "").trim(),
+      String(item?.text || item?.summary || "").trim(),
+    ].join("|");
+    return !existingKeys.has(key);
+  });
+  if (!newItems.length) return false;
+
+  role.monitor = {
+    ...(role.monitor || {}),
+    timeline: mergeMonitorTimelineEntries(existingTimeline, newItems),
+  };
+
+  const event = (Array.isArray(role.events) ? role.events : []).find(
+    (item) => String(item?.source || "").trim() === "journey-link" && getLiveEventDateKey(item) === targetDateKey,
+  );
+  if (event) {
+    const beatKeys = new Set(
+      normalizeArray(event.beats).map((beat) =>
+        [
+          String(beat?.time || "").trim(),
+          String(beat?.title || "").trim(),
+          String(beat?.text || beat?.summary || "").trim(),
+        ].join("|"),
+      ),
+    );
+    const nextBeats = [
+      ...normalizeArray(event.beats),
+      ...newItems
+        .filter((item) => {
+          const key = [String(item.time || "").trim(), String(item.title || "").trim(), String(item.text || "").trim()].join("|");
+          return !beatKeys.has(key);
+        })
+        .map((item) => ({
+          id: item.id,
+          createdAt: item.createdAt,
+          time: item.time,
+          title: item.title,
+          text: item.text,
+          tag: item.tag,
+        })),
+    ].sort((left, right) => getChatLifeMemorySortValue(left, targetDateKey) - getChatLifeMemorySortValue(right, targetDateKey));
+    event.beats = nextBeats.slice(-LIFE_MONITOR_DAILY_NODE_MAX);
+    event.summary = String(nextBeats[nextBeats.length - 1]?.text || event.summary || "").trim();
+  }
+
+  role.runtime = {
+    ...(role.runtime || {}),
+    lastLifeMonitorAt: newItems[newItems.length - 1]?.createdAt || now.toISOString(),
+  };
+  return true;
+};
+
 const stripAutoClosedEventTextTail = (value = "") => String(value || "").trim().replace(/[，。！？；、,\s]+$/u, "");
 
 const getAutoClosedLiveEventTimeLabel = (now = new Date()) => {
@@ -41697,7 +43065,7 @@ const syncRoleLiveEventsWithTime = (role, now = new Date()) => {
   if (!role) return false;
   role.events = Array.isArray(role.events) ? role.events : [];
 
-  let changed = false;
+  let changed = syncRolePlannedLifeMonitorNodes(role, now);
   role.events = role.events.map((event) => {
     if (!shouldAutoCloseLiveEvent(role, event, now)) return event;
     changed = true;
@@ -46517,6 +47885,7 @@ const parseLifeMonitorPlainTextPayload = (rawText = "", targetDateKey = formatDa
     headline: headline || buildLifeMonitorCompactTitle(safeTimeline[0]?.text || summary, "生活轨迹"),
     summary: summary || safeTimeline[safeTimeline.length - 1]?.text || safeBeats[safeBeats.length - 1]?.text || "",
     timeline: safeTimeline,
+    plannedTimeline: safeTimeline,
     long_term_goals: [],
     short_term_goals: shortTermGoals,
     goal_updates: goalUpdates,
@@ -46533,6 +47902,10 @@ const parseLifeMonitorPlainTextPayload = (rawText = "", targetDateKey = formatDa
       : {},
   };
   result.timeline = result.timeline.map((item) => ({ ...item, journeyDateKey: targetDateKey }));
+  result.plannedTimeline = (Array.isArray(result.plannedTimeline) ? result.plannedTimeline : result.timeline).map((item) => ({
+    ...item,
+    journeyDateKey: targetDateKey,
+  }));
   return result;
 };
 
@@ -50007,7 +51380,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   };
   const journeyPlainTextContext = buildPureTextGenerationContext({
     task: `生成 ${targetDateLabel} 的当天时间轴文本`,
-    outputIntent: `行程纯文本 + 1 个${journeyCanWriteEventLine ? "突发事件" : "普通主题"}生活轨迹节点`,
+    outputIntent: journeyCanWriteEventLine ? "行程纯文本 + 1 个生活轨迹事件主题 + 3到5个同主题节点" : "只生成行程纯文本，本日未触发生活轨迹",
     roleContext: journeyRoleContext,
     journeyContext,
     slimContext: journeySlimContext,
@@ -50016,17 +51389,16 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   });
 
   const response = await requestJourneyModelText({
-    systemPrompt: `纯文本格式任务：只输出指定的双竖线分隔纯文本。不要 JSON，不要 Markdown，不要代码块，不要解释。第一个可见字符必须是数字。生活轨迹首行必须正好 5 段。生活轨迹节点行必须正好 4 段并用 || 分隔。生活轨迹节点第一段只能是 HH:MM，不能写日期。故事正文目标 120 到 160 个简体汉字，最多不超过 200 个汉字。
-你现在负责一次性生成 ${targetDateLabel} 的当天行程和生活轨迹。
+    systemPrompt: `纯文本格式任务：只输出指定的双竖线分隔纯文本。不要 JSON，不要 Markdown，不要代码块，不要解释。第一个可见字符必须是数字。${journeyCanWriteEventLine ? "生活轨迹首行必须正好 5 段。生活轨迹节点行必须正好 4 段并用 || 分隔。生活轨迹节点第一段只能是 HH:MM，不能写日期。每个故事正文目标 120 到 160 个简体汉字，最多不超过 200 个汉字。" : "本日概率未触发生活轨迹，只输出行程行，不要输出生活轨迹标题、主题、事件或任何占位。"}
+你现在负责生成 ${targetDateLabel} 的当天行程${journeyCanWriteEventLine ? "，并在行程后生成生活轨迹事件线" : ""}。
 必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
 每行格式固定：
 HH:MM-HH:MM||标题||地点||详情
 硬性开头:
 - 第一行必须直接从 HH:MM-HH:MM|| 开头，前面不能有标题、编号、说明或空话
 - 最终输出第一个字符必须是数字，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
-- 行程区写完后只允许出现一行「生活轨迹」
-- 「生活轨迹」下一行必须直接写：${journeyCanWriteEventLine ? "事件||事件总标题||进行中||运势等级||影响天数1到7" : "主题||普通生活主题||片段||运势等级||0"}
-- ${journeyCanWriteEventLine ? "生活轨迹首行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字" : "生活轨迹首行第 3 段必须固定写片段，第 5 段必须固定写 0"}
+- ${journeyCanWriteEventLine ? "行程区写完后只允许出现一行「生活轨迹」，下一行必须直接写：事件||事件总标题||进行中||运势等级||影响天数1到7" : "行程区写完后立刻停止，不准输出「生活轨迹」、主题、事件、空白占位或平稳日常"}
+- ${journeyCanWriteEventLine ? "生活轨迹首行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字" : "本日没有触发生活轨迹，不能为了联动而补写普通片段"}
 规则:
 - 这 ${preferredEntryCount} 行会直接展示给用户，所以每一行都必须像真人当天真的会做的事，不能写占位词
 - 建议输出 ${preferredEntryCount} 行；如果当天确实更忙，可以多写，前端会完整保留，不要为了凑条数删掉已经写好的真实安排
@@ -50050,31 +51422,34 @@ HH:MM-HH:MM||标题||地点||详情
 - 生活轨迹要从角色人设、长期记忆、世界书、地图地点描述、最近总结、目标和当天行程里各取素材，写成这名角色自己的生活切片，不要写成通用会议纪要、项目汇报或数据监控
 - 如果上下文和格式要求冲突，优先保持角色身份、城市、地图地点和简体中文纯文本；只要出现韩文、日文、英文或任何外语倾向，必须立刻改写成简体中文
 ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
-- 行程写完后另起一行写「生活轨迹」四个字，再写 1 行${journeyCanWriteEventLine ? "事件总标题" : "普通生活主题"}和 1 行生活轨迹节点，可选 1 行短期目标
-- 生活轨迹首行格式固定：${journeyCanWriteEventLine ? "事件||像作文题一样的突发事件总标题||进行中||运势等级||影响天数1到7" : "主题||今天的普通生活主题||片段||运势等级||0"}
-- 生活轨迹节点格式固定：HH:MM||10个字左右的小标题||100到200个汉字的第三人称故事正文||短标签
-- 生活轨迹节点只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段
-- 生活轨迹节点行必须以 HH:MM|| 开头，不能写项目符号、编号、JSON、Markdown 或代码块
-- 生活轨迹节点只能写 1 行，不能补写多个时间点，不能一次性生成一整天轨迹
-- 如果目标日期就是今天，生活轨迹节点时间必须使用当前真实时间附近：${lifeNodeClockHint}，不要写未来几个小时才会发生的节点；如果目标日期不是今天，就用当天行程里最容易出事的合理时间点
+- ${journeyCanWriteEventLine ? `行程写完后另起一行写「生活轨迹」四个字，再写 1 行事件总标题和 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 行生活轨迹节点，可选 1 行短期目标` : "本日概率没有命中生活轨迹，行程写完后不要再写任何生活轨迹内容"}
+- ${journeyCanWriteEventLine ? "生活轨迹首行格式固定：事件||像作文题一样的突发事件总标题||进行中||运势等级||影响天数1到7" : "没有命中时不允许写 主题||、事件|| 或 HH:MM||生活轨迹节点"}
+- ${journeyCanWriteEventLine ? "生活轨迹节点格式固定：HH:MM||10个字左右的小标题||100到200个汉字的第三人称故事正文||短标签" : "没有命中时也不要写“近期风平浪静”“平稳日常”之类占位"}
+- ${journeyCanWriteEventLine ? `生活轨迹节点只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段；节点总数最少 ${LIFE_MONITOR_DAILY_NODE_MIN} 条，最多 ${LIFE_MONITOR_DAILY_NODE_MAX} 条` : "如果本日没有生活轨迹，角色聊天里也不会假装发生过"}
+- ${journeyCanWriteEventLine ? "每个生活轨迹节点行必须以 HH:MM|| 开头，不能写项目符号、编号、JSON、Markdown 或代码块" : "行程生成仍要完整，不要因为没有生活轨迹而缩短行程"}
+- ${journeyCanWriteEventLine ? "生活轨迹必须围绕同一个事件主题分成起因、转折、余波等 3 到 5 个节点；时间不固定，按故事节奏和当天行程挑合理时间点" : "本日未触发生活轨迹时，输出最后一条行程后立刻停止"}
+- ${journeyCanWriteEventLine ? `如果目标日期就是今天，可以规划今天稍后会到点显示的节点；第一条生活轨迹时间尽量使用当前真实时间附近：${lifeNodeClockHint}，后续节点按故事节奏安排，前端会只显示已发生节点` : "不要输出任何未触发说明"}
 - 双竖线 || 只是字段分隔符，不是表格；禁止写表头、字段名、分隔线，不准输出 时间||动作||地点||描述||心情 这类旧格式
-- 第二行的第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文
-- 生活轨迹必须借用当天行程的地点/人物/目标作锚点，但不能照搬行程标题和详情，不能写成“完成/收尾/归档/放松”这种状态词
-- 每条生活轨迹目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字；如果写事件明细，每条事件过程也必须同样控制，短标签不计入字数
-- 写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间
-- 生活轨迹正文必须用第三人称写角色，不能用“我”当叙述主语；小标题必须是模型总结出来的 8 到 12 个汉字，不能截取正文开头
-- ${journeyCanWriteEventLine ? "事件总标题必须统领所有节点，后续每个时间点都围绕同一个突发事件写转折、插曲、误会或余波，不要散成互不相关的小故事" : "本次没有命中突发事件，只能写普通生活主题里的一个有画面的小片段，不准写成重大事故或事件余波"}
-- ${journeyCanWriteEventLine ? "事件影响可以推进或新增短期目标，若确实产生目标，追加一行：短期目标||目标标题||下一步||进度数字0到100||持续天数1到7" : "普通生活主题通常不新增短期目标，除非它真的改变了下一步安排"}
+- ${journeyCanWriteEventLine ? `每个节点第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文` : "不生成生活轨迹时不需要解释概率"}
+- ${journeyCanWriteEventLine ? "生活轨迹必须借用当天行程的地点/人物/目标作锚点，但不能照搬行程标题和详情，不能写成“完成/收尾/归档/放松”这种状态词" : "行程仍必须贴合角色，不要把生活轨迹未触发写进详情"}
+- ${journeyCanWriteEventLine ? `每条生活轨迹目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字；短标签不计入字数` : "不要输出生活轨迹空标题"}
+- ${journeyCanWriteEventLine ? `写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间` : "不要输出主题空行"}
+- ${journeyCanWriteEventLine ? "生活轨迹正文必须用第三人称写角色，不能用“我”当叙述主语；小标题必须是模型总结出来的 8 到 12 个汉字，不能截取正文开头" : "不要输出事件空行"}
+- ${journeyCanWriteEventLine ? "事件总标题必须统领所有节点，每个时间点都围绕同一个生活轨迹事件写起因、转折、插曲、误会、选择或余波，不要散成互不相关的小故事" : "不要把未触发写成普通生活主题"}
+- ${journeyCanWriteEventLine ? "事件影响可以推进或新增短期目标，若确实产生目标，追加一行：短期目标||目标标题||下一步||进度数字0到100||持续天数1到7" : "不要追加短期目标"}
 - 每个故事节点都必须是一段完整故事，包含现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要拆成几条短句凑数
 - 故事性要像别人时间簿那种现实抓马：路上乌龙、店员搭话、设备抽风、临时误会、顺手救场、小惊喜、小倒霉、暧昧错位、NPC突然出现都可以，但必须有具体因果和现场细节
+- 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
 - 禁止只写“获得灵感/状态变化/顺利推进”，灵感必须来自一个看得见的物件、一句误会的话或一次临场事故，并写出后续影响
 - 生活轨迹会写进角色聊天上下文，所以必须像角色亲身经历的真实事实，之后用户问起时角色能自然承认和复述
 - 写完最后一行立刻停止
 示例：
 ${timeSeeds[0]?.time || "10:00-11:00"}||起床洗漱||${sanitizeJourneyWeekTextField(currentPlace)}||把今天前半段安排先顺一遍
-生活轨迹
-${journeyCanWriteEventLine ? "事件||咖啡纸袋里的暗号祝福||进行中||小有运气||2" : "主题||咖啡店门口的小停顿||片段||平稳||0"}
-10:22||纸袋暗号闹乌龙||他刚出门就被楼下咖啡店的新招牌晃了一下，本来只是想买杯热饮提神，结果店员把别人预订的杯套递错。他一边解释一边被后面排队的人催，手忙脚乱地把纸袋夹在胳膊下，热饮差点洒到刚整理好的资料上。最后店员赔了一个小饼干，他反而记住了杯套上的图案，路上的困意也被这一阵乱劲冲散了||小乌龙`,
+${journeyCanWriteEventLine ? `生活轨迹
+事件||咖啡纸袋里的暗号祝福||进行中||小有运气||2
+10:22||纸袋暗号闹乌龙||他刚出门就被楼下咖啡店的新招牌晃了一下，本来只是想买杯热饮提神，结果店员把别人预订的杯套递错。他一边解释一边被后面排队的人催，手忙脚乱地把纸袋夹在胳膊下，热饮差点洒到刚整理好的资料上。最后店员赔了一个小饼干，他反而记住了杯套上的图案，路上的困意也被这一阵乱劲冲散了||小乌龙
+14:35||错拿纸袋生新线索||午后他再翻纸袋时，才发现里面夹着一张写错名字的会员小票，背面还被店员顺手画了个夸张笑脸。他本来想直接扔掉，却被旁边人误会是在收集店铺印章，尴尬解释半天反而被提醒有隐藏赠品。这个乌龙让他临时绕回店里，也把下午原本死板的安排拐出一点新鲜后续||反转
+20:10||赠品牵出晚间邀约||晚上他带着那份隐藏赠品回到原计划地点，没想到熟人一眼认出纸袋上的限定图案，顺口提起附近今晚还有小摊快闪。他原本只想把资料放好就走，却被这句话拽进一个临时小局，既耽误了半小时，也换来一段能讲很久的笑话||余波` : ""}`,
     payload: {
       task: `生成 ${targetDateLabel} 的当天时间轴文本`,
       targetDate: normalizedTargetDate,
@@ -50110,11 +51485,24 @@ ${journeyCanWriteEventLine ? "事件||咖啡纸袋里的暗号祝福||进行中|
     goalTitles,
     mealTimes,
   });
-  const monitorPayload = limitLifeMonitorResultToSingleNode(
-    parseLifeMonitorPlainTextPayload(rawResponseText, normalizedTargetDate),
-    normalizedTargetDate,
-    new Date(),
-  );
+  const parsedMonitorPayload = journeyCanWriteEventLine
+    ? parseLifeMonitorPlainTextPayload(rawResponseText, normalizedTargetDate)
+    : { timeline: [], event: {}, short_term_goals: [], long_term_goals: [], goal_updates: [] };
+  const monitorCutoffDate = buildLifeMonitorCutoffDate(normalizedTargetDate, new Date());
+  const visibleMonitorTimeline = filterMonitorPayloadItemsByCutoff(parsedMonitorPayload.timeline, normalizedTargetDate, monitorCutoffDate);
+  const monitorPayload = journeyCanWriteEventLine
+    ? {
+        ...parsedMonitorPayload,
+        plannedTimeline: Array.isArray(parsedMonitorPayload.timeline) ? parsedMonitorPayload.timeline : [],
+        timeline: visibleMonitorTimeline,
+        event: parsedMonitorPayload.event && typeof parsedMonitorPayload.event === "object"
+          ? {
+              ...parsedMonitorPayload.event,
+              beats: filterMonitorPayloadItemsByCutoff(parsedMonitorPayload.event.beats, normalizedTargetDate, monitorCutoffDate),
+            }
+          : {},
+      }
+    : null;
   if (!completedTimeline.length) {
     throw attachModelMetaToError(new Error("模型没有生成可用行程"), response?.meta || null, {
       rawResponseText: response?.text || "",
@@ -50127,8 +51515,8 @@ ${journeyCanWriteEventLine ? "事件||咖啡纸袋里的暗号祝福||进行中|
       targetDate: normalizedTargetDate,
       timeline: completedTimeline,
       goal_updates: [],
-      monitor: monitorPayload.timeline.length ? monitorPayload : null,
-      event: monitorPayload.event && (monitorPayload.event.title || monitorPayload.event.summary) ? monitorPayload.event : null,
+      monitor: monitorPayload && (monitorPayload.plannedTimeline?.length || monitorPayload.timeline?.length) ? monitorPayload : null,
+      event: monitorPayload?.event && (monitorPayload.event.title || monitorPayload.event.summary) ? monitorPayload.event : null,
     },
     meta: {
       ...(response?.meta || {}),
@@ -51371,22 +52759,159 @@ const updateActiveRoleProfileField = (field, value) => {
   queueRoleProfileSync();
 };
 
+const normalizeHexColorApp = (value = "", fallback = "#ffffff") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(normalized)) return normalized;
+  if (/^#[0-9a-f]{3}$/.test(normalized)) {
+    return `#${normalized
+      .slice(1)
+      .split("")
+      .map((item) => item + item)
+      .join("")}`;
+  }
+  return fallback;
+};
+
+const hueToRgbApp = (p, q, t) => {
+  let nextT = t;
+  if (nextT < 0) nextT += 1;
+  if (nextT > 1) nextT -= 1;
+  if (nextT < 1 / 6) return p + (q - p) * 6 * nextT;
+  if (nextT < 1 / 2) return q;
+  if (nextT < 2 / 3) return p + (q - p) * (2 / 3 - nextT) * 6;
+  return p;
+};
+
+const hslToHexApp = (hue = 0, saturation = 0, lightness = 100) => {
+  const h = ((Number(hue) % 360) + 360) % 360 / 360;
+  const s = Math.max(0, Math.min(100, Number(saturation) || 0)) / 100;
+  const l = Math.max(0, Math.min(100, Number(lightness) || 0)) / 100;
+  let r;
+  let g;
+  let b;
+  if (s === 0) {
+    r = l;
+    g = l;
+    b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hueToRgbApp(p, q, h + 1 / 3);
+    g = hueToRgbApp(p, q, h);
+    b = hueToRgbApp(p, q, h - 1 / 3);
+  }
+  const toHex = (channel) => Math.round(channel * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+const hexToHslApp = (value = "#ffffff") => {
+  const hex = normalizeHexColorApp(value, "#ffffff").replace("#", "");
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+};
+
 const updateActiveRoleChatField = (field, value) => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role) return;
+  const bubbleProfileMeta = getRoleChatBubbleProfile(role);
+  const activeTheme = bubbleProfileMeta.theme;
+  const profileKey =
+    activeTheme === "custom" && bubbleProfileMeta.savedTheme?.id
+      ? null
+      : BUILTIN_CHAT_BUBBLE_THEME_IDS.includes(bubbleProfileMeta.skin)
+        ? bubbleProfileMeta.skin
+        : null;
+  const targetProfile = profileKey
+    ? {
+        ...(role.chats.bubbleThemeProfiles?.[profileKey] || {}),
+      }
+    : bubbleProfileMeta.savedTheme
+      ? bubbleProfileMeta.savedTheme
+      : null;
+
+  const commitThemeProfile = () => {
+    if (profileKey && targetProfile) {
+      role.chats.bubbleThemeProfiles = {
+        ...(role.chats.bubbleThemeProfiles || {}),
+        [profileKey]: targetProfile,
+      };
+    } else if (activeTheme === "custom" && bubbleProfileMeta.savedTheme?.id && targetProfile) {
+      role.chats.bubbleSavedThemes = (role.chats.bubbleSavedThemes || []).map((item) =>
+        item.id === bubbleProfileMeta.savedTheme.id ? { ...item, ...targetProfile, updatedAt: new Date().toISOString() } : item,
+      );
+    }
+  };
+
   if (field === "bubbleFontSize") {
-    role.chats[field] = clampValue(Number(value) || 14, 12, 24);
+    const normalized = clampValue(Number(value) || 14, 12, 24);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.bubbleFontSize = normalized;
+    commitThemeProfile();
   } else if (field === "bubbleSize") {
-    role.chats[field] = normalizeChatBubbleSize(value);
+    const normalized = normalizeChatBubbleSize(value);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.bubbleSize = normalized;
+    commitThemeProfile();
   } else if (field === "bubbleGap") {
-    role.chats[field] = normalizeChatBubbleGap(value);
+    const normalized = normalizeChatBubbleGap(value);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.bubbleGap = normalized;
+    commitThemeProfile();
   } else if (field === "bubbleAvatarSize") {
-    role.chats[field] = normalizeChatBubbleAvatarSize(value);
+    const normalized = normalizeChatBubbleAvatarSize(value);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.bubbleAvatarSize = normalized;
+    commitThemeProfile();
+  } else if (field === "bubbleAvatarGap") {
+    const normalized = normalizeChatBubbleAvatarGap(value);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.bubbleAvatarGap = normalized;
+    commitThemeProfile();
+  } else if (field === "stickerSize") {
+    const normalized = normalizeChatStickerSize(value);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.stickerSize = normalized;
+    commitThemeProfile();
+  } else if (field === "imageSize") {
+    const normalized = normalizeChatImageSize(value);
+    role.chats[field] = normalized;
+    if (targetProfile) targetProfile.imageSize = normalized;
+    commitThemeProfile();
+  } else if (field === "roleBubbleColor" || field === "userBubbleColor") {
+    const currentColors = normalizeChatBubbleColorSet(targetProfile?.colors || role.chats?.bubbleColors, bubbleProfileMeta.skin);
+    const nextColors = {
+      ...currentColors,
+      [field === "roleBubbleColor" ? "ai" : "user"]: String(value || "").trim(),
+    };
+    const normalizedColors = normalizeChatBubbleColorSet(nextColors, bubbleProfileMeta.skin);
+    role.chats.bubbleColors = normalizedColors;
+    if (targetProfile) targetProfile.colors = normalizedColors;
+    commitThemeProfile();
   } else if (field === "bubbleTheme") {
     const nextTheme = normalizeChatBubbleTheme(value, role.chats?.activeBubbleStyleId);
     role.chats[field] = nextTheme;
     if (nextTheme !== "custom") {
       role.chats.activeBubbleStyleId = null;
+      role.chats.activeBubbleSavedThemeId = null;
     }
   } else if (field === "summaryPrompt") {
     const normalized = String(value || "").trim();
@@ -51436,6 +52961,7 @@ const addBubbleStyleToActiveRole = () => {
   bubbleStyles.unshift(nextStyle);
   role.chats.bubbleStyles = bubbleStyles;
   role.chats.activeBubbleStyleId = nextStyle.id;
+  role.chats.activeBubbleSavedThemeId = null;
   role.chats.bubbleTheme = "custom";
   syncPersistentState();
   paint();
@@ -51448,6 +52974,7 @@ const toggleBubbleStyleForActiveRole = (bubbleStyleId) => {
   const target = bubbleStyles.find((item) => item.id === bubbleStyleId);
   if (!target) return;
   role.chats.activeBubbleStyleId = role.chats.activeBubbleStyleId === bubbleStyleId ? null : bubbleStyleId;
+  role.chats.activeBubbleSavedThemeId = null;
   role.chats.bubbleTheme = role.chats.activeBubbleStyleId ? "custom" : "default";
   target.updatedAt = new Date().toISOString();
   syncPersistentState();
@@ -51460,6 +52987,7 @@ const deleteBubbleStyleFromActiveRole = (bubbleStyleId) => {
   role.chats.bubbleStyles = getBubbleStylesForRole(role).filter((item) => item.id !== bubbleStyleId);
   if (role.chats.activeBubbleStyleId === bubbleStyleId) {
     role.chats.activeBubbleStyleId = null;
+    role.chats.activeBubbleSavedThemeId = null;
     role.chats.bubbleTheme = "default";
   }
   syncPersistentState();
@@ -51474,9 +53002,62 @@ const setBubbleThemeForActiveRole = (themeId) => {
   role.chats.bubbleTheme = normalizedTheme;
   if (normalizedTheme !== "custom") {
     role.chats.activeBubbleStyleId = null;
+    role.chats.activeBubbleSavedThemeId = null;
   } else if (!role.chats.activeBubbleStyleId) {
+    const firstSavedThemeId = role.chats.bubbleSavedThemes?.[0]?.id || null;
     const firstStyleId = getBubbleStylesForRole(role)[0]?.id || null;
-    role.chats.activeBubbleStyleId = firstStyleId;
+    role.chats.activeBubbleSavedThemeId = firstSavedThemeId;
+    role.chats.activeBubbleStyleId = firstSavedThemeId ? null : firstStyleId;
+  }
+  syncPersistentState();
+  paint();
+  return true;
+};
+
+const saveCurrentBubbleThemeForActiveRole = () => {
+  const role = getActiveChatRole() || getCurrentRole();
+  if (!role) return false;
+  const currentMeta = getRoleChatBubbleProfile(role);
+  const currentProfile = currentMeta.profile || {};
+  const defaultName = `主题 ${Math.max(1, (role.chats.bubbleSavedThemes || []).length + 1)}`;
+  const nextNameRaw = window.prompt("保存为新的主题美化", defaultName);
+  if (nextNameRaw == null) return false;
+  const nextName = String(nextNameRaw || "").trim() || defaultName;
+  const nextTheme = normalizeChatBubbleSavedTheme({
+    name: nextName,
+    baseTheme: currentMeta.skin || "qq",
+    ...currentProfile,
+    colors: currentProfile.colors,
+  });
+  role.chats.bubbleSavedThemes = [nextTheme, ...(role.chats.bubbleSavedThemes || [])];
+  role.chats.activeBubbleSavedThemeId = nextTheme.id;
+  role.chats.activeBubbleStyleId = null;
+  role.chats.bubbleTheme = "custom";
+  syncPersistentState();
+  paint();
+  return true;
+};
+
+const applySavedBubbleThemeForActiveRole = (themeId) => {
+  const role = getActiveChatRole() || getCurrentRole();
+  if (!role || !themeId) return false;
+  const target = (role.chats.bubbleSavedThemes || []).find((item) => item.id === themeId);
+  if (!target) return false;
+  role.chats.bubbleTheme = "custom";
+  role.chats.activeBubbleSavedThemeId = target.id;
+  role.chats.activeBubbleStyleId = null;
+  syncPersistentState();
+  paint();
+  return true;
+};
+
+const deleteSavedBubbleThemeFromActiveRole = (themeId) => {
+  const role = getActiveChatRole() || getCurrentRole();
+  if (!role || !themeId) return false;
+  role.chats.bubbleSavedThemes = (role.chats.bubbleSavedThemes || []).filter((item) => item.id !== themeId);
+  if (role.chats.activeBubbleSavedThemeId === themeId) {
+    role.chats.activeBubbleSavedThemeId = null;
+    role.chats.bubbleTheme = "default";
   }
   syncPersistentState();
   paint();
@@ -52603,6 +54184,32 @@ const buildJourneyLinkedMonitorEntries = (journeyData) => {
   return [buildJourneyLinkedMonitorEntry(journeyData)];
 };
 
+const getJourneyLinkedMonitorPlannedEntries = (journeyData) => {
+  const targetDate = formatDateKey(journeyData?.targetDate || new Date());
+  const plannedSource =
+    Array.isArray(journeyData?.monitorPreview?.plannedTimeline) && journeyData.monitorPreview.plannedTimeline.length
+      ? journeyData.monitorPreview.plannedTimeline
+      : Array.isArray(journeyData?.monitorPreview?.timeline)
+        ? journeyData.monitorPreview.timeline
+        : [];
+  return plannedSource
+    .map((item, index) => {
+      const text = String(item?.text || item?.summary || "").trim();
+      if (!text) return null;
+      const time = String(item?.time || "").trim();
+      return {
+        id: String(item?.id || `journey-link-plan-${targetDate}-${index}`).trim(),
+        journeyDateKey: targetDate,
+        createdAt: String(item?.createdAt || buildMonitorBeatCreatedAt(targetDate, time, index)).trim(),
+        time,
+        title: String(item?.title || "").trim(),
+        text,
+        tag: String(item?.tag || "").trim(),
+      };
+    })
+    .filter(Boolean);
+};
+
 const buildJourneyLinkedEvent = (journeyData) => {
   const targetDate = formatDateKey(journeyData?.targetDate || new Date());
   if (!journeyData?.eventPreview?.title && !journeyData?.eventPreview?.summary) return null;
@@ -52615,8 +54222,8 @@ const buildJourneyLinkedEvent = (journeyData) => {
   const beatSource =
     Array.isArray(journeyData?.eventPreview?.beats) && journeyData.eventPreview.beats.length
       ? journeyData.eventPreview.beats
-      : Array.isArray(journeyData?.monitorPreview?.timeline)
-        ? journeyData.monitorPreview.timeline
+      : getJourneyLinkedMonitorPlannedEntries(journeyData).length
+        ? getJourneyLinkedMonitorPlannedEntries(journeyData)
         : [];
   const beats = beatSource
     .map((item, index) => ({
@@ -52653,7 +54260,9 @@ const buildJourneyLinkedEvent = (journeyData) => {
 const mergeJourneyLinkedMonitor = (role, journeyData) => {
   const targetDate = formatDateKey(journeyData?.targetDate || new Date());
   const nextEntries = buildJourneyLinkedMonitorEntries(journeyData);
+  const nextPlannedEntries = getJourneyLinkedMonitorPlannedEntries(journeyData);
   const existingTimeline = Array.isArray(role.monitor?.timeline) ? role.monitor.timeline : [];
+  const existingPlannedTimeline = Array.isArray(role.monitor?.plannedTimeline) ? role.monitor.plannedTimeline : [];
   const mergedTimeline = [
     ...nextEntries,
     ...existingTimeline.filter((item) => formatDateKey(item?.journeyDateKey || item?.createdAt || "") !== targetDate),
@@ -52668,6 +54277,16 @@ const mergeJourneyLinkedMonitor = (role, journeyData) => {
   role.monitor = {
     ...(role.monitor || {}),
     timeline: mergedTimeline,
+    plannedTimeline: [
+      ...nextPlannedEntries,
+      ...existingPlannedTimeline.filter((item) => formatDateKey(item?.journeyDateKey || item?.createdAt || "") !== targetDate),
+    ]
+      .sort((left, right) => {
+        const leftTime = new Date(left?.createdAt || normalizeLooseTimestamp(left?.time) || 0).getTime();
+        const rightTime = new Date(right?.createdAt || normalizeLooseTimestamp(right?.time) || 0).getTime();
+        return rightTime - leftTime;
+      })
+      .slice(0, 28),
   };
 };
 
@@ -52710,7 +54329,7 @@ const applyJourneyPreviewToRole = (
               ...journeyData.monitorPreview.fortune,
             }
           : role.monitor?.fortune,
-      timeline: Array.isArray(journeyData.monitorPreview.timeline)
+        timeline: Array.isArray(journeyData.monitorPreview.timeline)
         ? journeyData.monitorPreview.timeline.map((item, index) => ({
             id: item?.id || `mon-${Date.now()}-${index}`,
             time: String(item?.time || "").trim(),
@@ -52722,6 +54341,18 @@ const applyJourneyPreviewToRole = (
               item?.createdAt || buildMonitorBeatCreatedAt(formatDateKey(journeyData.targetDate), item?.time || "", index),
           }))
         : role.monitor.timeline,
+      plannedTimeline: Array.isArray(journeyData.monitorPreview.plannedTimeline)
+        ? journeyData.monitorPreview.plannedTimeline.map((item, index) => ({
+            id: item?.id || `mon-plan-${Date.now()}-${index}`,
+            time: String(item?.time || "").trim(),
+            title: String(item?.title || "").trim(),
+            text: String(item?.text || "").trim(),
+            tag: String(item?.tag || "").trim(),
+            journeyDateKey: formatDateKey(journeyData.targetDate),
+            createdAt:
+              item?.createdAt || buildMonitorBeatCreatedAt(formatDateKey(journeyData.targetDate), item?.time || "", index),
+          }))
+        : role.monitor.plannedTimeline,
     };
   }
 
@@ -52945,6 +54576,7 @@ const LIFE_MONITOR_MODEL_COOLDOWN_MINUTES = 180;
 const LIFE_MONITOR_ACTIVE_EVENT_COOLDOWN_MINUTES = 150;
 const LIFE_MONITOR_HOURLY_STORY_CHANCE_MIN = 2;
 const LIFE_MONITOR_HOURLY_STORY_CHANCE_MAX = 32;
+const LIFE_MONITOR_DAILY_NODE_MIN = 3;
 const LIFE_MONITOR_DAILY_NODE_MAX = 5;
 const LIFE_MONITOR_STORY_MIN_CHARS = 100;
 const LIFE_MONITOR_STORY_TARGET_CHARS = 140;
@@ -53239,22 +54871,7 @@ const pickDeterministicLifeFateHooksDetailed = (tierKey = "steady", seed = "", c
 const pickDeterministicLifeFateHooks = (tierKey = "steady", seed = "", count = 3) =>
   pickDeterministicLifeFateHooksDetailed(tierKey, seed, count).map((entry) => entry.text);
 
-const getLifeFateEffectiveTriggerChance = (settings = {}, tierKey = "steady") => {
-  const baseChance = clampValue(Number(settings?.eventTriggerChance || 0), 0, 100);
-  if (baseChance <= 0) return 0;
-  const multiplier = Number(LIFE_FATE_EVENT_TRIGGER_MULTIPLIERS[tierKey] || 1);
-  let effectiveChance = Math.round(baseChance * multiplier);
-  if (tierKey === "steady") {
-    effectiveChance = Math.min(effectiveChance, Math.max(6, Math.round(baseChance * 0.6)));
-  } else if (tierKey === "catastrophe") {
-    effectiveChance = Math.max(effectiveChance, Math.min(100, baseChance + 30));
-  } else if (tierKey === "koi" || tierKey === "storm") {
-    effectiveChance = Math.max(effectiveChance, Math.min(95, baseChance + 18));
-  } else if (tierKey === "radiant") {
-    effectiveChance = Math.max(effectiveChance, Math.min(88, baseChance + 8));
-  }
-  return clampValue(effectiveChance, 0, 100);
-};
+const getLifeFateEffectiveTriggerChance = (settings = {}) => clampValue(Number(settings?.eventTriggerChance || 0), 0, 100);
 
 const getLifeFateVariationScore = (tierKey = "steady", effectiveTriggerChance = 0) => {
   const baseScore = Number(LIFE_FATE_VARIATION_BASE_SCORES[tierKey] || LIFE_FATE_VARIATION_BASE_SCORES.steady || 34);
@@ -53300,7 +54917,7 @@ const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
   const effectiveTriggerChance = getLifeFateEffectiveTriggerChance(settings, tierKey);
   const eventTriggered =
     effectiveTriggerChance > 0 &&
-    (tierKey === "catastrophe" || buildDeterministicUnit(`${seedBase}|trigger`) * 100 < effectiveTriggerChance);
+    buildDeterministicUnit(`${seedBase}|trigger`) * 100 < effectiveTriggerChance;
   const variationScore = getLifeFateVariationScore(tierKey, effectiveTriggerChance);
   const requiredConcreteMoments = getLifeFateRequiredConcreteMoments({
     variationScore,
@@ -53347,7 +54964,7 @@ const buildLifeFatePromptBlock = (role, targetDateKey = formatDateKey()) => {
 - 今日至少要写出的记忆点数量: ${Number(roll.requiredConcreteMoments || 1)}
 - 今日戏剧执行要求: ${roll.dramaDirective}
 - 今日优先题材方向: ${Array.isArray(roll.storyThemes) && roll.storyThemes.length ? roll.storyThemes.join(" / ") : "日常变化"}
-- 今日是否触发突发事件: ${roll.eventTriggered ? "是 你必须生成一条可归档进往期事件簿的完整事件" : "否 但也不能写成普通忙碌，仍要把具体插曲写进 monitor.timeline"}
+- 今日是否触发生活轨迹: ${roll.eventTriggered ? "是 你必须生成一条可归档进往期事件簿的完整生活轨迹事件线" : "否 今天不生成生活轨迹，不要写平稳日常占位"}
 - 今日优先戏剧元素: ${roll.storyHooks.join("；") || "普通日常里的微妙变化"}
 - 如果今天是 spark，不能只写成顺利和平静，要写出“今天真有点好玩”的感觉，最好带一点轻微乌龙、临时起意、社交热闹或现场笑点
 - 如果今天属于 spark / radiant / koi 这类偏正向档位，优先把记忆点写成城市生活里的 surprise / fun / neighborhood / invitation / animal，再去补职业、目标或主线推进
@@ -53356,53 +54973,7 @@ const buildLifeFatePromptBlock = (role, targetDateKey = formatDateKey()) => {
   };
 };
 
-const buildQuietMonitorTimelineFallback = (fortuneRoll, targetDateKey = formatDateKey()) => {
-  if (fortuneRoll?.eventTriggered) return [];
-  const label = String(fortuneRoll?.tierLabel || "平平无奇").trim() || "平平无奇";
-  const blurb = String(fortuneRoll?.tierBlurb || "").trim();
-  const hooks = Array.isArray(fortuneRoll?.storyHooks) ? fortuneRoll.storyHooks.filter(Boolean) : [];
-  const tone = String(fortuneRoll?.tone || "neutral").trim() || "neutral";
-  const variationScore = Number(fortuneRoll?.variationScore || 0);
-  const openingText =
-    tone === "lucky"
-      ? `今天一开头就带着一点顺风感，最容易撞上“${hooks[0] || blurb || "事情自己对上节拍"}”这种现实里的小惊喜`
-      : tone === "warm"
-        ? `今天不是大起大落，但中段很容易冒出“${hooks[0] || blurb || "刚刚好的小奖励"}”这种值得记一下的亮点`
-        : tone === "low"
-          ? `今天不是大翻车，但十有八九会被“${hooks[0] || blurb || "不大不小的麻烦"}”这种事绊一下`
-          : tone === "bad"
-            ? `今天的底色偏拧巴，像“${hooks[0] || blurb || "坏消息赶在坏时间点冒出来"}”这种岔口很容易出现`
-            : blurb
-              ? `今天抽到的是${label}，整体更像是${blurb}，但不能把它写得像白开水`
-              : `今天抽到的是${label}，没有大事发生，也得留下一点能被记住的小细节`;
-  const middayText =
-    variationScore >= 80
-      ? `到了中段，第二个记忆点往往会跟着冒出来，像“${hooks[1] || hooks[0] || "节奏被临时拐弯"}”这种事不会只轻轻擦过去`
-      : hooks[1]
-        ? `午后最容易出现的偏折，是“${hooks[1]}”这种不至于掀桌、但足够让人记住半天的小插曲`
-        : `午后通常会有一个让这一天突然变具体的瞬间，不一定大，但不能只是抽象状态`;
-  const nightText =
-    hooks[2]
-      ? `临近夜里时，还会留下“${hooks[2]}”这一类尾音，让整天不至于只剩一个“普通”`
-      : `到了晚上，这一天至少要留下一个能说得出口的尾音，而不是普通流水账`;
-  return [
-    {
-      time: "09:20",
-      text: openingText,
-      tag: label,
-    },
-    {
-      time: "14:40",
-      text: middayText,
-      tag: variationScore >= 80 ? "第二波偏移" : "中段插曲",
-    },
-    {
-      time: "21:10",
-      text: nightText,
-      tag: "尾音",
-    },
-  ].filter(Boolean);
-};
+const buildQuietMonitorTimelineFallback = () => [];
 
 const parseLifeMonitorClockMinutes = (value = "", fallback = 0) => {
   const normalized = String(value || "").trim();
@@ -53579,6 +55150,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
   const cutoffDate = buildLifeMonitorCutoffDate(targetDateKey, now);
   const fortuneRoll = buildLifeFateRoll(role, targetDateKey);
   const dailyNodeCount = getLifeMonitorDailyNodeCount(role, targetDateKey);
+  const plannedNodeCount = getMonitorPlannedTimelineForDate(role, targetDateKey).length;
   const dailyNodeLimitReached = dailyNodeCount >= LIFE_MONITOR_DAILY_NODE_MAX;
   const fateTriggerAllowed = Number(fortuneRoll?.triggerChance || 0) > 0 && Number(fortuneRoll?.effectiveTriggerChance || 0) > 0;
   const activeEvent = getChatReplyLiveMonitorEvent(role, now);
@@ -53591,7 +55163,11 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
   const generalCooldownReady = !hasModelHistory || minutesSinceModel >= LIFE_MONITOR_MODEL_COOLDOWN_MINUTES;
   const activeEventCooldownReady =
     fateTriggerAllowed && Boolean(activeEvent) && (!hasModelHistory || minutesSinceModel >= LIFE_MONITOR_ACTIVE_EVENT_COOLDOWN_MINUTES);
-  const eventMissing = fateTriggerAllowed && Boolean(fortuneRoll.eventTriggered) && !hasLifeMonitorGeneratedEventForDate(role, targetDateKey);
+  const eventMissing =
+    fateTriggerAllowed &&
+    Boolean(fortuneRoll.eventTriggered) &&
+    !plannedNodeCount &&
+    !hasLifeMonitorGeneratedEventForDate(role, targetDateKey);
   const hourlyChance = getLifeMonitorHourlyStoryChance(fortuneRoll, {
     segmentChanged,
     hasActiveEvent: Boolean(activeEvent),
@@ -53620,6 +55196,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       hourlyHit,
       cooldownReady: generalCooldownReady,
       dailyNodeCount,
+      plannedNodeCount,
     };
   }
 
@@ -53637,6 +55214,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       hourlyHit,
       cooldownReady: generalCooldownReady,
       dailyNodeCount,
+      plannedNodeCount,
     };
   }
 
@@ -53661,6 +55239,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
     hourlyHit,
     cooldownReady: generalCooldownReady,
     dailyNodeCount,
+    plannedNodeCount,
   };
 };
 
@@ -53704,6 +55283,7 @@ const filterMonitorPayloadItemsByCutoff = (items = [], targetDateKey = formatDat
     .filter(Boolean);
 
 const buildMonitorCurrentMomentFallback = (fortuneRoll, cutoffDate = new Date()) => {
+  if (!fortuneRoll?.eventTriggered) return null;
   const label = String(fortuneRoll?.tierLabel || "平平无奇").trim() || "平平无奇";
   const blurb = String(fortuneRoll?.tierBlurb || "").trim();
   const hook = Array.isArray(fortuneRoll?.storyHooks) ? String(fortuneRoll.storyHooks[0] || "").trim() : "";
@@ -53721,7 +55301,8 @@ const buildMonitorCurrentMomentFallback = (fortuneRoll, cutoffDate = new Date())
 const buildLifeMonitorTimelineFallback = (fortuneRoll, targetDateKey = formatDateKey(), cutoffDate = new Date()) => {
   const fallback = buildQuietMonitorTimelineFallback(fortuneRoll, targetDateKey);
   const filtered = filterMonitorPayloadItemsByCutoff(fallback, targetDateKey, cutoffDate);
-  return filtered.length ? filtered : [buildMonitorCurrentMomentFallback(fortuneRoll, cutoffDate)];
+  const currentMoment = buildMonitorCurrentMomentFallback(fortuneRoll, cutoffDate);
+  return filtered.length ? filtered : currentMoment ? [currentMoment] : [];
 };
 
 const constrainMonitorResultToCutoff = (result, targetDateKey = formatDateKey(), cutoffDate = new Date(), fortuneRoll = null) => {
@@ -53791,27 +55372,6 @@ const pickLifeMonitorNodeClosestToCutoff = (items = [], targetDateKey = formatDa
     })
     .filter(Boolean)
     .sort((left, right) => left.score - right.score || left.index - right.index)[0]?.item || null;
-};
-
-const limitLifeMonitorResultToSingleNode = (result = null, targetDateKey = formatDateKey(), cutoffDate = new Date()) => {
-  const safeResult = result && typeof result === "object" ? { ...result } : {};
-  const pickedTimeline = pickLifeMonitorNodeClosestToCutoff(safeResult.timeline, targetDateKey, cutoffDate);
-  const safeEvent = safeResult.event && typeof safeResult.event === "object" ? { ...safeResult.event } : {};
-  const pickedBeat = pickLifeMonitorNodeClosestToCutoff(safeEvent.beats, targetDateKey, cutoffDate);
-  const singleNode = pickedTimeline || pickedBeat;
-  if (!singleNode) return safeResult;
-  return {
-    ...safeResult,
-    summary: String(safeResult.summary || singleNode.text || "").trim(),
-    timeline: [singleNode],
-    event: Object.keys(safeEvent).length
-      ? {
-          ...safeEvent,
-          summary: String(safeEvent.summary || singleNode.text || "").trim(),
-          beats: [pickedBeat || singleNode],
-        }
-      : safeEvent,
-  };
 };
 
 const buildMonitorTimelineItems = (items = [], targetDateKey = formatDateKey()) =>
@@ -54188,6 +55748,12 @@ const decorateJourneyDataWithLinkedState = (role, journeyData, syntheticNow = ne
       timeline: providedMonitorTimeline.length
         ? providedMonitorTimeline
         : [],
+      plannedTimeline:
+        Array.isArray(safeMonitorPreview?.plannedTimeline) && safeMonitorPreview.plannedTimeline.length
+          ? safeMonitorPreview.plannedTimeline
+          : Array.isArray(safeMonitorPreview?.timeline)
+            ? safeMonitorPreview.timeline
+            : [],
       fortune: {
         dateKey: normalizedTargetDate,
         tierKey: fortuneRoll.tierKey,
@@ -54361,8 +55927,8 @@ const requestLifeMonitorPlainTextData = async ({
       : null,
   };
   const lifeMonitorPlainTextContext = buildPureTextGenerationContext({
-    task: isAutoMonitor ? "后台本地判定命中后生成一个生活轨迹新节点" : "生成一个生活轨迹新节点",
-    outputIntent: `${canWriteEventLine ? "事件" : "主题"}首行 + 1 个 HH:MM 生活轨迹节点`,
+    task: isAutoMonitor ? "后台本地判定命中后生成生活轨迹事件节点" : "生成生活轨迹事件节点",
+    outputIntent: "事件首行 + 1到5个 HH:MM 生活轨迹节点",
     roleContext,
     journeyContext,
     slimContext: lifeMonitorSlimContext,
@@ -54370,29 +55936,29 @@ const requestLifeMonitorPlainTextData = async ({
     fortuneRoll,
   });
   const response = await requestPlannerModelText({
-    systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. First visible character must be ${canWriteEventLine ? "事" : "主"}. Line 1 must have exactly 5 fields. Line 2 must have exactly 4 fields. Line 2 first field must be HH:MM only, not a date. The story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
-你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹新节点。
+    systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. First visible character must be 事. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
+你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹事件节点。
 必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
 输出格式：
-${canWriteEventLine ? "事件||像作文题一样的突发事件总标题||进行中或收尾||运势等级||影响天数1到7" : "主题||今天的普通生活主题||片段||运势等级||0"}
+事件||像作文题一样的生活轨迹总标题||进行中或收尾||运势等级||影响天数1到7
 HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事正文||短标签
 短期目标||目标标题||因为本节点产生或推进的下一步||进度数字0到100||持续天数1到7
 规则:
-- 这次只生成 1 个新节点，不能补写之前几个小时，不能一次性生成多条时间点
-- 时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM，只写到 ${cutoffLabel}，不得预测后面
+- 如果已有同一事件，本次只生成 1 个新节点，时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM，只写到 ${cutoffLabel}，不得预测后面
+- 如果这是今天第一次命中生活轨迹，本次生成同一事件主题下 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${Math.min(LIFE_MONITOR_DAILY_NODE_MAX, Math.max(LIFE_MONITOR_DAILY_NODE_MIN, remainingNodeCount || LIFE_MONITOR_DAILY_NODE_MAX))} 个节点，节点时间按当天行程灵活安排；第一条尽量接近 ${cutoffClock}，后续可以是稍后的计划节点，前端会到点再显示
 - 今天已经有 ${dailyNodeCount} 个生活轨迹节点，本次生成后一天最多只能到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个；不要为了补时段而多写
-- 第一行必须是 ${canWriteEventLine ? "事件||" : "主题||"}，第二行必须匹配 HH:MM||小标题||故事||短标签，第三行短期目标可选；影响天数、进度、持续天数都必须填具体数字
-- ${canWriteEventLine ? "第一行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字" : "第一行第 3 段必须固定写片段，第 5 段必须固定写 0"}
+- 第一行必须是 事件||，节点行必须匹配 HH:MM||小标题||故事||短标签，短期目标可选；影响天数、进度、持续天数都必须填具体数字
+- 第一行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字
 - 第二行只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段
-- 最终输出第一个字符必须是“${canWriteEventLine ? "事" : "主"}”，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
+- 最终输出第一个字符必须是“事”，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
 - 禁止输出 JSON、Markdown、代码块、日文、韩文/朝鲜文、英文说明、任何外语、列表编号和项目符号
 - 双竖线 || 只是字段分隔符，不是表格；禁止写表头、字段名、分隔线，不准输出 时间||动作||地点||描述||心情 这类旧格式
 - 第二行的第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文
 - 故事正文必须控制在${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字内，像时间簿现场记录，不要总结腔，短标签不计入字数；写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间
 - 故事正文必须用第三人称写角色，不能用“我”当叙述主语；可以写角色名字、他、她
 - 小标题必须是模型单独总结出来的 8 到 12 个汉字，不能直接截取正文前几个字
-- ${canWriteEventLine ? "事件总标题必须像作文题一样概括整条故事线，例如“弄堂红门里的老唱片线索”，不能写“生活推进”“状态波动”“今日插曲”" : "生活主题标题要概括这一刻的现场气氛，例如“雨后橱窗里的小停顿”，不能写“生活推进”“状态波动”“今日插曲”"}
-- ${canWriteEventLine ? "每个节点都必须围绕同一个事件总标题继续推进：有起因、现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要散成互不相关的小段子" : "本次没有触发突发事件，只写普通生活主题里的一个有画面的小片段；不要写成重大事故、不要新增事件余波、不要归档突发事件"}
+- 事件总标题必须像作文题一样概括整条故事线，例如“弄堂红门里的老唱片线索”，不能写“生活推进”“状态波动”“今日插曲”
+- 每个节点都必须围绕同一个事件总标题继续推进：有起因、现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要散成互不相关的小段子
 - 行程只是锚点，不能照抄行程标题/详情，不能把行程换个说法
 - 禁止写“完成、收尾、归档、放松、状态稳定、工作推进、生活推进”这类无聊状态词
 - 风格参考时间簿：要有具体时间、人物/地点、突发小事、荒诞但现实的细节、短标签；可以抓马、好笑、倒霉、暧昧误会，但必须现实可信
@@ -54402,9 +55968,9 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 突发事件必须结合概率设置：${String(fortuneRoll?.tierLabel || "平稳")} / 触发=${requiresArchiveEvent ? "是" : "否"} / 概率=${Number(lifeFateSettings?.eventTriggerChance || 0)}% / 有效概率=${Number(fortuneRoll?.effectiveTriggerChance || 0)}%
 - 好运写顺手被生活推一把，低运写被现实绊一下；都要现实可信
 - 影响天数按事件大小决定 1 到 7 天；小乌龙 1 天，中等误会/创作线索 2-4 天，重要关系/目标变化 5-7 天
-- ${canWriteEventLine ? "突发事件可以推进或新增短期目标，短期目标必须是 1 到 7 天能收尾的一小段现实任务" : "普通生活主题通常不新增短期目标；除非这个片段真的改变了下一步安排，否则不要写短期目标"}
-- ${canWriteEventLine && existingEvent ? `若已有同一事件，第一行总标题必须严格沿用这个标题，不要换新标题：${String(existingEvent.title || "").trim()}` : "若没有触发突发事件，第一行只能写主题，不准写事件"}
-- ${canWriteEventLine && existingEvent ? "若已有事件已经持续，新的节点必须写成续写转折或余波，不要重新开一个完全无关的小故事" : "普通主题可以有趣，但只能是生活片段，不要冒充突发事件"}
+- 生活轨迹事件可以推进或新增短期目标，短期目标必须是 1 到 7 天能收尾的一小段现实任务
+- ${existingEvent ? `若已有同一事件，第一行总标题必须严格沿用这个标题，不要换新标题：${String(existingEvent.title || "").trim()}` : "若没有已有事件，第一行要新建一个有标题的生活轨迹事件线"}
+- ${existingEvent ? "若已有事件已经持续，新的节点必须写成续写转折或余波，不要重新开一个完全无关的小故事" : "新事件必须从现实日常打破平衡开始，后续节点围绕同一个主题展开"}
 - 当前角色固定「${roleName}」，当前位置「${currentPlace}」，参考城市「${referenceCity}」
 - 当前目标：${goalTitles.join(" / ") || "暂无"}
 - 可用人物：${npcNames.join(" / ") || "暂无"}
@@ -54412,15 +55978,16 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 运势线索：${(fortuneRoll?.storyHooks || []).slice(0, 4).join(" / ") || fortuneRoll?.tierBlurb || "平稳日常"}
 - 你会收到下方纯文本参考上下文。写之前先锁定：角色姓名、人设、说话风格、长期记忆、总结记忆、世界书、NPC关系、地图地点、当天行程和最近聊天都以参考上下文为准
 - 生活轨迹必须从参考上下文里的角色资料、重要记忆、自动总结、世界书、地图地点、NPC、目标、最近聊天、突发事件里挑真实素材，和当天行程锚点揉成一段故事；不要写成无角色身份的通用记录
-- 参考上下文里的“昨日与当日连续性”包含昨天行程、昨天生活轨迹和影响期内事件；${canWriteEventLine ? "如果里面有未收尾事件，本节点必须承接同一事件总标题或写它的后续余波，不要无缘无故另开一条散故事" : "本次未触发突发事件时，只能把这些当背景，不要主动续写成新事件"}
-- ${canWriteEventLine ? "事件状态可以写进行中、收尾或已结束，但只有影响确实落地后才写已结束；影响天数必须和事件大小匹配，短期目标也要按同样 1 到 7 天节奏推进或收尾" : "第一行影响天数固定写 0，状态固定写片段，不要写进行中、收尾或已结束"}
+- 参考上下文里的“昨日与当日连续性”包含昨天行程、昨天生活轨迹和影响期内事件；如果里面有未收尾事件，本节点必须承接同一事件总标题或写它的后续余波，不要无缘无故另开一条散故事
+- 事件状态可以写进行中、收尾或已结束，但只有影响确实落地后才写已结束；影响天数必须和事件大小匹配，短期目标也要按同样 1 到 7 天节奏推进或收尾
+- 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
 - 地理锁定：只能写「${currentPlace}」、当天行程地点、角色地图地点或参考城市「${referenceCity}」里合理出现的地点；严禁把城市改成东京、涩谷、原宿、京都、大阪等无关日本地点，除非角色地图里本来就有
 - 人物锁定：只允许写可用人物、世界书/记忆里出现过的人物或用户昵称；不要编造佐藤、田中、山田等无关日文姓名
 - 风格锁定：故事要像这个角色亲身过的一小时，不要像会议纪要、项目进度、数据采样报告或系统监控
 - 如果模型想用外语或无关地名，必须改写成简体中文和角色本来的城市/地图地点
 直接输出纯文本。`,
     payload: {
-      task: isAutoMonitor ? "后台本地判定命中后生成一个生活轨迹新节点" : "生成一个生活轨迹新节点",
+      task: isAutoMonitor ? "后台本地判定命中后生成生活轨迹事件节点" : "生成生活轨迹事件节点",
       targetDate: normalizedTargetDate,
       cutoffTime: cutoffClock,
       fortuneSettings: lifeFateSettings,
@@ -54442,11 +56009,22 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
     singleVariant: true,
     signal,
   });
-  const parsedResult = limitLifeMonitorResultToSingleNode(
-    parseLifeMonitorPlainTextPayload(response?.text || "", normalizedTargetDate),
-    normalizedTargetDate,
-    cutoffDate,
-  );
+  const parsedPayload = parseLifeMonitorPlainTextPayload(response?.text || "", normalizedTargetDate);
+  const parsedResult = {
+    ...parsedPayload,
+    plannedTimeline: Array.isArray(parsedPayload.plannedTimeline) && parsedPayload.plannedTimeline.length
+      ? parsedPayload.plannedTimeline
+      : Array.isArray(parsedPayload.timeline)
+        ? parsedPayload.timeline
+        : [],
+    timeline: filterMonitorPayloadItemsByCutoff(parsedPayload.timeline, normalizedTargetDate, cutoffDate),
+    event: parsedPayload.event && typeof parsedPayload.event === "object"
+      ? {
+          ...parsedPayload.event,
+          beats: filterMonitorPayloadItemsByCutoff(parsedPayload.event.beats, normalizedTargetDate, cutoffDate),
+        }
+      : {},
+  };
   return {
     result: parsedResult,
     meta: {
@@ -54505,6 +56083,42 @@ const generateLifeMonitorFromApi = async ({
     Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
     Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
     Boolean(fortuneRoll.eventTriggered);
+  const existingLiveEventBeforeRequest = getChatReplyLiveMonitorEvent(role, cutoffDate);
+  if (!requiresArchiveEvent && !existingLiveEventBeforeRequest) {
+    updateRole(
+      role.id,
+      (nextRole) => {
+        nextRole.monitor = {
+          ...(nextRole.monitor || {}),
+          fortune: {
+            ...(nextRole.monitor?.fortune || {}),
+            dateKey: normalizedTargetDate,
+            tierKey: fortuneRoll.tierKey,
+            tierLabel: fortuneRoll.tierLabel,
+            summary: fortuneRoll.tierBlurb,
+            eventTriggered: false,
+            triggerChance: Number(lifeFateSettings.eventTriggerChance || 0),
+            effectiveTriggerChance: Number(fortuneRoll.effectiveTriggerChance || 0),
+            variationScore: Number(fortuneRoll.variationScore || 0),
+            requiredConcreteMoments: 0,
+            dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
+            storyHooks: fortuneRoll.storyHooks,
+          },
+        };
+        nextRole.runtime = {
+          ...(nextRole.runtime || {}),
+          lastLifeMonitorAttemptAt: new Date().toISOString(),
+          lastLifeMonitorLocalReason: "fate-not-triggered",
+        };
+        return nextRole;
+      },
+      { paintNow: false },
+    );
+    if (!silent) {
+      setToast("今天没有触发生活轨迹，不生成占位故事");
+    }
+    return false;
+  }
 
   addBusyToken("apiGenerationBusy", monitorToken);
   paint();
@@ -61197,12 +62811,40 @@ eventRoot.addEventListener("input", (event) => {
     const field = target.dataset.chatField;
     const value = target.type === "number" || target.type === "range" ? Number(target.value) : target.value;
     updateActiveRoleChatField(field, value);
-    if (["bubbleFontSize", "bubbleSize", "bubbleGap", "bubbleAvatarSize"].includes(field) && target.type === "range") {
+    const liveBubbleFields = [
+      "bubbleFontSize",
+      "bubbleSize",
+      "bubbleGap",
+      "bubbleAvatarSize",
+      "bubbleAvatarGap",
+      "stickerSize",
+      "imageSize",
+      "roleBubbleColor",
+      "userBubbleColor",
+    ];
+    if (liveBubbleFields.includes(field) && target.type === "range") {
       return;
     }
-    if (["bubbleFontSize", "bubbleSize", "bubbleGap", "bubbleAvatarSize"].includes(field) || target.type === "range") {
+    if (liveBubbleFields.includes(field) || target.type === "range" || target.type === "color") {
       paint();
     }
+    return;
+  }
+
+  if (target.dataset.bubbleColorLightness || target.dataset.bubbleColorSaturation) {
+    const field = target.dataset.bubbleColorLightness || target.dataset.bubbleColorSaturation;
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role) return;
+    const meta = getRoleChatBubbleProfile(role);
+    const currentColors = normalizeChatBubbleColorSet(meta.profile?.colors, meta.skin);
+    const current = field === "roleBubbleColor" ? currentColors.ai : currentColors.user;
+    const hsl = hexToHslApp(current);
+    const nextColor = hslToHexApp(
+      hsl.h,
+      target.dataset.bubbleColorSaturation ? Number(target.value) : hsl.s,
+      target.dataset.bubbleColorLightness ? Number(target.value) : hsl.l,
+    );
+    updateActiveRoleChatField(field, nextColor);
     return;
   }
 
@@ -61384,8 +63026,23 @@ eventRoot.addEventListener("change", (event) => {
     return;
   }
 
-  if (["bubbleFontSize", "bubbleSize", "bubbleGap", "bubbleAvatarSize"].includes(target.dataset.chatField)) {
-    updateActiveRoleChatField(target.dataset.chatField, Number(target.value));
+  if (
+    [
+      "bubbleFontSize",
+      "bubbleSize",
+      "bubbleGap",
+      "bubbleAvatarSize",
+      "bubbleAvatarGap",
+      "stickerSize",
+      "imageSize",
+      "roleBubbleColor",
+      "userBubbleColor",
+    ].includes(target.dataset.chatField)
+  ) {
+    updateActiveRoleChatField(
+      target.dataset.chatField,
+      target.type === "color" ? target.value : Number(target.value),
+    );
     paint();
     return;
   }
@@ -61532,6 +63189,10 @@ eventRoot.addEventListener("click", async (event) => {
   }
 
   if (action === "send-message") {
+    if (button.dataset.sendMode === "direct-ai") {
+      handleSendMessage({ triggerAi: true });
+      return;
+    }
     handleComposerPrimaryAction();
     return;
   }
@@ -61543,11 +63204,13 @@ eventRoot.addEventListener("click", async (event) => {
   }
 
   if (action === "pick-image") {
+    state.quickPlusMenuOpen = false;
     beginImagePick({ kind: "chat" });
     return;
   }
 
   if (action === "pick-camera-image") {
+    state.quickPlusMenuOpen = false;
     beginImagePick({ kind: "chat-camera", captureMode: "environment" });
     return;
   }
@@ -61820,12 +63483,14 @@ eventRoot.addEventListener("click", async (event) => {
   }
 
   if (action === "open-journey-sheet") {
+    state.quickPlusMenuOpen = false;
     state.journeyActiveDate = getJourneyActiveDateKey();
     openPanel("journey-sheet");
     return;
   }
 
   if (action === "open-video-session") {
+    state.quickPlusMenuOpen = false;
     if (!state.videoSession?.active) {
       const wantsVoiceInput = String(state.videoSession?.inputMode || "voice").trim() !== "text";
       const preflight = await runVideoSessionEntryPreflight({ wantsVoiceInput });
@@ -62188,6 +63853,29 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "save-current-bubble-theme") {
+    if (saveCurrentBubbleThemeForActiveRole()) {
+      setToast("已保存为新的主题美化");
+    }
+    return;
+  }
+
+  if (action === "apply-saved-bubble-theme") {
+    const themeId = String(button.dataset.bubbleSavedThemeId || "").trim();
+    if (!applySavedBubbleThemeForActiveRole(themeId)) return;
+    setToast("已切换到保存的主题");
+    return;
+  }
+
+  if (action === "delete-saved-bubble-theme") {
+    const themeId = String(button.dataset.bubbleSavedThemeId || "").trim();
+    if (!themeId) return;
+    if (!window.confirm("删除这套保存的主题美化吗")) return;
+    deleteSavedBubbleThemeFromActiveRole(themeId);
+    setToast("已删除这套主题美化");
+    return;
+  }
+
   if (action === "add-bubble-style") {
     addBubbleStyleToActiveRole();
     setToast("已新增一套气泡样式");
@@ -62206,6 +63894,7 @@ eventRoot.addEventListener("click", async (event) => {
     const role = getActiveChatRole() || getCurrentRole();
     if (!role) return;
     role.chats.activeBubbleStyleId = null;
+    role.chats.activeBubbleSavedThemeId = null;
     role.chats.bubbleTheme = "default";
     syncPersistentState();
     paint();
