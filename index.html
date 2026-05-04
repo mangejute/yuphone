@@ -7020,10 +7020,47 @@ body {
 }
 
 .life-monitor-header-actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 3px;
+  max-width: min(54vw, 218px);
+  padding: 3px;
+  border: 1px solid rgba(220, 222, 230, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.life-monitor-header-actions .tiny-header-btn {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 0 !important;
+  border-radius: 999px;
+  background: transparent !important;
+  color: rgba(17, 17, 17, 0.72) !important;
+  box-shadow: none !important;
+  font-size: 12px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.life-monitor-header-actions .tiny-header-btn.is-primary {
+  background: #111111 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.16) !important;
+}
+
+.life-monitor-header-actions .tiny-header-btn:active {
+  transform: scale(0.96);
+  background: rgba(17, 17, 17, 0.06) !important;
+}
+
+.life-monitor-header-actions .tiny-header-btn.is-primary:active {
+  background: #000000 !important;
 }
 
 .life-monitor-chip-row {
@@ -23880,7 +23917,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.04-life-track-regenerate-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.04-life-track-ios-nonwork-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27937,9 +27974,9 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
           false,
           `
             <div class="life-monitor-header-actions">
-              <button class="tiny-header-btn" type="button" data-action="generate-life-monitor">${isLifeMonitorBusy ? "生成中" : "手动刷新"}</button>
-              <button class="tiny-header-btn" type="button" data-action="regenerate-life-monitor-today">${isLifeMonitorBusy ? "生成中" : "重生成今天"}</button>
-              <button class="tiny-header-btn" type="button" data-action="open-panel" data-panel="life-fate-settings">概率设置</button>
+              <button class="tiny-header-btn ios-segment-btn" type="button" data-action="generate-life-monitor">${isLifeMonitorBusy ? "生成中" : "刷新"}</button>
+              <button class="tiny-header-btn ios-segment-btn is-primary" type="button" data-action="regenerate-life-monitor-today">${isLifeMonitorBusy ? "生成中" : "重生成"}</button>
+              <button class="tiny-header-btn ios-segment-btn" type="button" data-action="open-panel" data-panel="life-fate-settings">概率</button>
             </div>
           `,
         )}
@@ -52143,22 +52180,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     normalizedTargetDate === formatJourneyDayKey(journeyGenerationNow)
       ? `${String(journeyGenerationNow.getHours()).padStart(2, "0")}:${String(journeyGenerationNow.getMinutes()).padStart(2, "0")}`
       : "当天行程里最容易出事的合理时间点";
-  const { settings: lifeFateSettings, roll: baseFortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
-  const fortuneRoll = forceRegenerate
-    ? {
-        ...baseFortuneRoll,
-        eventTriggered: true,
-        triggerChance: Math.max(100, Number(baseFortuneRoll?.triggerChance || 0)),
-        effectiveTriggerChance: Math.max(100, Number(baseFortuneRoll?.effectiveTriggerChance || 0)),
-        requiredConcreteMoments: Math.max(2, Number(baseFortuneRoll?.requiredConcreteMoments || 0)),
-        dramaDirective: [
-          String(baseFortuneRoll?.dramaDirective || "").trim(),
-          "用户手动要求重生成今天生活轨迹，本次必须重新开一条生活事件线，不续写旧工作主题，不受当天随机未命中的限制",
-        ]
-          .filter(Boolean)
-          .join("；"),
-      }
-    : baseFortuneRoll;
+  const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
   const journeyCanWriteEventLine =
     Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
     Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
@@ -55406,6 +55428,8 @@ const LIFE_MONITOR_EVERYDAY_THEME_RE =
   /(?:外卖|奶茶|咖啡|便利店|超市|钥匙|门禁|电梯|手机|充电宝|快递|小票|纸袋|店员|邻居|朋友|路人|排队|通勤|地铁|公交|打车|天气|下雨|雨伞|宠物|小猫|小狗|小孩|小摊|街角|小店|逛街|散步|聚餐|吃饭|夜宵|买|丢|忘带|漏带|误会|乌龙|社死|红包|转账|免单|折扣|赠品|抽奖|临时邀约|偶遇|白跑|送错|拿错)/gu;
 const LIFE_MONITOR_NON_WORK_THEME_HINTS =
   "外卖送错、手机没电、门禁失灵、钥匙乌龙、店员叫错名、排队误会、路人搭话、小店赠品、宠物乱入、天气反转、临时邀约、邻里热闹、购物踩雷或捡漏";
+const LIFE_MONITOR_FORCE_REGEN_USER_INPUT_SEED =
+  "手动重生成生活轨迹 非工作生活事件 手机没电 付款卡住 叫号乌龙 排队误会 错拿物品 店员误会 路人搭话 天气反转 小额好运 临时邀约 外卖咖啡奶茶出错";
 
 const countLifeMonitorThemeMatches = (text = "", pattern) => {
   if (!pattern) return 0;
@@ -56712,6 +56736,7 @@ const buildLifeMonitorEverydayBiasDirective = ({
   journeyAnchorText = "",
   sameDayMonitorTimeline = [],
   goalTitles = [],
+  forceFreshEveryday = false,
 } = {}) => {
   const recentText = [
     journeyAnchorText,
@@ -56734,6 +56759,14 @@ const buildLifeMonitorEverydayBiasDirective = ({
       "- 如果必须承接旧工作事件，只能在一句话里说明旧线索已成背景，然后立刻转入新的生活乌龙/社交插曲/小麻烦",
     );
   }
+  if (forceFreshEveryday) {
+    lines.push(
+      "- 这是用户手动重生成：必须彻底避开上一版主题，不要继续展位、方案、视觉手册、设计稿、创作灵感、项目推进",
+      "- 当前地点如果带有工作/展会/创意语境，只能当背景板；主事件必须改成非工作生活随机变量，比如手机没电、叫号乌龙、错拿物品、店员误会、路人搭话、天气反转、排队插曲、小额好运或社交尴尬",
+      "- 本次输出全文禁止出现这些工作词：工作、方案、视觉、设计、手册、灵感、项目、Demo、采样、母带、混音、宣发、排版、品牌；如果想写这些词，必须换成生活中的物件、误会、路线或人际反应",
+      "- 故事收益禁止落回工作成果；结尾只能留下生活余波、社交后续、临时折返、物品归还、误会解释、路线改变或短期生活小目标",
+    );
+  }
   return lines.join("\n");
 };
 
@@ -56749,6 +56782,7 @@ const requestLifeMonitorPlainTextData = async ({
   lifeFateSettings,
   requiresArchiveEvent,
   isAutoMonitor,
+  forceRegenerate = false,
   signal = null,
 }) => {
   const plannerConfig = getPlannerApiConfig();
@@ -56776,18 +56810,30 @@ const requestLifeMonitorPlainTextData = async ({
     journeyAnchorText,
     sameDayMonitorTimeline,
     goalTitles,
+    forceFreshEveryday: forceRegenerate,
   });
-  const lifeMonitorUserInput = [
-    targetDateLabel,
-    cutoffClock,
-    currentPlace,
-    referenceCity,
-    journeyAnchorText,
-    goalTitles.join(" "),
-    npcNames.join(" "),
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const lifeMonitorUserInput = forceRegenerate
+    ? [
+        targetDateLabel,
+        cutoffClock,
+        currentPlace,
+        referenceCity,
+        LIFE_MONITOR_FORCE_REGEN_USER_INPUT_SEED,
+        npcNames.join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : [
+        targetDateLabel,
+        cutoffClock,
+        currentPlace,
+        referenceCity,
+        journeyAnchorText,
+        goalTitles.join(" "),
+        npcNames.join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ");
   const roleContext = buildChatFullRoleContext(liveRole, {
     userInput: lifeMonitorUserInput,
     now: cutoffDate,
@@ -56820,7 +56866,7 @@ const requestLifeMonitorPlainTextData = async ({
   };
   const lifeMonitorPlainTextContext = buildPureTextGenerationContext({
     task: isAutoMonitor ? "后台本地判定命中后生成生活轨迹事件节点" : "生成生活轨迹事件节点",
-    outputIntent: "事件首行 + 1到5个 HH:MM 生活轨迹节点",
+    outputIntent: forceRegenerate ? "手动重生成：新开非工作生活事件首行 + 1到5个 HH:MM 节点" : "事件首行 + 1到5个 HH:MM 生活轨迹节点",
     roleContext,
     journeyContext,
     slimContext: lifeMonitorSlimContext,
@@ -56828,7 +56874,7 @@ const requestLifeMonitorPlainTextData = async ({
     fortuneRoll,
   });
   const response = await requestPlannerModelText({
-    systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. First visible character must be 事. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
+    systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. The first visible line must start exactly with 事件||, not 事||. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
 你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹事件节点。
 必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
 输出格式：
@@ -56842,7 +56888,7 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 第一行必须是 事件||，节点行必须匹配 HH:MM||小标题||故事||短标签，短期目标可选；影响天数、进度、持续天数都必须填具体数字
 - 第一行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字
 - 第二行只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段
-- 最终输出第一个字符必须是“事”，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
+- 最终输出第一行必须严格以“事件||”开头，禁止写成“事||”，也不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
 - 禁止输出 JSON、Markdown、代码块、日文、韩文/朝鲜文、英文说明、任何外语、列表编号和项目符号
 - 双竖线 || 只是字段分隔符，不是表格；禁止写表头、字段名、分隔线，不准输出 时间||动作||地点||描述||心情 这类旧格式
 - 第二行的第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文
@@ -56851,6 +56897,9 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 小标题必须是模型单独总结出来的 8 到 12 个汉字，不能直接截取正文前几个字
 - 事件总标题必须像作文题一样概括整条故事线，例如“弄堂红门里的老唱片线索”，不能写“生活推进”“状态波动”“今日插曲”
 - 每个节点都必须围绕同一个事件总标题继续推进：有起因、现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要散成互不相关的小段子
+- ${forceRegenerate ? "本次是用户不满意后手动重生成：必须换成全新的非工作生活事件线，不许沿用上一版展位/方案/视觉/设计/灵感主题；即使行程地点是展位或工作现场，也必须写成生活层面的乌龙、小麻烦、小幸运或社交插曲" : "如果当前上下文偏工作，优先把工作当背景，事件核心改成生活随机变量"}
+- ${forceRegenerate ? "重生成时必须优先使用这些题材之一：手机没电或付款卡住、叫号/排队乌龙、错拿物品、店员误会、路人搭话、天气突然反转、钥匙/门禁/充电宝问题、小额免单好运、朋友临时求助、外卖/咖啡/奶茶出错" : "主事件优先写现实日常变量，不要连续写工作推进"}
+- ${forceRegenerate ? "本次全文禁用工作词：工作、方案、视觉、设计、手册、灵感、项目、Demo、采样、母带、混音、宣发、排版、品牌；不得用“比工作方案更真实”这种对比句，结尾必须落在生活后续" : "避免把结尾写回工作收益"}
 - 行程只是锚点，不能照抄行程标题/详情，不能把行程换个说法
 - 禁止写“完成、收尾、归档、放松、状态稳定、工作推进、生活推进”这类无聊状态词
 - 风格参考时间簿：要有具体时间、人物/地点、突发小事、荒诞但现实的细节、短标签；可以抓马、好笑、倒霉、暧昧误会，但必须现实可信
@@ -56965,7 +57014,22 @@ const generateLifeMonitorFromApi = async ({
     minute: "2-digit",
     hour12: false,
   }).format(cutoffDate);
-  const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
+  const { settings: lifeFateSettings, roll: baseFortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
+  const fortuneRoll = forceRegenerate
+    ? {
+        ...baseFortuneRoll,
+        eventTriggered: true,
+        triggerChance: Math.max(100, Number(baseFortuneRoll?.triggerChance || 0)),
+        effectiveTriggerChance: Math.max(100, Number(baseFortuneRoll?.effectiveTriggerChance || 0)),
+        requiredConcreteMoments: Math.max(2, Number(baseFortuneRoll?.requiredConcreteMoments || 0)),
+        dramaDirective: [
+          String(baseFortuneRoll?.dramaDirective || "").trim(),
+          "用户手动要求重生成今天生活轨迹，本次必须重新开一条非工作生活事件线；不要续写旧工作主题，不受当天随机未命中的限制",
+        ]
+          .filter(Boolean)
+          .join("；"),
+      }
+    : baseFortuneRoll;
   if (forceRegenerate) {
     updateRole(
       role.id,
@@ -57098,6 +57162,7 @@ const generateLifeMonitorFromApi = async ({
       lifeFateSettings,
       requiresArchiveEvent,
       isAutoMonitor,
+      forceRegenerate,
     });
     persistSecondaryTaskUsageSnapshot(role.id, {
       feature: "monitor",
