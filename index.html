@@ -23880,7 +23880,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.04-chat-theme-voice-bars-06";
+const APP_BUILD_VERSION_LABEL = "v2026.05.04-life-track-regenerate-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27926,6 +27926,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
   const overviewPlace = getRoleCurrentPlace(role) || role.profile.location || "未知地点";
   const overviewWeather = role.profile.weather || "天气未知";
   const overviewFortune = fortune.tierLabel || "平平无奇";
+  const isLifeMonitorBusy = hasBusyToken(state.apiGenerationBusy, "monitor") || hasBusyToken(state.apiGenerationBusy, `monitor-auto:${role.id}`);
 
   return `
     <div class="overlay-screen panel-overlay">
@@ -27936,7 +27937,8 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
           false,
           `
             <div class="life-monitor-header-actions">
-              <button class="tiny-header-btn" type="button" data-action="generate-life-monitor">手动刷新</button>
+              <button class="tiny-header-btn" type="button" data-action="generate-life-monitor">${isLifeMonitorBusy ? "生成中" : "手动刷新"}</button>
+              <button class="tiny-header-btn" type="button" data-action="regenerate-life-monitor-today">${isLifeMonitorBusy ? "生成中" : "重生成今天"}</button>
               <button class="tiny-header-btn" type="button" data-action="open-panel" data-panel="life-fate-settings">概率设置</button>
             </div>
           `,
@@ -33751,6 +33753,8 @@ const normalizeJourneyLinkedSnapshotGoal = (goal = {}) => {
 };
 const normalizeJourneyLinkedSnapshotMonitor = (monitor = {}, targetDateKey = formatDateKey()) => {
   const safeMonitor = monitor && typeof monitor === "object" ? monitor : {};
+  const rawFortune = safeMonitor?.fortune && typeof safeMonitor.fortune === "object" ? safeMonitor.fortune : null;
+  const eventTriggered = Boolean(rawFortune?.eventTriggered);
   const normalizeSnapshotTimeline = (items = [], prefix = "journey-snapshot-monitor") =>
     (Array.isArray(items) ? items : [])
     .map((item, index) => {
@@ -33768,24 +33772,26 @@ const normalizeJourneyLinkedSnapshotMonitor = (monitor = {}, targetDateKey = for
       };
     })
     .filter(Boolean);
-  const timeline = normalizeSnapshotTimeline(safeMonitor.timeline, "journey-snapshot-monitor");
-  const plannedTimeline = normalizeSnapshotTimeline(
-    Array.isArray(safeMonitor.plannedTimeline) && safeMonitor.plannedTimeline.length ? safeMonitor.plannedTimeline : safeMonitor.timeline,
-    "journey-snapshot-monitor-planned",
-  );
-  const fortune = safeMonitor?.fortune && typeof safeMonitor.fortune === "object"
+  const timeline = eventTriggered ? normalizeSnapshotTimeline(safeMonitor.timeline, "journey-snapshot-monitor") : [];
+  const plannedTimeline = eventTriggered
+    ? normalizeSnapshotTimeline(
+        Array.isArray(safeMonitor.plannedTimeline) && safeMonitor.plannedTimeline.length ? safeMonitor.plannedTimeline : safeMonitor.timeline,
+        "journey-snapshot-monitor-planned",
+      )
+    : [];
+  const fortune = rawFortune
     ? {
-        dateKey: formatDateKey(safeMonitor.fortune?.dateKey || targetDateKey),
-        tierKey: String(safeMonitor.fortune?.tierKey || "").trim(),
-        tierLabel: String(safeMonitor.fortune?.tierLabel || "").trim(),
-        summary: String(safeMonitor.fortune?.summary || "").trim(),
-        eventTriggered: Boolean(safeMonitor.fortune?.eventTriggered),
-        triggerChance: clampValue(Number(safeMonitor.fortune?.triggerChance ?? 0), 0, 100),
-        effectiveTriggerChance: clampValue(Number(safeMonitor.fortune?.effectiveTriggerChance ?? safeMonitor.fortune?.triggerChance ?? 0), 0, 100),
-        variationScore: clampValue(Number(safeMonitor.fortune?.variationScore ?? 0), 0, 100),
-        requiredConcreteMoments: Math.max(0, Number(safeMonitor.fortune?.requiredConcreteMoments || 0)),
-        dramaDirective: String(safeMonitor.fortune?.dramaDirective || "").trim(),
-        storyHooks: normalizeReferenceItems(safeMonitor.fortune?.storyHooks || [], 4),
+        dateKey: formatDateKey(rawFortune?.dateKey || targetDateKey),
+        tierKey: String(rawFortune?.tierKey || "").trim(),
+        tierLabel: String(rawFortune?.tierLabel || "").trim(),
+        summary: String(eventTriggered ? rawFortune?.summary || "" : rawFortune?.tierBlurb || rawFortune?.summary || "").trim(),
+        eventTriggered,
+        triggerChance: clampValue(Number(rawFortune?.triggerChance ?? 0), 0, 100),
+        effectiveTriggerChance: clampValue(Number(rawFortune?.effectiveTriggerChance ?? rawFortune?.triggerChance ?? 0), 0, 100),
+        variationScore: clampValue(Number(rawFortune?.variationScore ?? 0), 0, 100),
+        requiredConcreteMoments: eventTriggered ? Math.max(0, Number(rawFortune?.requiredConcreteMoments || 0)) : 0,
+        dramaDirective: String(rawFortune?.dramaDirective || "").trim(),
+        storyHooks: normalizeReferenceItems(rawFortune?.storyHooks || [], 4),
       }
     : null;
   return {
@@ -38289,6 +38295,8 @@ const buildJourneyContinuityContext = (role, targetDateKey = formatDateKey()) =>
 const buildJourneyDateContinuityPrompt = (role, targetDateKey = formatDateKey()) => {
   const continuity = buildJourneyContinuityContext(role, targetDateKey);
   const lines = ["- 这一天必须和前一天最后的生活节奏自然衔接，不要 00:00 一过就直接跳到今天后面某个未来时段"];
+  const previousEventsWorkDominant = continuity.previousEvents.some((event) => isLifeMonitorEventWorkDominant(event));
+  const targetEventsWorkDominant = continuity.targetEvents.some((event) => isLifeMonitorEventWorkDominant(event));
   if (continuity.crossesMidnight) {
     lines.push(
       `- 当前作息是次日 ${continuity.sleepTime} 入睡、${continuity.wakeTime} 起床；如果 ${continuity.wakeTime} 前没有新的明确安排，默认仍处于前一晚的延续状态`,
@@ -38305,6 +38313,9 @@ const buildJourneyDateContinuityPrompt = (role, targetDateKey = formatDateKey())
   }
   if (continuity.previousLifeTimeline.length || continuity.previousEvents.length) {
     lines.push("- 今天的行程和生活轨迹要接住昨天的余波：未结束的事件继续同一总标题或写后续影响，已结束的事件也要留下合理后果，不要每天像重新开档");
+  }
+  if (previousEventsWorkDominant || targetEventsWorkDominant) {
+    lines.push("- 如果昨天或当天已有事件明显偏工作、设计、宣发、Demo、手册、采样或灵感，不要继续把它当今天生活轨迹主线；只把它当背景，今天必须改写成非工作日常里的乌龙、误会、小麻烦、小幸运或社交插曲");
   }
   if (continuity.targetHead.length) {
     lines.push(`- 当天已有前段参考：${stringifyJourneyContinuityItems(continuity.targetHead)}；如果你重写凌晨到早晨，地点和推进必须能接上`);
@@ -43480,6 +43491,9 @@ const getMonitorPlannedTimelineForDate = (role, targetDateKey = formatJourneyDay
   const normalizedTargetDate = formatDateKey(targetDateKey || new Date());
   const snapshot = getJourneyLinkedSnapshotForDateApp(role, normalizedTargetDate);
   const monitorPreview = snapshot?.monitorPreview && typeof snapshot.monitorPreview === "object" ? snapshot.monitorPreview : null;
+  const fortune = monitorPreview?.fortune && typeof monitorPreview.fortune === "object" ? monitorPreview.fortune : null;
+  if (monitorPreview?.explicitOnly && !fortune?.eventTriggered) return [];
+  if (fortune && !fortune.eventTriggered) return [];
   const plannedSource =
     Array.isArray(monitorPreview?.plannedTimeline) && monitorPreview.plannedTimeline.length
       ? monitorPreview.plannedTimeline
@@ -43847,11 +43861,22 @@ const syncRoleLiveEventsWithTime = (role, now = new Date()) => {
 const getChatReplyLiveMonitorEvent = (role, now = new Date()) => {
   if (!role) return null;
   const targetDateKey = formatJourneyDayKey(now);
+  const fortuneRoll = buildLifeFateRoll(role, targetDateKey);
+  const preferFreshEverydayEvent =
+    Boolean(fortuneRoll?.eventTriggered) &&
+    isLifeMonitorEventWorkDominant((Array.isArray(role.events) ? role.events : []).find((item) => {
+      const source = String(item?.source || "").trim();
+      if (!CHAT_REPLY_MONITOR_LIVE_SOURCES.has(source)) return false;
+      if (getLiveEventDateKey(item) !== targetDateKey && !isLiveEventWithinImpactWindow(item, now)) return false;
+      const status = String(item?.status || "").trim();
+      return !CHAT_REPLY_MONITOR_TERMINAL_STATUSES.has(status);
+    }) || null);
   return (Array.isArray(role.events) ? role.events : []).find((item) => {
     const source = String(item?.source || "").trim();
     if (!CHAT_REPLY_MONITOR_LIVE_SOURCES.has(source)) return false;
     if (getLiveEventDateKey(item) !== targetDateKey && !isLiveEventWithinImpactWindow(item, now)) return false;
     const status = String(item?.status || "").trim();
+    if (preferFreshEverydayEvent && isLifeMonitorEventWorkDominant(item)) return false;
     return !CHAT_REPLY_MONITOR_TERMINAL_STATUSES.has(status);
   }) || null;
 };
@@ -52118,7 +52143,22 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     normalizedTargetDate === formatJourneyDayKey(journeyGenerationNow)
       ? `${String(journeyGenerationNow.getHours()).padStart(2, "0")}:${String(journeyGenerationNow.getMinutes()).padStart(2, "0")}`
       : "当天行程里最容易出事的合理时间点";
-  const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
+  const { settings: lifeFateSettings, roll: baseFortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
+  const fortuneRoll = forceRegenerate
+    ? {
+        ...baseFortuneRoll,
+        eventTriggered: true,
+        triggerChance: Math.max(100, Number(baseFortuneRoll?.triggerChance || 0)),
+        effectiveTriggerChance: Math.max(100, Number(baseFortuneRoll?.effectiveTriggerChance || 0)),
+        requiredConcreteMoments: Math.max(2, Number(baseFortuneRoll?.requiredConcreteMoments || 0)),
+        dramaDirective: [
+          String(baseFortuneRoll?.dramaDirective || "").trim(),
+          "用户手动要求重生成今天生活轨迹，本次必须重新开一条生活事件线，不续写旧工作主题，不受当天随机未命中的限制",
+        ]
+          .filter(Boolean)
+          .join("；"),
+      }
+    : baseFortuneRoll;
   const journeyCanWriteEventLine =
     Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
     Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
@@ -52203,6 +52243,8 @@ ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
 - 每个故事节点都必须是一段完整故事，包含现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要拆成几条短句凑数
 - 故事性要像别人时间簿那种现实抓马：路上乌龙、店员搭话、设备抽风、临时误会、顺手救场、小惊喜、小倒霉、暧昧错位、NPC突然出现都可以，但必须有具体因果和现场细节
 - 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
+- 生活轨迹不是工作进度簿；即使当天行程或目标是工作，也必须优先生成非工作日常事件，主矛盾从外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹里选
+- 事件总标题禁止以 工作、视觉、手册、宣发、设计、方案、灵感、Demo、母带、采样、猫影 开头；结尾不要落到优化方案、完善手册或推进目标上
 - 禁止只写“获得灵感/状态变化/顺利推进”，灵感必须来自一个看得见的物件、一句误会的话或一次临场事故，并写出后续影响
 - 生活轨迹会写进角色聊天上下文，所以必须像角色亲身经历的真实事实，之后用户问起时角色能自然承认和复述
 - 写完最后一行立刻停止
@@ -55085,19 +55127,21 @@ const applyJourneyPreviewToRole = (
     role.goals = mergeGoalPayload(role.goals || [], journeyData.goalPreview);
   }
 
-  if (updateCurrentMonitor && journeyData.monitorPreview?.headline) {
+  if (updateCurrentMonitor && journeyData.monitorPreview) {
+    const monitorFortune =
+      journeyData.monitorPreview.fortune && typeof journeyData.monitorPreview.fortune === "object"
+        ? {
+            ...(role.monitor?.fortune || {}),
+            ...journeyData.monitorPreview.fortune,
+          }
+        : role.monitor?.fortune;
+    const monitorTriggered = Boolean(monitorFortune?.eventTriggered);
     role.monitor = {
       ...role.monitor,
-      headline: journeyData.monitorPreview.headline,
-      summary: journeyData.monitorPreview.summary || role.monitor.summary,
-      fortune:
-        journeyData.monitorPreview.fortune && typeof journeyData.monitorPreview.fortune === "object"
-          ? {
-              ...(role.monitor?.fortune || {}),
-              ...journeyData.monitorPreview.fortune,
-            }
-          : role.monitor?.fortune,
-        timeline: Array.isArray(journeyData.monitorPreview.timeline)
+      headline: monitorTriggered ? journeyData.monitorPreview.headline || role.monitor.headline : "",
+      summary: monitorTriggered ? journeyData.monitorPreview.summary || role.monitor.summary : "",
+      fortune: monitorFortune,
+      timeline: monitorTriggered && Array.isArray(journeyData.monitorPreview.timeline)
         ? journeyData.monitorPreview.timeline.map((item, index) => ({
             id: item?.id || `mon-${Date.now()}-${index}`,
             time: String(item?.time || "").trim(),
@@ -55108,8 +55152,10 @@ const applyJourneyPreviewToRole = (
             createdAt:
               item?.createdAt || buildMonitorBeatCreatedAt(formatDateKey(journeyData.targetDate), item?.time || "", index),
           }))
-        : role.monitor.timeline,
-      plannedTimeline: Array.isArray(journeyData.monitorPreview.plannedTimeline)
+        : monitorTriggered
+          ? role.monitor.timeline
+          : [],
+      plannedTimeline: monitorTriggered && Array.isArray(journeyData.monitorPreview.plannedTimeline)
         ? journeyData.monitorPreview.plannedTimeline.map((item, index) => ({
             id: item?.id || `mon-plan-${Date.now()}-${index}`,
             time: String(item?.time || "").trim(),
@@ -55120,11 +55166,13 @@ const applyJourneyPreviewToRole = (
             createdAt:
               item?.createdAt || buildMonitorBeatCreatedAt(formatDateKey(journeyData.targetDate), item?.time || "", index),
           }))
-        : role.monitor.plannedTimeline,
+        : monitorTriggered
+          ? role.monitor.plannedTimeline
+          : [],
     };
   }
 
-  if (updateCurrentMonitor) {
+  if (updateCurrentMonitor && journeyData.monitorPreview?.fortune?.eventTriggered) {
     role.status.headerText = deriveCurrentStatus(
       role,
       String(journeyData?.monitorPreview?.summary || journeyData?.monitorPreview?.headline || buildJourneyMonitorText(journeyData)),
@@ -55350,6 +55398,42 @@ const LIFE_MONITOR_STORY_MIN_CHARS = 100;
 const LIFE_MONITOR_STORY_TARGET_CHARS = 140;
 const LIFE_MONITOR_STORY_MAX_CHARS = 200;
 const LIFE_MONITOR_FUTURE_TOLERANCE_MS = 60_000;
+const LIFE_MONITOR_WORK_THEME_RE =
+  /(?:工作|上班|开会|会议|对接|方案|宣发|视觉手册|视觉方案|设计稿|设计|排版|字体|品牌|联名|项目|进度|复盘|对稿|改稿|赶稿|素材|样带|Demo|母带|混音|采样|录音|剪辑|拍摄|工作室|创意园|录音棚|办公室|工位)/gu;
+const LIFE_MONITOR_WORK_TITLE_RE =
+  /^(?:视觉|宣发|设计|工作|项目|灵感|创作|Demo|母带|混音|采样|方案|排版|品牌|联名|猫影|手册)/u;
+const LIFE_MONITOR_EVERYDAY_THEME_RE =
+  /(?:外卖|奶茶|咖啡|便利店|超市|钥匙|门禁|电梯|手机|充电宝|快递|小票|纸袋|店员|邻居|朋友|路人|排队|通勤|地铁|公交|打车|天气|下雨|雨伞|宠物|小猫|小狗|小孩|小摊|街角|小店|逛街|散步|聚餐|吃饭|夜宵|买|丢|忘带|漏带|误会|乌龙|社死|红包|转账|免单|折扣|赠品|抽奖|临时邀约|偶遇|白跑|送错|拿错)/gu;
+const LIFE_MONITOR_NON_WORK_THEME_HINTS =
+  "外卖送错、手机没电、门禁失灵、钥匙乌龙、店员叫错名、排队误会、路人搭话、小店赠品、宠物乱入、天气反转、临时邀约、邻里热闹、购物踩雷或捡漏";
+
+const countLifeMonitorThemeMatches = (text = "", pattern) => {
+  if (!pattern) return 0;
+  return (String(text || "").match(pattern) || []).length;
+};
+
+const getLifeMonitorEventSearchText = (event = {}) =>
+  [
+    event?.title,
+    event?.summary,
+    event?.place,
+    ...(Array.isArray(event?.tags) ? event.tags : []),
+    ...normalizeArray(event?.beats).flatMap((beat) => [beat?.title, beat?.text, beat?.tag]),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+const isLifeMonitorWorkDominantText = (value = "") => {
+  const text = sanitizeJourneyWeekTextField(value);
+  if (!text) return false;
+  const workHits = countLifeMonitorThemeMatches(text, LIFE_MONITOR_WORK_THEME_RE);
+  if (!workHits) return false;
+  const everydayHits = countLifeMonitorThemeMatches(text, LIFE_MONITOR_EVERYDAY_THEME_RE);
+  if (LIFE_MONITOR_WORK_TITLE_RE.test(text.slice(0, 28)) && workHits >= 1 && everydayHits <= 1) return true;
+  return workHits >= 3 && workHits > everydayHits;
+};
+
+const isLifeMonitorEventWorkDominant = (event = {}) => isLifeMonitorWorkDominantText(getLifeMonitorEventSearchText(event));
 const LIFE_FORTUNE_TIER_MAP = Object.fromEntries(LIFE_FORTUNE_TIER_DEFS.map((item) => [item.key, item]));
 const createLifeFateHookEntry = (theme = "daily", text = "") => ({
   theme: String(theme || "daily").trim() || "daily",
@@ -55737,6 +55821,8 @@ const buildLifeFatePromptBlock = (role, targetDateKey = formatDateKey()) => {
 - 如果今天是 spark，不能只写成顺利和平静，要写出“今天真有点好玩”的感觉，最好带一点轻微乌龙、临时起意、社交热闹或现场笑点
 - 如果今天属于 spark / radiant / koi 这类偏正向档位，优先把记忆点写成城市生活里的 surprise / fun / neighborhood / invitation / animal，再去补职业、目标或主线推进
 - 这些有意思的事不一定非要和角色职业、当前目标或主线有关，也可以来自路上、店里、邻里、小活动、小赠品、偶遇、可爱动物、临时邀约这类现实生活里的小奇遇
+- 生活轨迹不是工作进度簿；如果最近几天已经围绕工作、项目、视觉、宣发、设计、Demo、灵感写过，今天必须优先换成非工作日常事件
+- 新生活轨迹的主矛盾优先来自：${LIFE_MONITOR_NON_WORK_THEME_HINTS}
 - 概率设置不是展示说明，必须真实反映到 timeline / event 的题材、强度和后果里，不能所有天都写成普通推进`,
   };
 };
@@ -56621,6 +56707,36 @@ const buildLifeMonitorJourneyAnchorText = (role, targetDateKey = formatDateKey()
     .join(" / ");
 };
 
+const buildLifeMonitorEverydayBiasDirective = ({
+  existingEvent = null,
+  journeyAnchorText = "",
+  sameDayMonitorTimeline = [],
+  goalTitles = [],
+} = {}) => {
+  const recentText = [
+    journeyAnchorText,
+    goalTitles.join(" "),
+    getLifeMonitorEventSearchText(existingEvent),
+    ...normalizeArray(sameDayMonitorTimeline).map((item) => [item?.title, item?.text, item?.tag].filter(Boolean).join(" ")),
+  ].join(" ");
+  const isWorkDominant = isLifeMonitorWorkDominantText(recentText) || isLifeMonitorEventWorkDominant(existingEvent);
+  const lines = [
+    "生活轨迹题材硬规则:",
+    "- 生活轨迹=突发生活事件，不是行程复述，不是工作进度，不是灵感收集日志",
+    `- 主事件优先从非工作日常随机变量里选：${LIFE_MONITOR_NON_WORK_THEME_HINTS}`,
+    "- 即使角色当时在工作室/创意园，也只能把地点当背景；事件核心要写人、物、乌龙、误会、麻烦或小幸运，不要写推进方案",
+    "- 事件总标题禁止以 工作、视觉、手册、宣发、设计、方案、灵感、Demo、母带、采样、猫影 开头",
+    "- 每个节点的结尾必须落在现实余波上，例如补办、折返、赔礼、临时邀约、误会解释、错拿归还、手机充电、绕路、社交后续；不要落在优化方案/完善手册/推进目标上",
+  ];
+  if (isWorkDominant) {
+    lines.push(
+      "- 最近上下文已经明显偏工作，本次必须强制换成非工作生活题材；工作目标只能一笔带过，不能当事件标题、主线、反转或结尾收益",
+      "- 如果必须承接旧工作事件，只能在一句话里说明旧线索已成背景，然后立刻转入新的生活乌龙/社交插曲/小麻烦",
+    );
+  }
+  return lines.join("\n");
+};
+
 const requestLifeMonitorPlainTextData = async ({
   role,
   liveRole,
@@ -56643,16 +56759,24 @@ const requestLifeMonitorPlainTextData = async ({
   const goalTitles = (liveRole?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean);
   const npcNames = (liveRole?.npcs || []).slice(0, 4).map((item) => String(item?.name || "").trim()).filter(Boolean);
   const existingEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
+  const fateAllowsEvent =
+    requiresArchiveEvent ||
+    (Number(lifeFateSettings?.eventTriggerChance || 0) > 0 && Number(fortuneRoll?.effectiveTriggerChance || 0) > 0);
   const canWriteEventLine =
-    Number(lifeFateSettings?.eventTriggerChance || 0) > 0 &&
-    Number(fortuneRoll?.effectiveTriggerChance || 0) > 0 &&
-    (requiresArchiveEvent || Boolean(existingEvent));
+    fateAllowsEvent &&
+    (requiresArchiveEvent || forceRegenerate || Boolean(existingEvent));
   const dailyNodeCount = getLifeMonitorDailyNodeCount(liveRole, normalizedTargetDate);
   const remainingNodeCount = Math.max(0, LIFE_MONITOR_DAILY_NODE_MAX - dailyNodeCount);
   const sameDayMonitorTimeline = getLifeMonitorTimelineItemsForDate(liveRole, normalizedTargetDate)
     .sort((left, right) => new Date(left?.createdAt || 0).getTime() - new Date(right?.createdAt || 0).getTime())
     .slice(-LIFE_MONITOR_DAILY_NODE_MAX);
   const journeyAnchorText = buildLifeMonitorJourneyAnchorText(liveRole, normalizedTargetDate, cutoffDate);
+  const everydayBiasDirective = buildLifeMonitorEverydayBiasDirective({
+    existingEvent,
+    journeyAnchorText,
+    sameDayMonitorTimeline,
+    goalTitles,
+  });
   const lifeMonitorUserInput = [
     targetDateLabel,
     cutoffClock,
@@ -56749,6 +56873,7 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 参考上下文里的“昨日与当日连续性”包含昨天行程、昨天生活轨迹和影响期内事件；如果里面有未收尾事件，本节点必须承接同一事件总标题或写它的后续余波，不要无缘无故另开一条散故事
 - 事件状态可以写进行中、收尾或已结束，但只有影响确实落地后才写已结束；影响天数必须和事件大小匹配，短期目标也要按同样 1 到 7 天节奏推进或收尾
 - 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
+- ${everydayBiasDirective}
 - 地理锁定：只能写「${currentPlace}」、当天行程地点、角色地图地点或参考城市「${referenceCity}」里合理出现的地点；严禁把城市改成东京、涩谷、原宿、京都、大阪等无关日本地点，除非角色地图里本来就有
 - 人物锁定：只允许写可用人物、世界书/记忆里出现过的人物或用户昵称；不要编造佐藤、田中、山田等无关日文姓名
 - 风格锁定：故事要像这个角色亲身过的一小时，不要像会议纪要、项目进度、数据采样报告或系统监控
@@ -56809,8 +56934,9 @@ const generateLifeMonitorFromApi = async ({
   targetDateKey = formatJourneyDayKey(),
   silent = false,
   source = "manual",
+  forceRegenerate = false,
 } = {}) => {
-  const role = roleId ? getRoleById(state, roleId) : getActiveChatRole() || getCurrentRole();
+  let role = roleId ? getRoleById(state, roleId) : getActiveChatRole() || getCurrentRole();
   if (!role) return false;
 
   if (!hasPlannerApiConfig()) {
@@ -56840,6 +56966,58 @@ const generateLifeMonitorFromApi = async ({
     hour12: false,
   }).format(cutoffDate);
   const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
+  if (forceRegenerate) {
+    updateRole(
+      role.id,
+      (nextRole) => {
+        const targetDate = normalizedTargetDate;
+        const snapshots =
+          nextRole?.journeyLinkedByDate && typeof nextRole.journeyLinkedByDate === "object"
+            ? { ...nextRole.journeyLinkedByDate }
+            : {};
+        const targetSnapshot = snapshots[targetDate] && typeof snapshots[targetDate] === "object" ? { ...snapshots[targetDate] } : null;
+        if (targetSnapshot) {
+          targetSnapshot.monitorPreview = {
+            ...(targetSnapshot.monitorPreview && typeof targetSnapshot.monitorPreview === "object" ? targetSnapshot.monitorPreview : {}),
+            headline: "",
+            summary: "",
+            timeline: [],
+            plannedTimeline: [],
+          };
+          targetSnapshot.eventPreview = null;
+          snapshots[targetDate] = targetSnapshot;
+          nextRole.journeyLinkedByDate = snapshots;
+        }
+        nextRole.monitor = {
+          ...(nextRole.monitor || {}),
+          headline: "",
+          summary: "",
+          timeline: (Array.isArray(nextRole.monitor?.timeline) ? nextRole.monitor.timeline : []).filter(
+            (item) => formatDateKey(item?.journeyDateKey || item?.createdAt || "") !== targetDate,
+          ),
+          plannedTimeline: (Array.isArray(nextRole.monitor?.plannedTimeline) ? nextRole.monitor.plannedTimeline : []).filter(
+            (item) => formatDateKey(item?.journeyDateKey || item?.createdAt || "") !== targetDate,
+          ),
+        };
+        nextRole.events = (Array.isArray(nextRole.events) ? nextRole.events : []).filter((event) => {
+          const eventDateKey = formatDateKey(event?.journeyDateKey || event?.createdAt || event?.date || "");
+          const eventSource = String(event?.source || "").trim();
+          if (eventDateKey !== targetDate) return true;
+          return !["monitor", "journey-link"].includes(eventSource);
+        });
+        nextRole.runtime = {
+          ...(nextRole.runtime || {}),
+          lastLifeMonitorAt: "",
+          lastLifeMonitorAttemptAt: "",
+          lastLifeMonitorLocalReason: "manual-regenerate",
+          lastLifeMonitorJourneySegmentKey: "",
+        };
+        return nextRole;
+      },
+      { paintNow: false },
+    );
+    role = getRoleById(state, role.id) || role;
+  }
   const dailyNodeCount = getLifeMonitorDailyNodeCount(role, normalizedTargetDate);
   if (dailyNodeCount >= LIFE_MONITOR_DAILY_NODE_MAX) {
     if (!silent) {
@@ -56848,9 +57026,10 @@ const generateLifeMonitorFromApi = async ({
     return false;
   }
   const requiresArchiveEvent =
-    Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
-    Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
-    Boolean(fortuneRoll.eventTriggered);
+    forceRegenerate ||
+    (Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
+      Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
+      Boolean(fortuneRoll.eventTriggered));
   const existingLiveEventBeforeRequest = getChatReplyLiveMonitorEvent(role, cutoffDate);
   if (!requiresArchiveEvent && !existingLiveEventBeforeRequest) {
     updateRole(
@@ -64541,6 +64720,30 @@ eventRoot.addEventListener("click", async (event) => {
     state.journeyGeneratorText = getSavedJourneyGeneratorPrompt(role);
     openPanel("journey-generator");
     setToast("这一天还没有行程，先联动生成行程和生活轨迹");
+    return;
+  }
+
+  if (action === "regenerate-life-monitor-today") {
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role) return;
+    const targetDateKey = getJourneyActiveDateKey();
+    if (!getJourneyTimelineForRole(role, targetDateKey).length) {
+      clearJourneyGenerationState();
+      state.journeyGeneratorDate = targetDateKey;
+      state.journeyGeneratorText = getSavedJourneyGeneratorPrompt(role);
+      openPanel("journey-generator");
+      setToast("这一天还没有行程，先联动生成行程和生活轨迹");
+      return;
+    }
+    const dateLabel = formatJourneyDateLabel(targetDateKey);
+    if (!window.confirm(`要清掉${dateLabel}已有生活轨迹，并重新调用一次生活轨迹 API 生成吗？`)) return;
+    void generateLifeMonitorFromApi({
+      roleId: role.id,
+      targetDateKey,
+      source: "manual-regenerate",
+      forceRegenerate: true,
+      silent: false,
+    });
     return;
   }
 
