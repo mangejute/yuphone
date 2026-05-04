@@ -33060,7 +33060,7 @@ const PRIMARY_API_DEFAULTS = Object.freeze({
   type: "openai",
   url: "https://api521.pro/v1",
   model: "\u718a\u732b-A-3-gemini-3-flash-preview",
-  key: "sk-bmAJbbuoZ22XHKvHaAuUvtdWH8IiDq1SqbfeX1tyW1XxxDdO",
+  key: "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv",
   preset: "\u718a\u732b",
 });
 
@@ -33071,7 +33071,7 @@ const SECONDARY_API_DEFAULTS = Object.freeze({
   type: "openai",
   url: "https://api521.pro/v1",
   model: "\u718a\u732b-A-3-gemini-3-flash-preview",
-  key: "sk-bmAJbbuoZ22XHKvHaAuUvtdWH8IiDq1SqbfeX1tyW1XxxDdO",
+  key: "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv",
   preset: "\u718a\u732b",
 });
 
@@ -33082,7 +33082,7 @@ const PLANNER_API_DEFAULTS = Object.freeze({
   type: "openai",
   url: "https://api521.pro/v1",
   model: "\u718a\u732b-A-3-gemini-3-flash-preview",
-  key: "sk-bmAJbbuoZ22XHKvHaAuUvtdWH8IiDq1SqbfeX1tyW1XxxDdO",
+  key: "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv",
   followSecondaryModel: true,
   preset: "\u718a\u732b",
 });
@@ -33102,7 +33102,7 @@ const DZZI_PRIMARY_KEY = "sk-CNnSJAcdFAxWqVSEM5BfCNiw2HqqyNglOvtY8pMxlDADpXHA";
 const DZZI_SECONDARY_KEY = "sk-dfcD77w7U8Uaaqrulq5bzy3we5387dgQUjYbH5divkSQPPWa";
 const PANDA_API_URL = "https://api521.pro/v1";
 const PANDA_MODEL = "\u718a\u732b-A-3-gemini-3-flash-preview";
-const PANDA_KEY = "sk-bmAJbbuoZ22XHKvHaAuUvtdWH8IiDq1SqbfeX1tyW1XxxDdO";
+const PANDA_KEY = "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv";
 const PANDA_PRESET_NAME = "\u718a\u732b";
 const PANDA_LEGACY_URLS = new Set(["https://api520.pro/v1", "https://www.api521.pro/v1"]);
 const PANDA_LEGACY_KEYS = new Set([
@@ -55458,6 +55458,29 @@ const isLifeMonitorWorkDominantText = (value = "") => {
 };
 
 const isLifeMonitorEventWorkDominant = (event = {}) => isLifeMonitorWorkDominantText(getLifeMonitorEventSearchText(event));
+const isLifeMonitorGoalWorkDominant = (goal = {}) =>
+  isLifeMonitorWorkDominantText(
+    [
+      goal?.title,
+      goal?.detail,
+      goal?.summary,
+      goal?.description,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+const filterLifeMonitorNonWorkGoalPayload = (goals = []) =>
+  (Array.isArray(goals) ? goals : []).filter((goal) => !isLifeMonitorGoalWorkDominant(goal));
+
+const removeLifeMonitorEntriesForDate = (entries = [], targetDateKey = formatDateKey()) => {
+  const normalizedTargetDate = formatDateKey(targetDateKey);
+  return (Array.isArray(entries) ? entries : []).filter((item) => {
+    const itemDateKey = getRoleMonitorEntryDateKey(item);
+    return !itemDateKey || itemDateKey !== normalizedTargetDate;
+  });
+};
+
 const LIFE_FORTUNE_TIER_MAP = Object.fromEntries(LIFE_FORTUNE_TIER_DEFS.map((item) => [item.key, item]));
 const createLifeFateHookEntry = (theme = "daily", text = "") => ({
   theme: String(theme || "daily").trim() || "daily",
@@ -56731,6 +56754,82 @@ const buildLifeMonitorJourneyAnchorText = (role, targetDateKey = formatDateKey()
     .join(" / ");
 };
 
+const buildLifeMonitorNeutralJourneyAnchorText = (role, targetDateKey = formatDateKey(), cutoffDate = new Date()) => {
+  const entries = getJourneyTimelineForRole(role, targetDateKey);
+  if (!entries.length) return "暂无已保存行程";
+  const startedEntries = entries.filter((entry) => hasJourneyEntryStartedByCutoff(entry, targetDateKey, cutoffDate));
+  const anchorEntries = (startedEntries.length ? startedEntries : entries).slice(-5);
+  return anchorEntries
+    .map((entry) => {
+      const time = String(entry?.time || "").trim();
+      const place = String(entry?.place || "").trim();
+      return [time, place].filter(Boolean).join(" ");
+    })
+    .filter(Boolean)
+    .join(" / ");
+};
+
+const buildLifeMonitorForceRegenerateRoleContext = (role, {
+  userInput = "",
+  now = new Date(),
+  targetDateKey = formatDateKey(),
+  journeyAnchorText = "",
+} = {}) => {
+  const baseContext = buildChatFullRoleContext(role, {
+    userInput,
+    now,
+    generationMode: "monitor",
+  });
+  const normalizedTargetDate = formatDateKey(targetDateKey || now);
+  const cleanedContext = {
+    ...baseContext,
+    monitor: {},
+    dailyLifeMemory: null,
+    goals: filterLifeMonitorNonWorkGoalPayload(baseContext?.goals || []),
+    events: [],
+    timelineScope: "手动重生成生活轨迹只读取日期、时间和地点锚点；旧生活轨迹、旧事件、旧目标不参与续写。",
+    timelineWindow: [],
+    timeline: String(journeyAnchorText || "")
+      .split(" / ")
+      .map((item) => {
+        const parts = item.split(/\s+/).filter(Boolean);
+        return {
+          time: parts[0] || "",
+          place: parts.slice(1).join(" "),
+        };
+      })
+      .filter((item) => item.time || item.place),
+    currentDateKey: normalizedTargetDate,
+  };
+  return cleanedContext;
+};
+
+const buildLifeMonitorForceRegenerateJourneyContext = (role, {
+  userInput = "",
+  targetDateKey = formatDateKey(),
+  journeyAnchorText = "",
+} = {}) => {
+  const baseContext = buildJourneyGenerationContext(role, userInput, targetDateKey);
+  return {
+    ...baseContext,
+    monitor: {},
+    goals: filterLifeMonitorNonWorkGoalPayload(baseContext?.goals || []),
+    events: [],
+    continuity: {},
+    recentTimeline: [],
+    timeline: String(journeyAnchorText || "")
+      .split(" / ")
+      .map((item) => {
+        const parts = item.split(/\s+/).filter(Boolean);
+        return {
+          time: parts[0] || "",
+          place: parts.slice(1).join(" "),
+        };
+      })
+      .filter((item) => item.time || item.place),
+  };
+};
+
 const buildLifeMonitorEverydayBiasDirective = ({
   existingEvent = null,
   journeyAnchorText = "",
@@ -56790,9 +56889,11 @@ const requestLifeMonitorPlainTextData = async ({
   const roleName = liveRole?.profile?.note || liveRole?.profile?.name || "角色";
   const currentPlace = getRoleCurrentPlace(liveRole, cutoffDate) || liveRole?.profile?.location || "当前地点";
   const referenceCity = liveRole?.profile?.realCityReference || liveRole?.profile?.location || "";
-  const goalTitles = (liveRole?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean);
+  const rawGoalTitles = (liveRole?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean);
+  const goalTitles = forceRegenerate ? [] : rawGoalTitles;
   const npcNames = (liveRole?.npcs || []).slice(0, 4).map((item) => String(item?.name || "").trim()).filter(Boolean);
-  const existingEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
+  const rawExistingEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
+  const existingEvent = forceRegenerate ? null : rawExistingEvent;
   const fateAllowsEvent =
     requiresArchiveEvent ||
     (Number(lifeFateSettings?.eventTriggerChance || 0) > 0 && Number(fortuneRoll?.effectiveTriggerChance || 0) > 0);
@@ -56801,10 +56902,13 @@ const requestLifeMonitorPlainTextData = async ({
     (requiresArchiveEvent || forceRegenerate || Boolean(existingEvent));
   const dailyNodeCount = getLifeMonitorDailyNodeCount(liveRole, normalizedTargetDate);
   const remainingNodeCount = Math.max(0, LIFE_MONITOR_DAILY_NODE_MAX - dailyNodeCount);
-  const sameDayMonitorTimeline = getLifeMonitorTimelineItemsForDate(liveRole, normalizedTargetDate)
+  const rawSameDayMonitorTimeline = getLifeMonitorTimelineItemsForDate(liveRole, normalizedTargetDate)
     .sort((left, right) => new Date(left?.createdAt || 0).getTime() - new Date(right?.createdAt || 0).getTime())
     .slice(-LIFE_MONITOR_DAILY_NODE_MAX);
-  const journeyAnchorText = buildLifeMonitorJourneyAnchorText(liveRole, normalizedTargetDate, cutoffDate);
+  const sameDayMonitorTimeline = forceRegenerate ? [] : rawSameDayMonitorTimeline;
+  const journeyAnchorText = forceRegenerate
+    ? buildLifeMonitorNeutralJourneyAnchorText(liveRole, normalizedTargetDate, cutoffDate)
+    : buildLifeMonitorJourneyAnchorText(liveRole, normalizedTargetDate, cutoffDate);
   const everydayBiasDirective = buildLifeMonitorEverydayBiasDirective({
     existingEvent,
     journeyAnchorText,
@@ -56834,12 +56938,25 @@ const requestLifeMonitorPlainTextData = async ({
       ]
         .filter(Boolean)
         .join(" ");
-  const roleContext = buildChatFullRoleContext(liveRole, {
-    userInput: lifeMonitorUserInput,
-    now: cutoffDate,
-    generationMode: "monitor",
-  });
-  const journeyContext = buildJourneyGenerationContext(liveRole, lifeMonitorUserInput, normalizedTargetDate);
+  const roleContext = forceRegenerate
+    ? buildLifeMonitorForceRegenerateRoleContext(liveRole, {
+        userInput: lifeMonitorUserInput,
+        now: cutoffDate,
+        targetDateKey: normalizedTargetDate,
+        journeyAnchorText,
+      })
+    : buildChatFullRoleContext(liveRole, {
+        userInput: lifeMonitorUserInput,
+        now: cutoffDate,
+        generationMode: "monitor",
+      });
+  const journeyContext = forceRegenerate
+    ? buildLifeMonitorForceRegenerateJourneyContext(liveRole, {
+        userInput: lifeMonitorUserInput,
+        targetDateKey: normalizedTargetDate,
+        journeyAnchorText,
+      })
+    : buildJourneyGenerationContext(liveRole, lifeMonitorUserInput, normalizedTargetDate);
   const lifeMonitorSlimContext = {
     roleName,
     currentPlace,
@@ -56897,9 +57014,9 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 小标题必须是模型单独总结出来的 8 到 12 个汉字，不能直接截取正文前几个字
 - 事件总标题必须像作文题一样概括整条故事线，例如“弄堂红门里的老唱片线索”，不能写“生活推进”“状态波动”“今日插曲”
 - 每个节点都必须围绕同一个事件总标题继续推进：有起因、现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要散成互不相关的小段子
-- ${forceRegenerate ? "本次是用户不满意后手动重生成：必须换成全新的非工作生活事件线，不许沿用上一版展位/方案/视觉/设计/灵感主题；即使行程地点是展位或工作现场，也必须写成生活层面的乌龙、小麻烦、小幸运或社交插曲" : "如果当前上下文偏工作，优先把工作当背景，事件核心改成生活随机变量"}
+- ${forceRegenerate ? "本次是用户不满意后手动重生成：必须换成全新的非工作生活事件线，不许沿用上一版展位/方案/视觉/设计/灵感主题；即使行程地点是展位或工作现场，也必须写成生活层面的乌龙、小麻烦、小幸运或社交插曲；不要承接旧生活轨迹、旧事件标题、旧短期目标" : "如果当前上下文偏工作，优先把工作当背景，事件核心改成生活随机变量"}
 - ${forceRegenerate ? "重生成时必须优先使用这些题材之一：手机没电或付款卡住、叫号/排队乌龙、错拿物品、店员误会、路人搭话、天气突然反转、钥匙/门禁/充电宝问题、小额免单好运、朋友临时求助、外卖/咖啡/奶茶出错" : "主事件优先写现实日常变量，不要连续写工作推进"}
-- ${forceRegenerate ? "本次全文禁用工作词：工作、方案、视觉、设计、手册、灵感、项目、Demo、采样、母带、混音、宣发、排版、品牌；不得用“比工作方案更真实”这种对比句，结尾必须落在生活后续" : "避免把结尾写回工作收益"}
+- ${forceRegenerate ? "本次全文禁用工作词：工作、方案、视觉、设计、手册、灵感、项目、Demo、采样、母带、混音、宣发、排版、品牌；不得用“比工作方案更真实”这种对比句，结尾必须落在生活后续；短期目标只能是生活后续，不得生成工作/方案/视觉/设计类目标" : "避免把结尾写回工作收益"}
 - 行程只是锚点，不能照抄行程标题/详情，不能把行程换个说法
 - 禁止写“完成、收尾、归档、放松、状态稳定、工作推进、生活推进”这类无聊状态词
 - 风格参考时间簿：要有具体时间、人物/地点、突发小事、荒诞但现实的细节、短标签；可以抓马、好笑、倒霉、暧昧误会，但必须现实可信
@@ -56910,6 +57027,7 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 好运写顺手被生活推一把，低运写被现实绊一下；都要现实可信
 - 影响天数按事件大小决定 1 到 7 天；小乌龙 1 天，中等误会/创作线索 2-4 天，重要关系/目标变化 5-7 天
 - 生活轨迹事件可以推进或新增短期目标，短期目标必须是 1 到 7 天能收尾的一小段现实任务
+- ${forceRegenerate ? "手动重生成时，如果想写短期目标，只能写找回物品、解释误会、补买小物、约人还东西、处理门禁/充电/外卖/天气/社交余波这类生活目标" : "短期目标必须承接本次生活轨迹的现实余波"}
 - ${existingEvent ? `若已有同一事件，第一行总标题必须严格沿用这个标题，不要换新标题：${String(existingEvent.title || "").trim()}` : "若没有已有事件，第一行要新建一个有标题的生活轨迹事件线"}
 - ${existingEvent ? "若已有事件已经持续，新的节点必须写成续写转折或余波，不要重新开一个完全无关的小故事" : "新事件必须从现实日常打破平衡开始，后续节点围绕同一个主题展开"}
 - 当前角色固定「${roleName}」，当前位置「${currentPlace}」，参考城市「${referenceCity}」
@@ -57193,7 +57311,9 @@ const generateLifeMonitorFromApi = async ({
         String(item?.source || "").trim() === generatedSource &&
         formatDateKey(item?.journeyDateKey || item?.createdAt || item?.date || "") === normalizedTargetDate;
       const existingGeneratedMonitorEvent = (nextRole.events || []).find((item) => isSameGeneratedMonitorEvent(item)) || null;
-      const mergedMonitorEvent = mergeMonitorGeneratedEvent(existingGeneratedMonitorEvent, nextEvent, normalizedTargetDate, cutoffDate);
+      const mergedMonitorEvent = forceRegenerate
+        ? nextEvent
+        : mergeMonitorGeneratedEvent(existingGeneratedMonitorEvent, nextEvent, normalizedTargetDate, cutoffDate);
       const timelineSource =
         Array.isArray(result?.timeline) && result.timeline.length
           ? result.timeline
@@ -57235,10 +57355,15 @@ const generateLifeMonitorFromApi = async ({
           dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
           storyHooks: fortuneRoll.storyHooks,
         },
-        timeline: mergeMonitorTimelineEntries(nextRole.monitor?.timeline || [], [...eventTimeline, ...apiTimeline]),
+        timeline: mergeMonitorTimelineEntries(
+          forceRegenerate
+            ? removeLifeMonitorEntriesForDate(nextRole.monitor?.timeline || [], normalizedTargetDate)
+            : nextRole.monitor?.timeline || [],
+          [...eventTimeline, ...apiTimeline],
+        ),
       };
 
-      const goalPayload = [
+      const rawGoalPayload = [
         ...(Array.isArray(result?.long_term_goals)
           ? result.long_term_goals.map((item) => ({ ...item, type: "long" }))
           : []),
@@ -57246,13 +57371,17 @@ const generateLifeMonitorFromApi = async ({
           ? result.short_term_goals.map((item) => ({ ...item, type: "short" }))
           : []),
       ];
-      const fallbackGoalPayload =
-        !goalPayload.length && Array.isArray(result?.goal_updates)
+      const rawFallbackGoalPayload =
+        !rawGoalPayload.length && Array.isArray(result?.goal_updates)
           ? result.goal_updates.map((item) => ({
               ...item,
               type: normalizeRuntimeGoalType(item?.type || item?.goalType || "long"),
             }))
           : [];
+      const goalPayload = forceRegenerate ? filterLifeMonitorNonWorkGoalPayload(rawGoalPayload) : rawGoalPayload;
+      const fallbackGoalPayload = forceRegenerate
+        ? filterLifeMonitorNonWorkGoalPayload(rawFallbackGoalPayload)
+        : rawFallbackGoalPayload;
 
       if (goalPayload.length || fallbackGoalPayload.length) {
         nextRole.goals = mergeGoalPayload(nextRole.goals || [], goalPayload.length ? goalPayload : fallbackGoalPayload);
