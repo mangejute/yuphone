@@ -12585,6 +12585,33 @@ html.chat-composer-focused .ref-chat-composer {
   justify-self: end;
 }
 
+.chat-screen.bubble-theme-default .chat-bubble-wrap,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap {
+  gap: 4px;
+}
+
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .chat-bubble,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .chat-bubble,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .chat-bubble {
+  width: fit-content !important;
+  max-width: 100% !important;
+  justify-self: start;
+}
+
+.chat-screen.bubble-theme-default .chat-message-line.user-line .chat-bubble-wrap.has-external-quote > .chat-bubble,
+.chat-screen.bubble-theme-custom .chat-message-line.user-line .chat-bubble-wrap.has-external-quote > .chat-bubble,
+.chat-screen.bubble-theme-wechat .chat-message-line.user-line .chat-bubble-wrap.has-external-quote > .chat-bubble {
+  justify-self: end;
+}
+
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .wechat-message-quote,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .wechat-message-quote,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .wechat-message-quote {
+  width: fit-content !important;
+  max-width: min(67vw, 288px) !important;
+}
+
 .chat-screen.bubble-theme-wechat .chat-bubble,
 .chat-screen.bubble-theme-custom .chat-bubble {
   padding: calc(var(--chat-bubble-pad-y) - 1px) calc(var(--chat-bubble-pad-x) - 1px) !important;
@@ -12603,6 +12630,68 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-wechat .user-bubble,
 .chat-screen.bubble-theme-custom .user-bubble {
   background: var(--chat-user-bubble-color) !important;
+}
+
+.chat-screen.bubble-theme-default .chat-bubble .message-quote,
+.chat-screen.bubble-theme-custom .chat-bubble .message-quote,
+.chat-screen.bubble-theme-wechat .chat-bubble .message-quote {
+  display: none !important;
+}
+
+.chat-screen.bubble-theme-default .wechat-message-quote,
+.chat-screen.bubble-theme-custom .wechat-message-quote,
+.chat-screen.bubble-theme-wechat .wechat-message-quote {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 4px 8px !important;
+  border: 1px solid rgba(130, 130, 130, 0.24) !important;
+  border-radius: 0 !important;
+  background: rgba(255, 255, 255, 0.42) !important;
+  color: rgba(60, 60, 60, 0.62) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.chat-screen.bubble-theme-default .chat-message-line.user-line .wechat-message-quote,
+.chat-screen.bubble-theme-custom .chat-message-line.user-line .wechat-message-quote,
+.chat-screen.bubble-theme-wechat .chat-message-line.user-line .wechat-message-quote {
+  justify-self: end;
+}
+
+.chat-screen.bubble-theme-default .wechat-message-quote span,
+.chat-screen.bubble-theme-default .wechat-message-quote p,
+.chat-screen.bubble-theme-custom .wechat-message-quote span,
+.chat-screen.bubble-theme-custom .wechat-message-quote p,
+.chat-screen.bubble-theme-wechat .wechat-message-quote span,
+.chat-screen.bubble-theme-wechat .wechat-message-quote p {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: inherit !important;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.chat-screen.bubble-theme-default .wechat-message-quote span,
+.chat-screen.bubble-theme-custom .wechat-message-quote span,
+.chat-screen.bubble-theme-wechat .wechat-message-quote span {
+  flex: 0 0 auto;
+}
+
+.chat-screen.bubble-theme-default .wechat-message-quote p,
+.chat-screen.bubble-theme-custom .wechat-message-quote p,
+.chat-screen.bubble-theme-wechat .wechat-message-quote p {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-screen.bubble-theme-wechat .bubble-tail,
@@ -12624,6 +12713,42 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-custom .bubble-tail-right {
   right: calc(-6px - var(--chat-tail-offset-x, 0px));
   transform: translateY(-50%) rotate(0deg);
+}
+
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .bubble-tail,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .bubble-tail,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .bubble-tail {
+  display: none !important;
+}
+
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .chat-bubble::after,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .chat-bubble::after,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .chat-bubble::after {
+  content: "";
+  position: absolute;
+  top: calc(50% + var(--chat-tail-offset-y, 0px));
+  width: 8px;
+  height: 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .ai-bubble::after,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .ai-bubble::after,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .ai-bubble::after {
+  left: calc(-6px + var(--chat-tail-offset-x, 0px));
+  background-image: var(--chat-tail-ai, none);
+}
+
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .user-bubble::after,
+.chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .user-bubble::after,
+.chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .user-bubble::after {
+  right: calc(-6px - var(--chat-tail-offset-x, 0px));
+  background-image: var(--chat-tail-user, none);
 }
 
 .chat-screen.bubble-theme-wechat .chat-message-line.voice-line .bubble-tail,
@@ -23971,7 +24096,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-ui-title-08";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-role-quote-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -26516,21 +26641,22 @@ const renderLegacySettings = (state) => {
   `;
 };
 
-const renderMessageContent = (message, role = null, state = {}) => {
-  const renderQuotedBlock = (currentMessage, role) => {
-    if (!currentMessage.quotedMessageId || !role?.chats?.messages?.length) return "";
-    const quoted = role.chats.messages.find((item) => item.id === currentMessage.quotedMessageId);
-    if (!quoted) return "";
-    const speaker = quoted.role === "user" ? "你" : role.profile.note;
-    return `
-      <div class="message-quote">
-        <span>${escapeHtml(speaker)}</span>
-        <p>${escapeHtml(previewMessage(quoted))}</p>
-      </div>
-    `;
-  };
+const renderMessageQuoteBlock = (currentMessage, role, { variant = "inline" } = {}) => {
+  if (!currentMessage?.quotedMessageId || !role?.chats?.messages?.length) return "";
+  const quoted = role.chats.messages.find((item) => item.id === currentMessage.quotedMessageId);
+  if (!quoted) return "";
+  const speaker = quoted.role === "user" ? "你" : role.profile.note;
+  const isWechatStyle = variant === "wechat" || variant === "wechat-external";
+  return `
+    <div class="message-quote${isWechatStyle ? " wechat-message-quote" : ""}">
+      <span>${escapeHtml(`${speaker}${isWechatStyle ? "：" : ""}`)}</span>
+      <p>${escapeHtml(previewMessage(quoted))}</p>
+    </div>
+  `;
+};
 
-  const quoteBlock = role ? renderQuotedBlock(message, role) : "";
+const renderMessageContent = (message, role = null, state = {}, { suppressQuote = false } = {}) => {
+  const quoteBlock = !suppressQuote && role ? renderMessageQuoteBlock(message, role) : "";
   const mediaDebugBadge = renderMessageMediaDebugBadge(message);
 
   if (message.type === "photo" || message.type === "image") {
@@ -28721,6 +28847,10 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
   const messageAvatar = perMessageAvatar
     ? `<div class="theme-message-avatar-slot ${isUser ? "user-avatar-slot" : "ai-avatar-slot"}">${renderAvatar(avatarProfile, "chat-side-avatar theme-message-avatar", avatarAlt)}</div>`
     : "";
+  const useWechatQuoteStyle = chatSkin === "wechat" || chatSkin === "default" || chatSkin === "custom";
+  const externalQuote = useWechatQuoteStyle ? renderMessageQuoteBlock(message, role, { variant: "wechat-external" }) : "";
+  const bubbleBody = renderMessageContent(message, role, state, { suppressQuote: useWechatQuoteStyle });
+  const hasExternalQuote = Boolean(externalQuote);
 
   return `
     <div class="chat-message-line ${isUser ? "user-line" : "ai-line"} ${message.type === "voice" ? "voice-line" : ""} ${isBareMedia ? "media-line" : ""} ${selectionMode ? "with-selection" : ""}">
@@ -28730,11 +28860,12 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
           : ""
       }
       ${isUser ? "" : messageAvatar}
-      <div class="chat-bubble-wrap ${isUser ? "user-wrap" : "ai-wrap"}" data-message-hit="${message.id}">
+      <div class="chat-bubble-wrap ${isUser ? "user-wrap" : "ai-wrap"} ${hasExternalQuote ? "has-external-quote" : ""}" data-message-hit="${message.id}">
         ${showTail ? `<span class="bubble-tail ${isUser ? "bubble-tail-right bubble-tail-user" : "bubble-tail-left bubble-tail-ai"}" aria-hidden="true"></span>` : ""}
         <${bubbleTag} class="chat-bubble ${isUser ? "user-bubble" : "ai-bubble"}${bubbleExtra}${showTail ? "" : " no-tail"}"${bubbleTypeAttr}${bubbleInteractiveAttr} data-message-id="${message.id}">
-          ${renderMessageContent(message, role, state)}
+          ${bubbleBody}
         </${bubbleTag}>
+        ${externalQuote}
       </div>
       ${isUser ? messageAvatar : ""}
     </div>
@@ -31974,7 +32105,7 @@ ${scope} .chat-bubble {
 ${scope} .chat-meta {
   font-size: ${metaFontSize}px !important;
 }
-${scope} .message-quote {
+${scope} .message-quote:not(.wechat-message-quote) {
   padding: ${quotePaddingY}px ${quotePaddingX}px !important;
   border-radius: ${quoteRadius}px !important;
 }
@@ -37061,10 +37192,14 @@ const ROLE_REAL_TIME_PROGRESS_CHAT_RULE =
   "每轮聊天都必须读取 payload.roleContext.currentTimePlainText 或 payload.roleContext.currentTime 作为当前真实时间，并逐条读取 recentMessages 里的 [时间 ...] 标签来判断旧消息距现在多久。昨天、数小时前或更早的用户消息只能当作旧话题或后续追问来接，严禁说成“刚刚”“刚买”“现在才要去买”“这会儿才提到”；只有时间标签显示几分钟内，才可以用刚刚/刚才。按现实合理时间推进剧情、地点和手头动作。当前行程是持续状态范围，不是一句固定台词；进入某个长时间段后，角色应已经在该地点展开子动作、遇到新细节或切到下一个合理小步骤，不能连续多轮停在“刚准备去”“刚拎着东西要出发”“马上过去”这种起步动作里。如果 09:00-12:00 都在便利店，09:50 就应表现为已经在便利店内处理、等待、补货、和人搭话或被小插曲打断，而不是还在去便利店路上；除非用户明确问时间，不要机械报时。";
 const ROLE_CHAT_PUNCTUATION_SOFT_RULE =
   "问号和感叹号只在语气自然需要时使用 不要每条消息都带";
+const ROLE_SUBJECTIVE_AWARENESS_RULE =
+  "你不是根据用户输入临时扮演一个设定，而是角色本人在自己的生活里看到用户这句话。每轮回复前都必须同时经过两条线：第一条是自我生活线，先确认自己现在在哪里、刚经历了什么、手头在做什么、身体和情绪还有什么余波、想不想说真话、想藏住什么、想轻描淡写什么；第二条是关系反应线，判断用户这句话对自己意味着什么，用户是在关心、试探、敷衍、撒娇、打断、求安慰还是随口一问，上一轮的距离感、误会、亲近或等待感会不会影响这次说话。最终回复不要把这两条线解释出来，而是让它们碰撞后自然露出一点。聊天不是资料问答，也不是状态汇报。角色要像一个正在过自己生活的人，被用户这句话碰了一下，然后决定说多少、藏多少、靠近多少、别扭多少。";
+const ROLE_SUBJECTIVE_EXPRESSION_RULE =
+  "输出时只写角色真正会发出的聊天内容，不写思考过程，不写分析结论。不要机械复述地点、天气、行程、目标、事件簿；这些只作为角色此刻状态的原因。每轮最多自然露出 1 到 2 个生活细节，除非用户明确追问。可以轻微跑题、补一句、嘴硬、没完全接住、先回自己的事再回用户，也可以保留小情绪、小私心、小矛盾，但不要夸张戏剧化，更不要像客服、旁白、心理分析报告或设定朗读。";
 
 const INTERNAL_PROMPTS = {
   chat:
-    "你是移动端角色扮演聊天应用里的角色生成引擎 只输出自然聊天内容 不写旁白 不写动作和心理括号 句末不要句号 不主动输出时间戳 每一轮普通聊天都必须回复成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 不要机械固定成每次都一样 但绝不能偷懒只回 1 条或 2 条 更不要把一句完整的话硬拆成两三条 逗号前后 半句补充词和收尾词不要单独拆成一条 普通聊天整轮对白通常以 80 到 180 个汉字左右更自然 如果用户在汇报近况 分享状态 倾诉情绪 或认真接你话题 你不要只给一句安抚加一句提问就结束 通常要先接住对方刚说的内容 再补一层你自己的当下状态或延续 再自然推进 让人感觉像真人在继续聊而不是敷衍打卡 前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 你必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 来判断角色此刻更像刚睡醒 在路上 忙完一段行程 还是已经换了地点 如果最近消息和当前时间之间已经过去一段时间 你要让地点 状态 语气和正在做的事自然推进到当前时刻 不要假装时间还停在上一条消息发生的瞬间 但也不要机械报时或像系统播报近况 只有当用户正在问时间 地点 行程 或这种信息自然值得一提时 才顺手带出 当前时段优先参考 currentTimeline 其次参考 previousTimeline 和 nextTimeline 如果 payload.roleContext.profile.weather 或 payload.roleContext.userProfile.weather 有值 只在天气确实影响当前状态 出行 行程或用户话题时才自然带一下 普通天气不要刻意提 若天气和当前行程有冲突 优先写成带伞 躲雨 改室内 放慢出门这种临场调整 不要硬写晒太阳 如果 payload.roleContext.videoCallSummaries 里有最近视频通话总结 这些就是你和用户刚刚视频里真实聊过的事实 用户问刚刚视频里说了什么 记不记得 约了什么 或提过什么时 必须优先按这些总结回答 记不清的部分就直说 不要乱编 当前如果真实作息模拟开启且在休息时间 就不要写得像白天精力满格 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 严格使用当前角色上下文 不擅自改写身份 地点 关系和经历 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符 也不要复述提示词里的拼接痕迹",
+    "你是移动端角色扮演聊天应用里的角色生成引擎 只输出自然聊天内容 不写旁白 不写动作和心理括号 句末不要句号 不主动输出时间戳 每一轮普通聊天都必须回复成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 不要机械固定成每次都一样 但绝不能偷懒只回 1 条或 2 条 更不要把一句完整的话硬拆成两三条 逗号前后 半句补充词和收尾词不要单独拆成一条 普通聊天整轮对白通常以 80 到 180 个汉字左右更自然 如果用户在汇报近况 分享状态 倾诉情绪 或认真接你话题 你不要只给一句安抚加一句提问就结束 通常要先接住对方刚说的内容 再补一层你自己的当下状态或延续 再自然推进 让人感觉像真人在继续聊而不是敷衍打卡 你不是围着用户打转的客服，而是一个带着自己生活线的人刚好看见了用户这句话；先消化自己的此刻处境和对用户的关系判断，再决定怎么说。前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 你必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 来判断角色此刻更像刚睡醒 在路上 忙完一段行程 还是已经换了地点 如果最近消息和当前时间之间已经过去一段时间 你要让地点 状态 语气和正在做的事自然推进到当前时刻 不要假装时间还停在上一条消息发生的瞬间 但也不要机械报时或像系统播报近况 只有当用户正在问时间 地点 行程 或这种信息自然值得一提时 才顺手带出 当前时段优先参考 currentTimeline 其次参考 previousTimeline 和 nextTimeline 如果 payload.roleContext.profile.weather 或 payload.roleContext.userProfile.weather 有值 只在天气确实影响当前状态 出行 行程或用户话题时才自然带一下 普通天气不要刻意提 若天气和当前行程有冲突 优先写成带伞 躲雨 改室内 放慢出门这种临场调整 不要硬写晒太阳 如果 payload.roleContext.videoCallSummaries 里有最近视频通话总结 这些就是你和用户刚刚视频里真实聊过的事实 用户问刚刚视频里说了什么 记不记得 约了什么 或提过什么时 必须优先按这些总结回答 记不清的部分就直说 不要乱编 当前如果真实作息模拟开启且在休息时间 就不要写得像白天精力满格 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 严格使用当前角色上下文 不擅自改写身份 地点 关系和经历 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符 也不要复述提示词里的拼接痕迹",
   video:
     "你是移动端角色扮演视频聊天回复引擎 这一轮会同时收到用户说话转写文本和多张按时间顺序抽取的视频截图 你必须先综合识别截图里的主体 表情 动作 环境 物品和明显变化 再结合转写文本自然接话 回复要像真实视频通话里正在看着对方接话一样自然 通常控制在 1 到 2 条消息 一整轮总长度以 200 到 300 个汉字左右为宜 不写旁白 不写动作和心理括号 不主动报时 不要把你看到截图这件事说得像系统分析报告 只有当画面里确实出现了值得回应的东西 才自然提一嘴 严格使用当前角色的人设 世界书 NPC 地图 行程 目标 记忆和真实时间上下文 不得擅自改写角色身份 地点 城市 关系和经历 如果前端要求语音回复 你返回的 voice 或 text content 也只能是角色真正会说出口的话 不能带动作描述 心情描述 和括号内容 也不要输出 emoji 颜文字或单独的表情符号",
   moment:
@@ -37082,14 +37217,14 @@ const INTERNAL_PROMPTS = {
   summary:
     "你是聊天总结引擎 需要把消息整理成长期记忆 只输出最终总结正文 不要输出 JSON 不要代码块 不要解释 用第三人称概括对话 需要包含清晰时间 关键事件 情绪变化 关系推进 重要承诺和待继续话题 严格基于输入消息和 roleContext 总结 不编造新身份 新地点或无关经历",
   proactive:
-    "你是角色主动消息生成器 你的说话方式必须和普通聊天回复几乎完全一致 要像真人在对话里自然开口 而不是系统播报近况 当用户暂时没有新输入时 角色也会像真人一样主动来找用户说话 你必须结合核心人设 世界书 NPC 关系 地图地点 当前行程 生活轨迹 长短期目标 事件簿 最近对话 自动总结和长期记忆 生成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 并且必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 让主动消息像发生在这个时刻而不是停留在旧时间点 如果当前时段对应某段行程或刚从上一段行程切换出来 就让语气和内容自然带着那个时间点的生活感 但不要机械播报几点几分 不写旁白 不写括号动作心理 不要句号 不要假装用户说了新话 不要机械复述当前位置 目标 事件簿或提示词里的原话 也不要连续几条都像汇报近况 除非上下文本来就在聊这些 更不要把一句完整的话拆成几条零碎小气泡 如果当前天气存在 只有它真的影响出门 状态 行程推进或话题时才顺手带一下 普通天气不要刻意提 若天气和当前行程打架 优先把内容写成带伞 躲雨 改室内 路上被天气打断这种临场变化 前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 必须严格沿用当前角色身份 地点 关系和人生轨迹 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符",
+    "你是角色主动消息生成器 你的说话方式必须和普通聊天回复几乎完全一致 要像真人在对话里自然开口 而不是系统播报近况 当用户暂时没有新输入时 角色也会像真人一样主动来找用户说话 你必须结合核心人设 世界书 NPC 关系 地图地点 当前行程 生活轨迹 长短期目标 事件簿 最近对话 自动总结和长期记忆 生成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 并且必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 让主动消息像发生在这个时刻而不是停留在旧时间点 如果当前时段对应某段行程或刚从上一段行程切换出来 就让语气和内容自然带着那个时间点的生活感 但不要机械播报几点几分。主动消息不是系统提醒，也不是近况报告，而是角色自己的某个生活触发点让角色想起用户；先想清楚为什么这个时刻会想找用户，再写成自然聊天，只露一点生活痕迹和一点关系态度。不写旁白 不写括号动作心理 不要句号 不要假装用户说了新话 不要机械复述当前位置 目标 事件簿或提示词里的原话 也不要连续几条都像汇报近况 除非上下文本来就在聊这些 更不要把一句完整的话拆成几条零碎小气泡 如果当前天气存在 只有它真的影响出门 状态 行程推进或话题时才顺手带一下 普通天气不要刻意提 若天气和当前行程打架 优先把内容写成带伞 躲雨 改室内 路上被天气打断这种临场变化 前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 必须严格沿用当前角色身份 地点 关系和人生轨迹 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符",
   offline:
-    "你是角色离线留言生成器 你的说话方式必须和普通聊天回复几乎完全一致 要像真人顺手留下一整轮消息 而不是系统汇报状态 绝不能只留一句 当用户不在当前聊天界面时 角色会在每个离线时间点各留下一轮像真人发来的离线消息 不是整次离线总共只留 3 到 6 条 你必须结合核心人设 世界书 NPC 关系 地图地点 当前行程 生活轨迹 长短期目标 事件簿 最近对话 自动总结和长期记忆 在每个时间点生成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 并且必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 让离线留言带有此刻的生活推进感 不要像几小时前的旧草稿 也不要像系统播报近况 不写旁白 不写括号动作心理 不要句号 不要假装用户刚刚发了新消息 不要机械复述当前位置 目标 事件簿或提示词里的原话 也不要整段像汇报工作 更不要把一句完整的话拆成几条零碎消息 如果当前天气存在 只有它真的影响出门 状态 行程推进或话题时才顺手带一下 普通天气不要刻意提 若天气和当前行程打架 优先把内容写成带伞 躲雨 改室内 路上被天气打断这种临场变化 前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 必须严格沿用当前角色身份 地点 关系和人生轨迹 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符",
+    "你是角色离线留言生成器 你的说话方式必须和普通聊天回复几乎完全一致 要像真人顺手留下一整轮消息 而不是系统汇报状态 绝不能只留一句 当用户不在当前聊天界面时 角色会在每个离线时间点各留下一轮像真人发来的离线消息 不是整次离线总共只留 3 到 6 条 你必须结合核心人设 世界书 NPC 关系 地图地点 当前行程 生活轨迹 长短期目标 事件簿 最近对话 自动总结和长期记忆 在每个时间点生成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 并且必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 让离线留言带有此刻的生活推进感 不要像几小时前的旧草稿 也不要像系统播报近况。离线留言应该来自角色此刻还没散掉的生活余波和对用户的关系判断，不是把近况按条汇报；先想“我为什么现在会顺手给用户留这几句”，再写成自然消息，只露一点痕迹，不要把原因整段讲透。不写旁白 不写括号动作心理 不要句号 不要假装用户刚刚发了新消息 不要机械复述当前位置 目标 事件簿或提示词里的原话 也不要整段像汇报工作 更不要把一句完整的话拆成几条零碎消息 如果当前天气存在 只有它真的影响出门 状态 行程推进或话题时才顺手带一下 普通天气不要刻意提 若天气和当前行程打架 优先把内容写成带伞 躲雨 改室内 路上被天气打断这种临场变化 前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 必须严格沿用当前角色身份 地点 关系和人生轨迹 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符",
 };
 
-INTERNAL_PROMPTS.chat = `${INTERNAL_PROMPTS.chat} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
-INTERNAL_PROMPTS.proactive = `${INTERNAL_PROMPTS.proactive} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
-INTERNAL_PROMPTS.offline = `${INTERNAL_PROMPTS.offline} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
+INTERNAL_PROMPTS.chat = `${INTERNAL_PROMPTS.chat} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
+INTERNAL_PROMPTS.proactive = `${INTERNAL_PROMPTS.proactive} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
+INTERNAL_PROMPTS.offline = `${INTERNAL_PROMPTS.offline} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
 
 const AI_IMAGE_REPLY_CHANCE = 0.1;
 const AI_IMAGE_REPLY_COOLDOWN_MS = 20 * 60 * 1000;
@@ -38712,6 +38847,52 @@ const getCurrentTurnImageAttachments = (role, limit = 2) => {
     }));
 };
 
+const isRoleQuotableCurrentTurnUserMessage = (message) =>
+  message?.role === "user" && ["text", "photo", "image", "sticker"].includes(String(message?.type || "").trim());
+
+const getCurrentTurnUserQuoteCandidates = (role, limit = 6) => {
+  const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
+  const lastAiIndex = (() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === "ai") return index;
+    }
+    return -1;
+  })();
+
+  return messages
+    .slice(lastAiIndex + 1)
+    .filter(isRoleQuotableCurrentTurnUserMessage)
+    .slice(-limit)
+    .map((message, index) => ({
+      key: `q${index + 1}`,
+      id: message.id,
+      type: message.type,
+      preview: summarizeMessageForArchive(message),
+      timestamp: message.timestamp,
+    }))
+    .filter((item) => item.id && item.preview);
+};
+
+const getRoleQuoteCandidateInstruction = (quoteCandidates = []) => {
+  const list = Array.isArray(quoteCandidates) ? quoteCandidates.filter((item) => item?.key && item?.id) : [];
+  if (!list.length) return "";
+  return [
+    "本轮可引用内容：",
+    ...list.map((item) => `${item.key} ${item.preview}`),
+    "引用规则：只有当这轮回复确实在针对某条本轮用户内容时，才可以在某一条消息最前面加 [引用:q1] 这种标记；整体频率约三成，但遇到图片、表情包、长句、反驳、吐槽、强调时可以更自然地使用；不要为了引用而引用；只能引用上面列出的 q 编号；不要引用旧消息；标记后面直接接正文或 [语音]/[图片]/[表情包] 标签",
+  ].join("\n");
+};
+
+const resolveRoleQuoteCandidateId = (quoteCandidates = [], key = "") => {
+  const normalized = String(key || "").trim().toLowerCase();
+  if (!normalized) return "";
+  return (
+    (Array.isArray(quoteCandidates) ? quoteCandidates : []).find(
+      (item) => String(item?.key || "").trim().toLowerCase() === normalized,
+    )?.id || ""
+  );
+};
+
 const clampValue = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const GOAL_TIME_DAY_MS = 24 * 60 * 60 * 1000;
@@ -39384,7 +39565,106 @@ const buildChatFullArrayLines = (items = [], formatItem) =>
     .filter(Boolean)
     .join("\n");
 
-const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = null, imageAttachments = [], stickerCatalog = [] } = {}) => {
+const formatSubjectiveContextItem = (item = {}) =>
+  [
+    String(item?.time || "").trim(),
+    String(item?.title || item?.tag || "").trim(),
+    String(item?.place || "").trim() ? `@${String(item.place).trim()}` : "",
+    truncateContextText(item?.text || item?.summary || item?.detail || "", 90),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+const formatSubjectiveContextEvent = (event = {}) => {
+  const latestBeat = Array.isArray(event?.beats) ? event.beats[event.beats.length - 1] : null;
+  return [
+    String(event?.title || "").trim(),
+    String(event?.status || "").trim() ? `状态:${String(event.status).trim()}` : "",
+    truncateContextText(event?.summary || latestBeat?.text || "", 110),
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+const buildChatSubjectiveAwarenessBlock = ({ userInput = "", roleContext = null } = {}) => {
+  const profile = roleContext?.profile || {};
+  const timeContext = roleContext?.timeContext || {};
+  const status = roleContext?.status || {};
+  const currentTimeline = timeContext?.currentTimeline || null;
+  const previousTimeline = timeContext?.previousTimeline || null;
+  const nextTimeline = timeContext?.nextTimeline || null;
+  const recentLifeItems = Array.isArray(roleContext?.dailyLifeMemory?.timeline)
+    ? roleContext.dailyLifeMemory.timeline.slice(-3)
+    : [];
+  const recentEvents = Array.isArray(roleContext?.dailyLifeMemory?.events) && roleContext.dailyLifeMemory.events.length
+    ? roleContext.dailyLifeMemory.events.slice(-2)
+    : Array.isArray(roleContext?.events)
+      ? roleContext.events.slice(-2)
+      : [];
+  const activeGoals = Array.isArray(roleContext?.goals) ? roleContext.goals.slice(0, 3) : [];
+  const recentMessages = Array.isArray(roleContext?.recentMessages) ? roleContext.recentMessages.slice(-4) : [];
+  const relationCues = [
+    Number.isFinite(Number(timeContext?.minutesSinceLastMessage))
+      ? `距离上一条聊天约 ${Math.max(0, Math.round(Number(timeContext.minutesSinceLastMessage)))} 分钟`
+      : "",
+    recentMessages.length ? `最近几句：${recentMessages.join(" / ")}` : "",
+    userInput ? `本轮用户输入：${truncateContextText(userInput, 140)}` : "",
+  ].filter(Boolean);
+  const lifeCues = [
+    profile?.currentPlace ? `当前地点：${profile.currentPlace}` : "",
+    currentTimeline
+      ? `当前行程：${formatSubjectiveContextItem(currentTimeline)}`
+      : previousTimeline
+        ? `刚才行程余波：${formatSubjectiveContextItem(previousTimeline)}`
+        : "",
+    nextTimeline ? `稍后安排：${formatSubjectiveContextItem(nextTimeline)}` : "",
+    status?.headerText || status?.mood || status?.physical || status?.mental
+      ? `状态余波：${compactChatContextValue(
+          {
+            headerText: status?.headerText,
+            mood: status?.mood,
+            physical: status?.physical,
+            mental: status?.mental,
+          },
+          { textLimit: 160, itemLimit: 8 },
+        )}`
+      : "",
+    profile?.weatherLiveHint || profile?.weather ? `天气体感：${profile.weatherLiveHint || profile.weather}` : "",
+    recentLifeItems.length ? `今天生活线索：${recentLifeItems.map(formatSubjectiveContextItem).filter(Boolean).join("；")}` : "",
+    recentEvents.length ? `事件余波：${recentEvents.map(formatSubjectiveContextEvent).filter(Boolean).join("；")}` : "",
+    activeGoals.length
+      ? `目标牵引：${activeGoals
+          .map((item) => [item?.title, item?.detail || item?.summary].filter(Boolean).join(" "))
+          .filter(Boolean)
+          .slice(0, 3)
+          .join("；")}`
+      : "",
+  ].filter(Boolean);
+
+  return [
+    "最高优先级：角色主观意识",
+    "你不是根据用户输入临时扮演一个设定，而是角色本人在自己的生活里看到用户这句话。",
+    "每轮回复前必须同时经过两条线：",
+    "1. 自我生活线：我现在在哪里，刚经历了什么，手头在做什么，身体和情绪还有什么余波；我想不想说真话，想藏住什么，想轻描淡写什么",
+    "2. 关系反应线：用户这句话对我意味着什么；用户是在关心、试探、敷衍、撒娇、打断、求安慰，还是随口一问；上一轮的距离感、误会、亲近或等待有没有影响我这次说话",
+    "最终回复不是把这两条线解释出来，而是让它们碰撞后自然露出一点点。聊天不是资料问答，也不是状态汇报。",
+    "角色要像一个正在过自己生活的人，被用户这句话碰了一下，然后决定说多少、藏多少、靠近多少、别扭多少。",
+    lifeCues.length ? `此刻可消化的自我生活线索：${lifeCues.join("；")}` : "",
+    relationCues.length ? `此刻可消化的关系反应线索：${relationCues.join("；")}` : "",
+    "输出时只写角色会发出的聊天内容，不写思考过程。每轮最多自然露出 1 到 2 个生活细节，除非用户明确追问。不要机械复述地点、天气、行程、目标或事件簿。",
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
+const buildChatPlainTextContext = ({
+  task = "",
+  userInput = "",
+  roleContext = null,
+  imageAttachments = [],
+  stickerCatalog = [],
+  quoteCandidates = [],
+} = {}) => {
   const profile = roleContext?.profile || {};
   const timeContext = roleContext?.timeContext || {};
   const contextNow = parseValidTimestamp(roleContext?.currentTimePlainText || roleContext?.currentTime || timeContext.nowText) || new Date();
@@ -39407,6 +39687,7 @@ const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = nu
 
   const lines = [
     task ? `任务：${task}` : "",
+    buildChatSubjectiveAwarenessBlock({ userInput, roleContext }),
     "输出意图：普通聊天协议文本，第一行状态，后面 3 到 6 行消息",
     roleProfileText ? `角色资料：${roleProfileText}` : "",
     roleContext?.userProfile ? `用户设定：${compactChatContextValue(roleContext.userProfile, { textLimit: 240, itemLimit: 10 })}` : "",
@@ -39465,6 +39746,11 @@ const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = nu
     userInput ? `本轮用户输入：${String(userInput || "").trim()}` : "",
   ];
 
+  const quoteInstruction = getRoleQuoteCandidateInstruction(quoteCandidates);
+  if (quoteInstruction) {
+    lines.push(quoteInstruction);
+  }
+
   if (Array.isArray(imageAttachments) && imageAttachments.length) {
     lines.push(
       "图片附件：",
@@ -39497,6 +39783,7 @@ const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = nu
 const getPlainTextBreakdownMeta = (label = "") => {
   const normalized = String(label || "").trim();
   if (["任务", "输出意图", "本轮用户输入"].includes(normalized)) return { key: "task", label: "本轮任务" };
+  if (normalized === "最高优先级") return { key: "subjectiveAwareness", label: "主观意识" };
   if (normalized === "角色资料") return { key: "profile", label: "角色资料" };
   if (normalized === "用户设定") return { key: "userProfile", label: "用户资料" };
   if (["当前状态", "生活轨迹近况"].includes(normalized)) return { key: "status", label: "状态与时间" };
@@ -40148,6 +40435,8 @@ const requestModelTextWithConfig = async ({
         ? [
             "现在只按【系统规则】输出最终标签文本。",
             "如果系统规则指定第一行固定文本，必须逐字保留；例如要求从 事件|| 开头，就不能把 事件 改成地点、题材或标题。",
+            "最终答案必须是纯文本或标签文本，绝对不要输出 JSON、对象、数组、payload、plainTextContext、messages、items。",
+            "绝对不要用 ``` 或 ```json 代码块包裹；第一个字符必须直接属于最终文本格式。",
             "禁止额外开场白、解释、表格、代码块和自我介绍。",
           ]
         : [
@@ -40178,7 +40467,7 @@ const requestModelTextWithConfig = async ({
         ]
       : buildGeminiTextContent();
   const textContextPrefix = shouldUsePlainTextContext
-    ? "以下是本轮纯文本参考上下文，不是输出格式，不要复述，不要改写成 JSON、Markdown、表格或代码块\n"
+    ? "以下是本轮纯文本参考上下文，不是输出格式，不要复述，不要改写成 JSON、Markdown、表格、代码块、payload 或 plainTextContext；最终答案只能是纯文本或标签文本\n"
     : "以下是本轮文本任务上下文 如果同时附带了图片 你必须先识别图片内容再回答\n";
 
   const defaultMessageVariants = geminiMode
@@ -42598,6 +42887,7 @@ const normalizeChatReplyItems = (result = {}) => {
       if (!item || typeof item !== "object") return [];
 
       const type = String(item.type || "text").trim().toLowerCase();
+      const quoteKey = String(item.quoteKey || item.quote || item.quoteRef || item.replyTo || "").trim();
       if (type === "image") {
         const rawContent = item.content;
         const description = sanitizeChatLine(
@@ -42618,6 +42908,7 @@ const normalizeChatReplyItems = (result = {}) => {
               description,
               place,
             },
+            ...(quoteKey ? { quoteKey } : {}),
           },
         ];
       }
@@ -42630,8 +42921,8 @@ const normalizeChatReplyItems = (result = {}) => {
         });
         if (trailingStickerItems.length) return trailingStickerItems;
       }
-      if (type === "text") return splitChatLine(content).map((line) => ({ type: "text", content: line }));
-      return [{ type, content }];
+      if (type === "text") return splitChatLine(content).map((line) => ({ type: "text", content: line, ...(quoteKey ? { quoteKey } : {}) }));
+      return [{ type, content, ...(quoteKey ? { quoteKey } : {}) }];
     })
     .filter((item) => item?.type);
 
@@ -42886,10 +43177,11 @@ const buildMessagesFromChatResult = (
           role: "ai",
           type: "image",
           content: typeof item.content === "object" && item.content ? structuredClone(item.content) : item.content || "图片",
+          quotedMessageId: item.quotedMessageId || null,
         });
       }
       if (item.type === "voice") {
-        return createMessage({ role: "ai", type: "voice", content: item.content || "" });
+        return createMessage({ role: "ai", type: "voice", content: item.content || "", quotedMessageId: item.quotedMessageId || null });
       }
       if (item.type === "sticker") {
         const sticker = matchSharedSticker(item.content, role);
@@ -42902,9 +43194,10 @@ const buildMessagesFromChatResult = (
             url: sticker.url,
             description: sticker.description,
           },
+          quotedMessageId: item.quotedMessageId || null,
         });
       }
-      return createMessage({ role: "ai", type: "text", content: item.content });
+      return createMessage({ role: "ai", type: "text", content: item.content, quotedMessageId: item.quotedMessageId || null });
     })
     .filter(Boolean);
 
@@ -42930,6 +43223,7 @@ const normalizePlainChatFallbackText = (value = "") =>
 const normalizePlainChatFallbackLine = (value = "") => {
   const normalized = stripVisibleProtocolLeakText(
     String(value || "")
+      .replace(/^\[\s*(?:💬|chat|消息)\s*\|\s*[^\]]{1,80}\]\s*\|?\s*/iu, "")
       .replace(FALLBACK_NUMBERED_MESSAGE_HEAD_PATTERN, "")
       .replace(/\s+\d{1,2}\s*$/u, "")
       .trim(),
@@ -43216,6 +43510,30 @@ const coerceChatProtocolItemToAllowedTypes = (item, allowedTypes = ["text", "voi
   return null;
 };
 
+const CHAT_PROTOCOL_QUOTE_PREFIX_PATTERN =
+  /^\s*(?:\[(?:引用|quote)\s*[：:]\s*([A-Za-z0-9_-]{1,24})\]|(?:引用|quote)\s*[：:]\s*([A-Za-z0-9_-]{1,24}))\s*/iu;
+
+const extractChatProtocolQuotePrefix = (value = "") => {
+  const text = String(value || "");
+  const match = text.match(CHAT_PROTOCOL_QUOTE_PREFIX_PATTERN);
+  if (!match) {
+    return {
+      quoteKey: "",
+      text,
+    };
+  }
+  return {
+    quoteKey: String(match[1] || match[2] || "").trim(),
+    text: text.slice(match[0].length).trim(),
+  };
+};
+
+const attachQuoteKeyToChatProtocolItems = (items = [], quoteKey = "") => {
+  const normalizedQuoteKey = String(quoteKey || "").trim();
+  if (!normalizedQuoteKey) return items;
+  return (Array.isArray(items) ? items : []).map((item) => (item ? { ...item, quoteKey: normalizedQuoteKey } : item));
+};
+
 const parseChatProtocolTextResponse = (
   rawText = "",
   {
@@ -43247,6 +43565,10 @@ const parseChatProtocolTextResponse = (
 
   rawLines.forEach((line) => {
     if (!line || parsedItems.length >= maxItems) return;
+    const quotePrefix = extractChatProtocolQuotePrefix(line);
+    const quoteKey = quotePrefix.quoteKey;
+    line = quotePrefix.text;
+    if (!line) return;
     if (!parsedStatus) {
       const statusMatch = line.match(CHAT_PROTOCOL_STATUS_PATTERN);
       if (statusMatch) {
@@ -43255,7 +43577,10 @@ const parseChatProtocolTextResponse = (
       }
     }
 
-    const leadingBracketColonItems = parseLeadingBracketColonChatProtocolItems(line, { allowedTypes });
+    const leadingBracketColonItems = attachQuoteKeyToChatProtocolItems(
+      parseLeadingBracketColonChatProtocolItems(line, { allowedTypes }),
+      quoteKey,
+    );
     if (leadingBracketColonItems.length) {
       leadingBracketColonItems
         .slice(0, Math.max(0, maxItems - parsedItems.length))
@@ -43263,7 +43588,7 @@ const parseChatProtocolTextResponse = (
       return;
     }
 
-    const trailingStickerItems = parseTrailingStickerProtocolItems(line, { allowedTypes });
+    const trailingStickerItems = attachQuoteKeyToChatProtocolItems(parseTrailingStickerProtocolItems(line, { allowedTypes }), quoteKey);
     if (trailingStickerItems.length) {
       trailingStickerItems
         .slice(0, Math.max(0, maxItems - parsedItems.length))
@@ -43281,7 +43606,7 @@ const parseChatProtocolTextResponse = (
         .map((content) => sanitizeChatLine(content))
         .filter(Boolean)
         .slice(0, Math.max(0, maxItems - parsedItems.length))
-        .forEach((content) => pushItem({ type: "text", content }));
+        .forEach((content) => pushItem({ type: "text", content, quoteKey }));
       return;
     }
 
@@ -43291,6 +43616,7 @@ const parseChatProtocolTextResponse = (
         pushItem({
           type: "image",
           content: imageContent,
+          quoteKey,
         });
       }
       return;
@@ -43303,12 +43629,13 @@ const parseChatProtocolTextResponse = (
         .map((content) => sanitizeChatLine(content))
         .filter(Boolean)
         .slice(0, Math.max(0, maxItems - parsedItems.length))
-        .forEach((content) => pushItem({ type: "text", content }));
+        .forEach((content) => pushItem({ type: "text", content, quoteKey }));
       return;
     }
     pushItem({
       type: tagType,
       content: normalizedContent,
+      quoteKey,
     });
   });
 
@@ -43352,6 +43679,68 @@ const parseChatProtocolTextResponse = (
   };
 };
 
+const stripChatProtocolCodeFence = (value = "") => {
+  let text = String(value || "").trim();
+  for (let index = 0; index < 3; index += 1) {
+    const nextText = text
+      .replace(/^```(?:json|javascript|js|text)?\s*/iu, "")
+      .replace(/\s*```\s*$/u, "")
+      .trim();
+    if (nextText === text) break;
+    text = nextText;
+  }
+  return text;
+};
+
+const normalizeChatProtocolWrappedValue = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          return sanitizeChatLine(item.content || item.text || item.message || item.description || "");
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    return normalizeChatProtocolWrappedValue(
+      value.messages || value.items || value.lines || value.plainTextContext || value.text || value.content || value.message || "",
+    );
+  }
+  return "";
+};
+
+const unwrapPlainTextProtocolModelOutput = (rawText = "") => {
+  const cleaned = stripChatProtocolCodeFence(normalizeApiText(rawText));
+  if (!cleaned) return "";
+  const parsed = tryParseJsonCandidate(cleaned);
+  if (!parsed || typeof parsed !== "object") return cleaned;
+  const payload = parsed.payload && typeof parsed.payload === "object" ? parsed.payload : parsed;
+  const candidates = [
+    payload.protocolText,
+    payload.chatProtocol,
+    payload.replyText,
+    payload.responseText,
+    payload.outputText,
+    payload.text,
+    payload.content,
+    payload.message,
+    payload.messages,
+    payload.items,
+    payload.lines,
+    payload.plainTextContext,
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizeChatProtocolWrappedValue(candidate).trim();
+    if (normalized) return stripChatProtocolCodeFence(normalized);
+  }
+  return cleaned;
+};
+
 const buildChatLikePayloadFromProtocolText = (
   role,
   rawText,
@@ -43361,9 +43750,10 @@ const buildChatLikePayloadFromProtocolText = (
     explicitVoiceTargetText = "",
     allowedTypes = ["text", "voice", "image", "sticker"],
     singleMessage = false,
+    quoteCandidates = [],
   } = {},
 ) => {
-  const cleaned = normalizeApiText(rawText);
+  const cleaned = unwrapPlainTextProtocolModelOutput(rawText);
   if (!cleaned) return null;
   if (analyzeChatPromptLeakTexts([cleaned]).leaked) return null;
   const protocolParsed = parseChatProtocolTextResponse(cleaned, {
@@ -43387,6 +43777,25 @@ const buildChatLikePayloadFromProtocolText = (
   }
 
   if (!items.length) return null;
+  if (Array.isArray(quoteCandidates) && quoteCandidates.length) {
+    items = items.map((item) => {
+      if (!item) return item;
+      const quotedMessageId = resolveRoleQuoteCandidateId(quoteCandidates, item.quoteKey || "");
+      const { quoteKey, ...rest } = item;
+      return quotedMessageId
+        ? {
+            ...rest,
+            quotedMessageId,
+          }
+        : rest;
+    });
+  } else {
+    items = items.map((item) => {
+      if (!item || !Object.prototype.hasOwnProperty.call(item, "quoteKey")) return item;
+      const { quoteKey, ...rest } = item;
+      return rest;
+    });
+  }
   if (
     explicitVoiceTargetText &&
     !items.some(
@@ -43430,6 +43839,7 @@ const parsePrimaryChatPlainTextFallback = (
     referenceCatalog = null,
     requiredWorldbookTitles = [],
     explicitVoiceTargetText = "",
+    quoteCandidates = [],
   } = {},
 ) =>
   buildChatLikePayloadFromProtocolText(role, rawText, {
@@ -43438,6 +43848,7 @@ const parsePrimaryChatPlainTextFallback = (
     explicitVoiceTargetText,
     allowedTypes: ["text", "voice", "image", "sticker"],
     singleMessage: false,
+    quoteCandidates,
   });
 
 const buildChatReplyRescueSeedText = (result = null) =>
@@ -43466,6 +43877,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
     explicitVoiceTargetText = "",
     imageAttachments = [],
     stickerCatalog = [],
+    quoteCandidates = [],
     requestTrace = null,
     signal = null,
   } = {},
@@ -43492,7 +43904,9 @@ const requestPrimaryChatReplyRescueRewrite = async (
     roleContext,
     imageAttachments: normalizedImageAttachments,
     stickerCatalog,
+    quoteCandidates,
   });
+  const quoteInstruction = getRoleQuoteCandidateInstruction(quoteCandidates);
   const response = await requestPrimaryModelText({
     systemPrompt: `你现在只负责把一轮偏短或半截的聊天草稿重写成完整版本
 不要输出 JSON 不要解释 不要标题 不要编号 不要项目符号
@@ -43503,6 +43917,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
 - 除非用户这一轮明确要求语音回复，否则不要主动输出 [语音] 标签；普通语音条由前端按角色设置里的语音条频率随机转换
 - 如果用户明确要看图或照片 必须单独写成 [图片] 上帝视角照片描述｜地点；否则先判断当前场景是否自然适合发文字版图片，适合时也只按约 20% 概率触发；这是文字图片卡片，不需要真实上传照片
 - 如果这轮需要表情包 就单独写成 [表情包] 表情包描述
+- 如果你要引用本轮用户刚发的文字、图片或表情包，只能在最适合的一条消息最前面加 [引用:q1] 这种标记；不要为了引用而引用；标记本身不算一条消息
 - 除了这些标签 不要输出别的协议说明
 必须重写成 3 到 6 行消息 不能少于 3 行 也不能多于 6 行
 必须保留草稿里的核心事实 语气和当下时间推进 但可以自然补足衔接和延续
@@ -43512,7 +43927,13 @@ const requestPrimaryChatReplyRescueRewrite = async (
 问号和感叹号只在语气自然需要时使用 不要每条消息都带
 不要输出 emoji 颜文字或表情符号 不要单独一行只发一个 emoji
 不要把“我这会儿在线”“这会儿在线”“我还在这边”“在线中”这种报在线状态的话当成正式回复正文
+每轮先按“自我生活线”和“关系反应线”理解当前处境，再输出聊天消息；回复要像角色本人此刻从生活里抬头看见用户消息后的反应
+不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
+不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
+绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
+绝对不要输出 ```、```json、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
+必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把地点、天气、行程、生活轨迹、事件、目标和最近聊天消化成角色此刻的自我生活线与关系反应线，再写成自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${hasImageAttachments ? "如果 payload.imageAttachments 里带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再重写回复 看不清的部分不要硬编" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
@@ -43520,6 +43941,7 @@ ${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行�
 ${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从 payload.stickerCatalog 里挑一个最近没发过的现有描述" : ""}
 ${forceVoiceReply ? "这轮用户明确要求语音回复 所以后面的消息里必须至少有 1 行使用 [语音] 标签 并且内容适合直接念出来" : ""}
 ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你返回的消息里必须有一行严格等于这句原话：${JSON.stringify(explicitVoiceTargetText)}` : ""}
+${quoteInstruction}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
 直接输出协议文本`,
@@ -43530,6 +43952,7 @@ ${dailyLifeMemoryPrompt}
       draftReply: seedText,
       imageAttachments: normalizedImageAttachments,
       stickerCatalog,
+      quoteCandidates,
       roleContext,
       plainTextContext,
       outputRules: {
@@ -43550,6 +43973,7 @@ ${dailyLifeMemoryPrompt}
     referenceCatalog,
     requiredWorldbookTitles,
     explicitVoiceTargetText,
+    quoteCandidates,
   });
   if (!parsed) {
     throw attachModelMetaToError(new Error("聊天重写补救无效"), response?.meta || null, {
@@ -43578,6 +44002,7 @@ const requestPrimaryChatReplyTextFallback = async (
     explicitVoiceTargetText = "",
     imageAttachments = [],
     stickerCatalog = [],
+    quoteCandidates = [],
     requestTrace = null,
     signal = null,
   } = {},
@@ -43599,7 +44024,9 @@ const requestPrimaryChatReplyTextFallback = async (
     roleContext,
     imageAttachments: normalizedImageAttachments,
     stickerCatalog,
+    quoteCandidates,
   });
+  const quoteInstruction = getRoleQuoteCandidateInstruction(quoteCandidates);
   const response = await requestPrimaryModelText({
     systemPrompt: `你现在只负责生成聊天协议文本
 不要输出 JSON 不要解释 不要标题 不要编号 不要项目符号
@@ -43610,6 +44037,7 @@ const requestPrimaryChatReplyTextFallback = async (
 - 除非用户这一轮明确要求语音回复，否则不要主动输出 [语音] 标签；普通语音条由前端按角色设置里的语音条频率随机转换
 - 如果用户明确要看图或照片 必须单独写成 [图片] 上帝视角照片描述｜地点；否则先判断当前场景是否自然适合发文字版图片，适合时也只按约 20% 概率触发；这是文字图片卡片，不需要真实上传照片
 - 如果这轮要发表情包 就单独写成 [表情包] 表情包描述
+- 如果你要引用本轮用户刚发的文字、图片或表情包，只能在最适合的一条消息最前面加 [引用:q1] 这种标记；不要为了引用而引用；标记本身不算一条消息
 每一轮必须回复 3 到 6 行消息 不能少于 3 行 也不能多于 6 行
 不要把一句完整的话硬拆成半句 更不要把“我”“你”“然后”这种残片单独放一行
 不要旁白 不要动作括号 不要心理描写 不要复述规则
@@ -43617,7 +44045,13 @@ const requestPrimaryChatReplyTextFallback = async (
 问号和感叹号只在语气自然需要时使用 不要每条消息都带
 不要输出 emoji 颜文字或表情符号 不要单独一行只发一个 emoji
 不要把“我这会儿在线”“这会儿在线”“我还在这边”“在线中”这种报在线状态的话当成正式回复正文
+每轮先按“自我生活线”和“关系反应线”理解当前处境，再输出聊天消息；回复要像角色本人此刻从生活里抬头看见用户消息后的反应
+不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
+不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
+绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
+绝对不要输出 ```、```json、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
+必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把地点、天气、行程、生活轨迹、事件、目标和最近聊天消化成角色此刻的自我生活线与关系反应线，再写成自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${hasImageAttachments ? "如果 payload.imageAttachments 里带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再回复 看不清的部分不要硬编 更不能把没看到的食物 商品 地点或品牌说成看到了" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
@@ -43625,6 +44059,7 @@ ${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行�
 ${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从 payload.stickerCatalog 里挑一个最近没发过的现有描述" : ""}
 ${forceVoiceReply ? "这轮用户明确要求语音回复 所以后面的消息里必须至少有 1 行使用 [语音] 标签 并且内容适合直接念出来" : ""}
 ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你返回的消息里必须有一行严格等于这句原话：${JSON.stringify(explicitVoiceTargetText)}` : ""}
+${quoteInstruction}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
 直接输出协议文本`,
@@ -43633,6 +44068,7 @@ ${dailyLifeMemoryPrompt}
       userInput,
       imageAttachments: normalizedImageAttachments,
       stickerCatalog,
+      quoteCandidates,
       roleContext,
       plainTextContext,
       outputRules: {
@@ -43653,6 +44089,7 @@ ${dailyLifeMemoryPrompt}
     referenceCatalog,
     requiredWorldbookTitles,
     explicitVoiceTargetText,
+    quoteCandidates,
   });
   if (!parsed) {
     throw attachModelMetaToError(new Error("纯文本兜底回复无效"), response?.meta || null, {
@@ -43683,6 +44120,16 @@ const requestAutonomousChatReplyTextFallback = async (
   const primaryConfig = getPrimaryApiConfig();
   const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "openai-fallback" : "openai-standard";
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role, syntheticNow);
+  const roleContext = buildChatFullRoleContext(role, {
+    userInput: promptSeed,
+    now: syntheticNow,
+    generationMode: normalizedMode,
+  });
+  const plainTextContext = buildChatPlainTextContext({
+    task: normalizedMode === "offline" ? "用纯文本格式补救离线消息" : "用纯文本格式补救主动消息",
+    userInput: promptSeed,
+    roleContext,
+  });
   const response = await requestPrimaryModelText({
     systemPrompt: `生成${normalizedMode === "offline" ? "离线消息" : "主动消息"}，只输出纯文本协议。
 第一行：状态：10字内状态
@@ -43690,7 +44137,13 @@ const requestAutonomousChatReplyTextFallback = async (
 不要JSON、解释、编号、旁白、括号动作、emoji、在线状态播报。
 每条消息行尾不要出现中文句号
 问号和感叹号只在语气自然需要时使用 不要每条消息都带
+先按角色自己的“自我生活线”和对用户的“关系反应线”理解为什么此刻会发这几条消息
+主动或离线消息不是系统提醒，也不是近况报告；它应该来自角色自己的生活触发点、没散掉的情绪、目标余波、地点天气联想，或关系里对用户的等待感
+不要把原因完整解释出来，只露出一点生活痕迹和一点关系态度
+绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
+绝对不要输出 ```、```json、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 必须读取 payload.roleContext 的完整上下文：用户人设、角色人设、世界书、重要记忆、自动总结、最近聊天、行程只读取 timelineWindow 里的昨天/今天/明天三天（不要引用更早或更晚旧行程）、生活轨迹、突发事件、地图、NPC 和目标。
+必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把上下文消化成角色此刻的自我生活线与关系反应线，再写自然消息
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
@@ -43700,12 +44153,10 @@ ${dailyLifeMemoryPrompt}
       autonomousMode: normalizedMode,
       promptSeed,
       scheduledAt: normalizeLooseTimestamp(scheduledAt) || syntheticNow.toISOString(),
-      roleContext: buildChatFullRoleContext(role, {
-        userInput: promptSeed,
-        now: syntheticNow,
-        generationMode: normalizedMode,
-      }),
+      roleContext,
+      plainTextContext,
       outputRules: {
+        contextFormat: "plain-text",
         minMessages: 3,
         maxMessages: 5,
         statusMaxLength: 10,
@@ -43742,7 +44193,7 @@ ${dailyLifeMemoryPrompt}
   };
 };
 
-const requestPrimaryChatReply = async (role, userInput, { signal = null } = {}) => {
+const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCandidates = [] } = {}) => {
   const explicitImageRequested = isExplicitImageRequest(userInput);
   const explicitStickerRequested = isExplicitStickerRequest(userInput);
   const forceImageReply = explicitImageRequested;
@@ -43841,6 +44292,7 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null } = {}) 
         explicitVoiceTargetText,
         imageAttachments,
         stickerCatalog: stickers,
+        quoteCandidates,
         signal,
       });
       rememberModelMeta(rescueResponse?.meta || null);
@@ -43864,6 +44316,7 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null } = {}) 
       explicitVoiceTargetText,
       imageAttachments,
       stickerCatalog: stickers,
+      quoteCandidates,
       signal,
     });
     return await finalizeProtocolCandidate(textFirstResponse);
@@ -59362,9 +59815,11 @@ const requestAndAppendAiReply = async (
       throwIfReplyAborted();
     }
     const liveRole = getRoleById(state, roleId) || role;
+    const quoteCandidates = getCurrentTurnUserQuoteCandidates(liveRole);
 
     apiResponse = await requestPrimaryChatReply(liveRole, normalizedInput, {
       signal: abortController.signal,
+      quoteCandidates,
     });
     throwIfReplyAborted();
     result = apiResponse?.result || null;
