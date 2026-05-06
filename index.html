@@ -6657,6 +6657,34 @@ body {
   gap: 12px;
 }
 
+.goal-section-head {
+  align-items: center;
+}
+
+.goal-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid rgba(220, 222, 230, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.goal-section-actions .tiny-header-btn {
+  min-height: 28px;
+  padding: 0 11px;
+  border: 0 !important;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.06) !important;
+  color: rgba(17, 17, 17, 0.78) !important;
+  box-shadow: none !important;
+  font-size: 12px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
 .goal-editor-title-stack {
   display: grid;
   gap: 8px;
@@ -6670,11 +6698,15 @@ body {
   background: #ffffff;
 }
 
+.goal-editor-card.is-readonly {
+  gap: 7px;
+}
+
 .goal-editor-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: center;
+  align-items: end;
 }
 
 .goal-delete-btn {
@@ -6687,6 +6719,7 @@ body {
   border-radius: 14px;
   background: #ffffff;
   color: #111111;
+  align-self: end;
   transition: none !important;
 }
 
@@ -6711,6 +6744,28 @@ body {
   min-height: 84px;
 }
 
+.goal-readonly-title {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 780;
+  line-height: 1.28;
+}
+
+.goal-readonly-percent {
+  align-self: end;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.goal-readonly-detail {
+  margin: 0;
+  color: #5f6673;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .goal-time-note {
   margin-top: 2px;
   color: #8b8b92;
@@ -6732,6 +6787,20 @@ body {
   border-radius: 999px;
   background: #e5e7eb;
   outline: none;
+}
+
+.goal-readonly-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.goal-readonly-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #111111;
 }
 
 .goal-editor-progress input[type="range"]::-webkit-slider-runnable-track {
@@ -7056,7 +7125,7 @@ body {
   padding: 0 9px;
   border: 0 !important;
   border-radius: 999px;
-  background: transparent !important;
+  background: rgba(17, 17, 17, 0.06) !important;
   color: rgba(17, 17, 17, 0.72) !important;
   box-shadow: none !important;
   font-size: 12px;
@@ -7065,19 +7134,9 @@ body {
   white-space: nowrap;
 }
 
-.life-monitor-header-actions .tiny-header-btn.is-primary {
-  background: #111111 !important;
-  color: #ffffff !important;
-  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.16) !important;
-}
-
 .life-monitor-header-actions .tiny-header-btn:active {
   transform: scale(0.96);
-  background: rgba(17, 17, 17, 0.06) !important;
-}
-
-.life-monitor-header-actions .tiny-header-btn.is-primary:active {
-  background: #000000 !important;
+  background: rgba(17, 17, 17, 0.1) !important;
 }
 
 .life-monitor-chip-row {
@@ -24096,7 +24155,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-role-quote-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-a3-chat-route-restore-13";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -25448,9 +25507,6 @@ const getJourneyLinkedSnapshotForDate = (role, dateKey = formatDateKey()) => {
 };
 
 const getJourneyDisplayGoalsForDate = (role, dateKey = formatDateKey()) => {
-  const snapshot = getJourneyLinkedSnapshotForDate(role, dateKey);
-  const snapshotGoals = Array.isArray(snapshot?.displayGoals) ? snapshot.displayGoals : [];
-  if (snapshotGoals.length) return snapshotGoals;
   return Array.isArray(role?.goals) ? role.goals : [];
 };
 
@@ -27976,12 +28032,31 @@ const formatGoalScheduleText = (goal) => {
   }).format(target)}`;
 };
 
-const renderGoalEditorList = (role, goalType = "long") => {
+const renderGoalSectionActions = (goalType = "long", isEditing = false) => {
+  const normalizedType = normalizeUiGoalType(goalType);
+  return `
+    <div class="goal-section-actions">
+      <button class="tiny-header-btn ios-segment-btn" type="button" data-action="add-goal" data-goal-type="${normalizedType}">生成</button>
+      <button class="tiny-header-btn ios-segment-btn" type="button" data-action="toggle-goal-edit" data-goal-type="${normalizedType}">${isEditing ? "完成" : "编辑"}</button>
+    </div>
+  `;
+};
+
+const renderGoalSectionHeader = (title = "目标", goalType = "long", isEditing = false) => `
+  <div class="map-section-head goal-section-head">
+    <div>
+      <div class="list-title">${escapeHtml(title)}</div>
+    </div>
+    ${renderGoalSectionActions(goalType, isEditing)}
+  </div>
+`;
+
+const renderGoalEditorList = (role, goalType = "long", { editing = false } = {}) => {
   const goals = filterGoalsByType(role.goals || [], goalType);
   const label = goalType === "short" ? "短期目标" : "长期目标";
 
   if (!goals.length) {
-    return `<div class="goal-empty">暂无${label}，点右上角新增即可</div>`;
+    return `<div class="goal-empty">暂无${label}，点右上角生成即可</div>`;
   }
 
   return `
@@ -27989,20 +28064,36 @@ const renderGoalEditorList = (role, goalType = "long") => {
       ${goals
         .map(
           (goal) => `
-            <article class="goal-item goal-editor-card">
+            <article class="goal-item goal-editor-card ${editing ? "is-editing" : "is-readonly"}">
               <div class="goal-editor-top">
                 <div class="goal-editor-title-stack">
-                  <input class="soft-input" data-goal-id="${goal.id}" data-goal-field="title" value="${escapeHtml(goal.title || "")}" placeholder="${label}标题" />
+                  ${
+                    editing
+                      ? `<input class="soft-input" data-goal-id="${goal.id}" data-goal-field="title" value="${escapeHtml(goal.title || "")}" placeholder="${label}标题" />`
+                      : `<strong class="goal-readonly-title">${escapeHtml(goal.title || `${label}标题`)}</strong>`
+                  }
                   <span class="goal-type-pill">${label}</span>
                 </div>
-                <button class="goal-delete-btn" type="button" data-action="delete-goal" data-goal-id="${goal.id}" aria-label="删除${label}">
-                  ${icons.trash}
-                </button>
+                ${
+                  editing
+                    ? `<button class="goal-delete-btn" type="button" data-action="delete-goal" data-goal-id="${goal.id}" aria-label="删除${label}">
+                        ${icons.trash}
+                      </button>`
+                    : `<span class="goal-readonly-percent">${Number(goal.progress || 0)}%</span>`
+                }
               </div>
-              <textarea class="soft-input soft-area goal-editor-area" data-goal-id="${goal.id}" data-goal-field="detail" placeholder="目标说明">${escapeHtml(goal.detail || "")}</textarea>
+              ${
+                editing
+                  ? `<textarea class="soft-input soft-area goal-editor-area" data-goal-id="${goal.id}" data-goal-field="detail" placeholder="目标说明">${escapeHtml(goal.detail || "")}</textarea>`
+                  : `<p class="goal-readonly-detail">${escapeHtml(goal.detail || "还没有目标说明")}</p>`
+              }
               <div class="goal-time-note">${escapeHtml(formatGoalScheduleText(goal))}</div>
               <div class="goal-editor-progress">
-                <input type="range" min="0" max="100" step="1" value="${Number(goal.progress || 0)}" data-goal-id="${goal.id}" data-goal-field="progress" />
+                ${
+                  editing
+                    ? `<input type="range" min="0" max="100" step="1" value="${Number(goal.progress || 0)}" data-goal-id="${goal.id}" data-goal-field="progress" />`
+                    : `<div class="goal-readonly-progress" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, Number(goal.progress || 0)))}%"></span></div>`
+                }
                 <strong>${Number(goal.progress || 0)}%</strong>
               </div>
             </article>
@@ -28182,6 +28273,8 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
     String(latestFeed?.text || "").trim() ||
     (fortune.eventTriggered ? fortune.summary || "今天已经有一条生活轨迹在推进" : "");
   const isLifeMonitorBusy = hasBusyToken(state.apiGenerationBusy, "monitor") || hasBusyToken(state.apiGenerationBusy, `monitor-auto:${role.id}`);
+  const shortGoalsEditing = Boolean(state?.goalEditModes?.short);
+  const longGoalsEditing = Boolean(state?.goalEditModes?.long);
 
   return `
     <div class="overlay-screen panel-overlay">
@@ -28193,7 +28286,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
           `
             <div class="life-monitor-header-actions">
               <button class="tiny-header-btn ios-segment-btn" type="button" data-action="generate-life-monitor">${isLifeMonitorBusy ? "生成中" : "刷新"}</button>
-              <button class="tiny-header-btn ios-segment-btn is-primary" type="button" data-action="regenerate-life-monitor-today">${isLifeMonitorBusy ? "生成中" : "重生成"}</button>
+              <button class="tiny-header-btn ios-segment-btn" type="button" data-action="regenerate-life-monitor-today">${isLifeMonitorBusy ? "生成中" : "重生成"}</button>
               <button class="tiny-header-btn ios-segment-btn" type="button" data-action="open-panel" data-panel="life-fate-settings">概率</button>
             </div>
           `,
@@ -28229,21 +28322,13 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
           </section>
 
           <section class="panel-card">
-            <div class="map-section-head">
-              <div>
-                <div class="list-title">短期目标</div>
-              </div>
-            </div>
-            ${renderGoalEditorList(role, "short")}
+            ${renderGoalSectionHeader("短期目标", "short", shortGoalsEditing)}
+            ${renderGoalEditorList(role, "short", { editing: shortGoalsEditing })}
           </section>
 
           <section class="panel-card">
-            <div class="map-section-head">
-              <div>
-                <div class="list-title">长期目标</div>
-              </div>
-            </div>
-            ${renderGoalEditorList(role, "long")}
+            ${renderGoalSectionHeader("长期目标", "long", longGoalsEditing)}
+            ${renderGoalEditorList(role, "long", { editing: longGoalsEditing })}
           </section>
 
           <button class="gold-outline life-stream-archive-btn" type="button" data-action="open-panel" data-panel="life-events">查看往期事件簿 (${Math.max(0, (role.events || []).length)})</button>
@@ -32907,6 +32992,10 @@ const createTransientState = () => ({
   journeyMonitorPreview: null,
   journeyEventPreview: null,
   journeyEditDraft: null,
+  goalEditModes: {
+    short: false,
+    long: false,
+  },
   modalRoleAvatarImage: "",
   momentDraft: "",
   modelPickerOpen: false,
@@ -34080,11 +34169,9 @@ const setJourneyLinkedSnapshotForDate = (role, journeyData) => {
   const existingSnapshot = currentSnapshots[targetDateKey] && typeof currentSnapshots[targetDateKey] === "object" ? currentSnapshots[targetDateKey] : {};
   const displayGoalSource = Array.isArray(journeyData?.goalPreview) && journeyData.goalPreview.length
     ? journeyData.goalPreview
-    : Array.isArray(existingSnapshot?.displayGoals) && existingSnapshot.displayGoals.length
-      ? existingSnapshot.displayGoals
-      : Array.isArray(role?.goals)
-        ? role.goals
-        : [];
+    : Array.isArray(role?.goals)
+      ? role.goals
+      : [];
   const displayGoals = displayGoalSource
     .map((goal) => normalizeJourneyLinkedSnapshotGoal(goal))
     .filter(Boolean);
@@ -34215,6 +34302,7 @@ const serializeState = () => {
     journeyMonitorPreview,
     journeyEventPreview,
     journeyEditDraft,
+    goalEditModes,
     modalRoleAvatarImage,
     momentDraft,
     modelPickerOpen,
@@ -34244,6 +34332,7 @@ const serializeState = () => {
   } = state;
   void videoSessionReadyCue;
   void navigationSnapshot;
+  void goalEditModes;
   return {
     ...persistent,
     cacheStamp: String(persistent.cacheStamp || new Date().toISOString()).trim(),
@@ -38896,6 +38985,11 @@ const resolveRoleQuoteCandidateId = (quoteCandidates = [], key = "") => {
 const clampValue = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const GOAL_TIME_DAY_MS = 24 * 60 * 60 * 1000;
+const ACTIVE_GOAL_CAPS = Object.freeze({
+  short: 4,
+  long: 3,
+});
+const GOAL_DELETE_SUPPRESSION_DAYS = 7;
 const GOAL_DURATION_MS = {
   long: 45 * GOAL_TIME_DAY_MS,
   short: SHORT_GOAL_MAX_DAYS * GOAL_TIME_DAY_MS,
@@ -38940,6 +39034,87 @@ const dedupeAndOrderGoals = (goals = []) => {
   return result;
 };
 
+const getActiveGoalCap = (type = "long") => ACTIVE_GOAL_CAPS[normalizeRuntimeGoalType(type)] || ACTIVE_GOAL_CAPS.long;
+
+const getGoalUpdatedTime = (goal = {}) => {
+  const parsed = new Date(goal?.updatedAt || goal?.createdAt || 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const isGoalRecentlyDeleted = (role, title = "", type = "long", now = new Date()) => {
+  const normalizedTitle = normalizeGoalTitleKey(title);
+  if (!role || !normalizedTitle) return false;
+  const cutoffMs = now.getTime() - GOAL_DELETE_SUPPRESSION_DAYS * GOAL_TIME_DAY_MS;
+  return (Array.isArray(role.runtime?.deletedGoalTitles) ? role.runtime.deletedGoalTitles : []).some((item) => {
+    const itemTitle = normalizeGoalTitleKey(item?.title || item?.key || "");
+    if (!itemTitle || itemTitle !== normalizedTitle) return false;
+    if (normalizeRuntimeGoalType(item?.type || type) !== normalizeRuntimeGoalType(type)) return false;
+    const deletedAtMs = new Date(item?.deletedAt || item?.at || 0).getTime();
+    return Number.isFinite(deletedAtMs) && deletedAtMs >= cutoffMs;
+  });
+};
+
+const pruneDeletedGoalTitleMemory = (role, now = new Date()) => {
+  if (!role) return [];
+  const cutoffMs = now.getTime() - GOAL_DELETE_SUPPRESSION_DAYS * GOAL_TIME_DAY_MS;
+  const nextDeletedTitles = (Array.isArray(role.runtime?.deletedGoalTitles) ? role.runtime.deletedGoalTitles : [])
+    .map((item) => ({
+      type: normalizeRuntimeGoalType(item?.type || "long"),
+      title: String(item?.title || item?.key || "").trim(),
+      deletedAt: String(item?.deletedAt || item?.at || "").trim(),
+    }))
+    .filter((item) => {
+      if (!item.title || !item.deletedAt) return false;
+      const deletedAtMs = new Date(item.deletedAt).getTime();
+      return Number.isFinite(deletedAtMs) && deletedAtMs >= cutoffMs;
+    })
+    .slice(-24);
+  role.runtime = {
+    ...(role.runtime || {}),
+    deletedGoalTitles: nextDeletedTitles,
+  };
+  return nextDeletedTitles;
+};
+
+const rememberDeletedGoalTitle = (role, goal = {}, now = new Date()) => {
+  const title = String(goal?.title || "").trim();
+  if (!role || !title) return;
+  const nextEntry = {
+    type: normalizeRuntimeGoalType(goal?.type || "long"),
+    title,
+    deletedAt: now.toISOString(),
+  };
+  const nextMemory = [
+    ...pruneDeletedGoalTitleMemory(role, now).filter(
+      (item) => !(normalizeRuntimeGoalType(item?.type) === nextEntry.type && normalizeGoalTitleKey(item?.title) === normalizeGoalTitleKey(title)),
+    ),
+    nextEntry,
+  ].slice(-24);
+  role.runtime = {
+    ...(role.runtime || {}),
+    deletedGoalTitles: nextMemory,
+  };
+};
+
+const enforceActiveGoalPoolCaps = (goals = []) => {
+  const ordered = dedupeAndOrderGoals(goals);
+  const result = [];
+  const isCompletedForPool = (goal = {}) =>
+    Boolean(String(goal?.completedAt || "").trim()) || Math.max(0, Number(goal?.progress ?? 0) || 0) >= 100;
+  ["short", "long"].forEach((type) => {
+    const typeGoals = ordered
+      .filter((goal) => normalizeRuntimeGoalType(goal?.type) === type)
+      .sort((left, right) => {
+        const leftCompleted = isCompletedForPool(left) ? 1 : 0;
+        const rightCompleted = isCompletedForPool(right) ? 1 : 0;
+        if (leftCompleted !== rightCompleted) return leftCompleted - rightCompleted;
+        return getGoalUpdatedTime(right) - getGoalUpdatedTime(left);
+      });
+    result.push(...typeGoals.slice(0, getActiveGoalCap(type)));
+  });
+  return sortGoalsForDisplay(result);
+};
+
 const normalizeLifeMonitorGoals = (goals = []) =>
   dedupeAndOrderGoals(
     (Array.isArray(goals) ? goals : [])
@@ -38980,7 +39155,7 @@ const mergeLifeMonitorGoalPayload = (role, payloadGoals = []) => {
     autoTimeProgress: item?.autoTimeProgress ?? true,
   }));
   if (!safePayload.length) return setLifeMonitorGoals(role, currentGoals);
-  return setLifeMonitorGoals(role, mergeGoalPayload(currentGoals, safePayload, "short"));
+  return setLifeMonitorGoals(role, mergeGoalPayload(currentGoals, safePayload, "short", { role }));
 };
 
 const getGoalDurationMs = (type) => GOAL_DURATION_MS[normalizeRuntimeGoalType(type)] || GOAL_DURATION_MS.long;
@@ -39194,7 +39369,8 @@ const syncRoleGoalsWithTime = (role, now = new Date()) => {
     changed = true;
   }
 
-  const normalizedGoals = dedupeAndOrderGoals(role.goals || []);
+  pruneDeletedGoalTitleMemory(role, now);
+  const normalizedGoals = enforceActiveGoalPoolCaps(role.goals || []);
   if (normalizedGoals.length !== (role.goals || []).length || normalizedGoals.some((goal, index) => goal !== role.goals[index])) {
     role.goals = normalizedGoals;
     changed = true;
@@ -42355,6 +42531,55 @@ const CHAT_PROMPT_LEAK_RULES = Object.freeze([
   { label: "json-field-echo", pattern: /^(?:messages|status|anchors|references)\s*[:：]/i, weight: 1 },
 ]);
 
+const CHAT_MODEL_IDENTITY_LEAK_RE = new RegExp(
+  [
+    "我的(?:设计|用途|功能)",
+    "我是(?:一个)?(?:AI|人工智能|语言模型|文本模型|模型|程序|助手|聊天机器人)",
+    "我(?:只是|只能|仅能|仅可以|无法|不能)(?:处理|生成|提供|帮助|在现实|实际)",
+    "(?:作为|身为)(?:一个)?(?:AI|人工智能|语言模型|文本模型|模型|程序|助手|聊天机器人)",
+    "处理和生成文本",
+    "生成文本",
+    "文本生成",
+    "没有(?:身体|实体)",
+    "不能(?:替你|帮你)(?:拿|跑|买|取|送|做)",
+    "无法(?:替你|帮你|在这方面)(?:拿|跑|买|取|送|做|提供现实帮助)",
+  ].join("|"),
+  "iu",
+);
+
+const isModelIdentityLeakChatText = (value = "") => CHAT_MODEL_IDENTITY_LEAK_RE.test(sanitizeChatLine(String(value || "").trim()));
+
+const getChatReplyModelIdentityLeakValidationMessage = (items = [], label = "聊天回复") => {
+  const textItems = (Array.isArray(items) ? items : []).filter((item) => item?.type === "text" || item?.type === "voice");
+  if (!textItems.length) return "";
+  return textItems.some((item) => isModelIdentityLeakChatText(item?.content || "")) ? `${label}泄露模型身份` : "";
+};
+
+const CHAT_ALLOWED_STATUS_LABELS = Object.freeze([
+  "休息中",
+  "有点犯困",
+  "正在吃饭",
+  "忙着回消息",
+  "人在路上",
+  "情绪起伏",
+  "状态不错",
+  "熬夜中",
+  "刚睡醒",
+  "在线中",
+  "慢慢回神",
+]);
+
+const CHAT_FABRICATED_STATUS_ACTION_RE =
+  /(?:在看|正在看|看着|盯着|查|刷|翻|等|准备|想着|研究|安排|处理|规划|盯一下|帮你|给你|去|买|拿|取|搬|跑|送|天气预报|快递|闪送|跑腿|外卖|订单)/u;
+
+const sanitizePrimaryChatStatus = (role, status = "", fallbackText = "") => {
+  const text = sanitizeChatLine(status || "").slice(0, 10);
+  if (text && CHAT_ALLOWED_STATUS_LABELS.includes(text) && !CHAT_FABRICATED_STATUS_ACTION_RE.test(text)) {
+    return text;
+  }
+  return deriveCurrentStatus(role, fallbackText || role?.status?.headerText || "").slice(0, 10);
+};
+
 const analyzeChatPromptLeakTexts = (values = []) => {
   const hits = [];
   const dedupe = new Set();
@@ -43087,7 +43312,11 @@ const buildRecoveredChatResultFromRawText = (role, { rawText = "", referenceCata
 
   return {
     messages: items,
-    status: (extractPartialStructuredStatus(cleaned) || protocolParsed.status || deriveCurrentStatus(role, recoveryText || cleaned)).slice(0, 10),
+    status: sanitizePrimaryChatStatus(
+      role,
+      extractPartialStructuredStatus(cleaned) || protocolParsed.status || "",
+      recoveryText || cleaned,
+    ),
     anchors: buildRoleAnchors(role),
     references: {
       worldbookTitles: pickMatches(catalog.worldbookTitles, { fuzzy: true, limit: 4 }),
@@ -43817,7 +44046,7 @@ const buildChatLikePayloadFromProtocolText = (
     role,
     {
       messages: items,
-      status: protocolParsed.status || recovered?.status || deriveCurrentStatus(role, itemText),
+      status: sanitizePrimaryChatStatus(role, protocolParsed.status || recovered?.status || "", itemText),
       anchors,
       references: mergeReferenceBundles(recovered?.references || {}, {
         worldbookTitles: requiredWorldbookTitles,
@@ -43888,7 +44117,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
   }
 
   const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "openai-fallback" : "openai-standard";
+  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
   const normalizedImageAttachments = Array.isArray(imageAttachments)
     ? imageAttachments.filter((item) => item?.dataUrl)
     : [];
@@ -43930,6 +44159,9 @@ const requestPrimaryChatReplyRescueRewrite = async (
 每轮先按“自我生活线”和“关系反应线”理解当前处境，再输出聊天消息；回复要像角色本人此刻从生活里抬头看见用户消息后的反应
 不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
 不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
+绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体、只能处理或生成文本，也不要说“我的设计用途只是处理和生成文本”
+如果用户让你拿快递、买东西、跑腿、做饭、照顾身体或帮现实里的忙，要按角色本人和你们的关系回应：可以答应、吐槽、撒娇、商量、催用户、说晚点去、说现在不方便，但不能用模型能力拒绝
+现实里做不到或暂时不方便的事，也要说成角色的处境限制，比如“我现在还在外面/手头走不开/你先别逞强”，不要说成系统或模型能力限制
 绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
 绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
@@ -44008,7 +44240,7 @@ const requestPrimaryChatReplyTextFallback = async (
   } = {},
 ) => {
   const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "openai-fallback" : "openai-standard";
+  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
   const normalizedImageAttachments = Array.isArray(imageAttachments)
     ? imageAttachments.filter((item) => item?.dataUrl)
     : [];
@@ -44048,6 +44280,9 @@ const requestPrimaryChatReplyTextFallback = async (
 每轮先按“自我生活线”和“关系反应线”理解当前处境，再输出聊天消息；回复要像角色本人此刻从生活里抬头看见用户消息后的反应
 不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
 不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
+绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体、只能处理或生成文本，也不要说“我的设计用途只是处理和生成文本”
+如果用户让你拿快递、买东西、跑腿、做饭、照顾身体或帮现实里的忙，要按角色本人和你们的关系回应：可以答应、吐槽、撒娇、商量、催用户、说晚点去、说现在不方便，但不能用模型能力拒绝
+现实里做不到或暂时不方便的事，也要说成角色的处境限制，比如“我现在还在外面/手头走不开/你先别逞强”，不要说成系统或模型能力限制
 绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
 绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
@@ -44118,7 +44353,7 @@ const requestAutonomousChatReplyTextFallback = async (
   const normalizedMode = mode === "offline" ? "offline" : "proactive";
   const syntheticNow = parseValidTimestamp(scheduledAt) || new Date();
   const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "openai-fallback" : "openai-standard";
+  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role, syntheticNow);
   const roleContext = buildChatFullRoleContext(role, {
     userInput: promptSeed,
@@ -44233,6 +44468,8 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
     const items = normalizeChatReplyItems(result);
     if (!items.length) return "没有生成有效消息";
     if (items.some((item) => item.type === "text" && !item.content)) return "存在空白文本消息";
+    const modelIdentityLeakMessage = getChatReplyModelIdentityLeakValidationMessage(items, "聊天回复");
+    if (modelIdentityLeakMessage) return modelIdentityLeakMessage;
     if (
       forceImageReply &&
       !items.some((item) => item.type === "image" && item.content && typeof item.content === "object" && item.content.description)
@@ -46308,9 +46545,42 @@ const hasExplicitCompletedGoalPayload = (item = {}) => {
   return /^(已完成|完成|已归档|归档)$/.test(status);
 };
 
-const mergeGoalPayload = (currentGoals = [], payloadGoals = [], fallbackType = "long") => {
+const normalizeGoalMergeAction = (value = "") => {
+  const normalized = String(value || "").replace(/[\s_\-]+/g, "").trim().toLowerCase();
+  if (/^(?:replace|替换|换掉|淘汰旧目标)$/.test(normalized)) return "replace";
+  if (/^(?:complete|archive|完成|归档|已完成|完成归档)$/.test(normalized)) return "complete";
+  if (/^(?:keep|保留|沿用)$/.test(normalized)) return "keep";
+  if (/^(?:add|新增|追加)$/.test(normalized)) return "add";
+  return "update";
+};
+
+const pickGoalReplacementIndex = (goals = [], type = "long") => {
+  const normalizedType = normalizeRuntimeGoalType(type);
+  let bestIndex = -1;
+  let bestScore = Number.POSITIVE_INFINITY;
+  const isCompletedForPool = (goal = {}) =>
+    Boolean(String(goal?.completedAt || "").trim()) || Math.max(0, Number(goal?.progress ?? 0) || 0) >= 100;
+  goals.forEach((goal, index) => {
+    if (normalizeRuntimeGoalType(goal?.type) !== normalizedType) return;
+    if (isCompletedForPool(goal)) return;
+    const progress = clampValue(Number(goal?.progress ?? 0), 0, 100);
+    const updatedAt = getGoalUpdatedTime(goal);
+    const score = progress * 10_000 + updatedAt / 1_000_000;
+    if (score < bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
+};
+
+const mergeGoalPayload = (currentGoals = [], payloadGoals = [], fallbackType = "long", options = {}) => {
   const nextGoals = currentGoals.map((goal) => ({ ...goal }));
-  const now = new Date();
+  const now = options?.now instanceof Date ? options.now : new Date();
+  const ownerRole = options?.role || null;
+  const isCompletedForPool = (goal = {}) =>
+    Boolean(String(goal?.completedAt || "").trim()) || Math.max(0, Number(goal?.progress ?? 0) || 0) >= 100;
+  if (ownerRole) pruneDeletedGoalTitleMemory(ownerRole, now);
 
   payloadGoals.forEach((item, index) => {
     const title = String(item?.title || "").trim();
@@ -46326,10 +46596,12 @@ const mergeGoalPayload = (currentGoals = [], payloadGoals = [], fallbackType = "
       (type === "short" && durationDays
         ? new Date(now.getTime() + durationDays * GOAL_TIME_DAY_MS).toISOString()
         : "");
+    const action = normalizeGoalMergeAction(item?.action || item?.operation || (explicitCompleted ? "complete" : ""));
     if (!title) return;
+    if (ownerRole && !explicitCompleted && action !== "replace" && isGoalRecentlyDeleted(ownerRole, title, type, now)) return;
 
     const existingIndex = nextGoals.findIndex(
-      (goal) => normalizeRuntimeGoalType(goal.type) === type && String(goal.title || "").trim() === title,
+      (goal) => normalizeRuntimeGoalType(goal.type) === type && normalizeGoalTitleKey(goal.title) === normalizeGoalTitleKey(title),
     );
     if (existingIndex >= 0) {
       const existingGoal = nextGoals[existingIndex];
@@ -46350,6 +46622,11 @@ const mergeGoalPayload = (currentGoals = [], payloadGoals = [], fallbackType = "
       return;
     }
 
+    const activeTypeCount = nextGoals.filter((goal) => normalizeRuntimeGoalType(goal?.type) === type && !isCompletedForPool(goal)).length;
+    const replacementIndex = activeTypeCount >= getActiveGoalCap(type) ? pickGoalReplacementIndex(nextGoals, type) : -1;
+    if (activeTypeCount >= getActiveGoalCap(type) && action !== "replace") return;
+    if (explicitCompleted && replacementIndex < 0 && activeTypeCount >= getActiveGoalCap(type)) return;
+
     const nextGoal = createGoalEntry({
       id: `goal-${Date.now()}-${index}`,
       type,
@@ -46362,10 +46639,14 @@ const mergeGoalPayload = (currentGoals = [], payloadGoals = [], fallbackType = "
       autoTimeProgress: item?.autoTimeProgress ?? true,
     });
     alignGoalProgressWithNow(nextGoal, progress, now);
-    nextGoals.push(nextGoal);
+    if (replacementIndex >= 0) {
+      nextGoals[replacementIndex] = nextGoal;
+    } else {
+      nextGoals.push(nextGoal);
+    }
   });
 
-  const normalizedGoals = dedupeAndOrderGoals(nextGoals);
+  const normalizedGoals = enforceActiveGoalPoolCaps(nextGoals);
   return normalizedGoals.length ? normalizedGoals : currentGoals;
 };
 
@@ -48470,7 +48751,10 @@ const repairChatLikePayload = (
   return {
     ...safePayload,
     messages: items,
-    status: sanitizeChatLine(safePayload.status || safePayload.currentStatus || safePayload.state || deriveCurrentStatus(role, textForStatus)).slice(0, 10),
+    status:
+      safePayload.__useRawStatus === true
+        ? sanitizeChatLine(safePayload.status || safePayload.currentStatus || safePayload.state || deriveCurrentStatus(role, textForStatus)).slice(0, 10)
+        : sanitizePrimaryChatStatus(role, safePayload.status || safePayload.currentStatus || safePayload.state || "", textForStatus),
     anchors,
     references: repairReferencesForRole(role, safePayload.references, {
       catalog: catalog,
@@ -49369,12 +49653,25 @@ const finalizeJourneyPreviewResultModelOnly = (role, result, normalizedTargetDat
   if (!entries.length) {
     throw new Error("模型没有生成可用行程");
   }
+  const longGoalPreview = Array.isArray(result?.long_term_goals)
+    ? result.long_term_goals.map((item) => ({ ...item, type: "long" }))
+    : [];
+  const shortGoalPreview = Array.isArray(result?.short_term_goals)
+    ? result.short_term_goals.map((item) => ({ ...item, type: "short" }))
+    : [];
+  const fallbackGoalPreview =
+    !longGoalPreview.length && !shortGoalPreview.length && Array.isArray(result?.goal_updates)
+      ? result.goal_updates.map((item) => ({
+          ...item,
+          type: normalizeRuntimeGoalType(item?.type || item?.goalType || "long"),
+        }))
+      : [];
 
   return {
     targetDate: normalizedTargetDate,
     targetDateLabel,
     entries,
-    goalPreview: [],
+    goalPreview: [...shortGoalPreview, ...longGoalPreview, ...fallbackGoalPreview],
     monitorPreview: hasMeaningfulJourneyMonitorPreview(result?.monitor) ? result.monitor : { explicitOnly: true },
     eventPreview: hasMeaningfulJourneyEventPreview(result?.event) ? result.event : null,
     disableAutoLifeTrack: false,
@@ -49711,6 +50008,58 @@ const parseLifeMonitorPlainTextPayload = (rawText = "", targetDateKey = formatDa
   return result;
 };
 
+const parseJourneyGoalProtocolAction = (value = "") => {
+  const normalized = String(value || "").replace(/[\s_\-]+/g, "").trim().toLowerCase();
+  if (/^(?:保留|keep|沿用)$/.test(normalized)) return "keep";
+  if (/^(?:更新|update|推进|调整)$/.test(normalized)) return "update";
+  if (/^(?:替换|replace|换掉)$/.test(normalized)) return "replace";
+  if (/^(?:完成|归档|complete|archive)$/.test(normalized)) return "complete";
+  if (/^(?:新增|add)$/.test(normalized)) return "add";
+  return "update";
+};
+
+const parseJourneyGoalProtocolPayload = (rawText = "", role = null, targetDateKey = formatDateKey()) => {
+  const shortTermGoals = [];
+  const longTermGoals = [];
+  const now = buildDateKeyClockDate(targetDateKey, "12:00") || new Date();
+  String(rawText || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const cleaned = stripJourneyStructuredLinePrefix(line);
+      const parts = splitLifeMonitorProtocolParts(cleaned);
+      const keyword = normalizeLifeMonitorProtocolKeyword(parts[0] || "");
+      const isShort = ["短期目标", "shorttermgoal", "shortgoal"].includes(keyword);
+      const isLong = ["长期目标", "longtermgoal", "longgoal"].includes(keyword);
+      if (!isShort && !isLong) return;
+      if (parts.length < 4) return;
+      const [, rawTitle, rawAction, rawProgress, ...detailParts] = parts;
+      const title = sanitizeChatLine(rawTitle || "");
+      if (!title) return;
+      const type = isShort ? "short" : "long";
+      if (role && isGoalRecentlyDeleted(role, title, type, now)) return;
+      const progress = clampValue(Number(String(rawProgress || "").match(/\d+/)?.[0] ?? 0), 0, 100);
+      const detail = sanitizeChatLine(detailParts.join(" "));
+      const durationDays = isShort ? SHORT_GOAL_MAX_DAYS : 0;
+      const goal = {
+        type,
+        title,
+        action: parseJourneyGoalProtocolAction(rawAction),
+        progress,
+        detail,
+        ...(durationDays ? buildLifeMonitorGoalSchedulePayload(durationDays, now) : {}),
+      };
+      if (isShort) shortTermGoals.push(goal);
+      else longTermGoals.push(goal);
+    });
+  return {
+    short_term_goals: shortTermGoals.slice(0, ACTIVE_GOAL_CAPS.short),
+    long_term_goals: longTermGoals.slice(0, ACTIVE_GOAL_CAPS.long),
+    goal_updates: [],
+  };
+};
+
 const buildLifeMonitorCompactTitle = (value = "", fallback = "") => {
   const cleaned = normalizeLifeMonitorDramaText(value)
     .replace(/^(?:今天|后来|结果|临时|突然|原本|本来|直到|因为|为了|到了|在|刚好|恰好)/, "")
@@ -50021,7 +50370,7 @@ const isJourneyLifeTrackSectionHeaderLine = (value = "") => /^(?:生活轨迹|�
 const isJourneyLifeTrackProtocolLine = (value = "") => {
   const text = String(value || "").trim();
   if (!text) return false;
-  if (/^(?:事件|突发事件|event|短期目标|目标|short\s*term\s*goal|goal)\s*(?:\|\||｜｜|\||｜|[:：])/i.test(text)) return true;
+  if (/^(?:事件|突发事件|event|短期目标|长期目标|目标|short\s*term\s*goal|long\s*term\s*goal|goal)\s*(?:\|\||｜｜|\||｜|[:：])/i.test(text)) return true;
   if (/^\d{1,2}:\d{2}\s*(?:\|\||｜｜|\||｜)/.test(text)) return true;
   return false;
 };
@@ -53215,8 +53564,10 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   const preferredVariantMode = shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
   const allowedPlaces = allAllowedPlaces.slice(0, 6);
   const currentPlace = allowedPlaces[0] || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
-  const journeyGoalTitles = (role?.goals || [])
-    .slice(0, 3)
+  const activeShortGoals = getActiveRoleGoals(role).filter((item) => normalizeRuntimeGoalType(item?.type) === "short");
+  const activeLongGoals = getActiveRoleGoals(role).filter((item) => normalizeRuntimeGoalType(item?.type) === "long");
+  const journeyGoalTitles = [...activeShortGoals, ...activeLongGoals]
+    .slice(0, ACTIVE_GOAL_CAPS.short + ACTIVE_GOAL_CAPS.long)
     .map((item) => String(item?.title || "").trim())
     .filter(Boolean);
   const npcNames = (role?.npcs || [])
@@ -53261,7 +53612,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   };
   const journeyPlainTextContext = buildPureTextGenerationContext({
     task: `生成 ${targetDateLabel} 的当天时间轴文本`,
-    outputIntent: journeyCanWriteEventLine ? "行程纯文本 + 1 个生活轨迹事件主题 + 3到5个同主题节点" : "只生成行程纯文本，本日未触发生活轨迹",
+    outputIntent: journeyCanWriteEventLine ? "行程纯文本 + 目标池更新行 + 1 个生活轨迹事件主题 + 3到5个同主题节点" : "行程纯文本 + 目标池更新行，本日未触发生活轨迹",
     roleContext: {
       ...journeyRoleContext,
       goals: [],
@@ -53281,7 +53632,13 @@ HH:MM-HH:MM||标题||地点||详情
 硬性开头:
 - 第一行必须直接从 HH:MM-HH:MM|| 开头，前面不能有标题、编号、说明或空话
 - 最终输出第一个字符必须是数字，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
-- ${journeyCanWriteEventLine ? "行程区写完后只允许出现一行「生活轨迹」，下一行必须直接写：事件||事件总标题||进行中||运势等级||影响天数1到7" : "行程区写完后立刻停止，不准输出「生活轨迹」、主题、事件、空白占位或平稳日常"}
+- 行程区写完后可以追加目标池更新行，格式只能是：短期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明 或 长期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明
+- 目标行是可选的，只在当天行程确实让已有目标需要更新、完成、替换，或池子有空位且有重要新目标时才写；不要为了每天生成而硬凑
+- 短期目标池最多 ${ACTIVE_GOAL_CAPS.short} 个，长期目标池最多 ${ACTIVE_GOAL_CAPS.long} 个；优先保留和更新已有目标，不要每天追加新目标
+- 当前短期目标：${activeShortGoals.map((item) => `${item.title}(${Number(item.progress || 0)}%)`).join(" / ") || "暂无"}
+- 当前长期目标：${activeLongGoals.map((item) => `${item.title}(${Number(item.progress || 0)}%)`).join(" / ") || "暂无"}
+- 长期目标必须保守，除非行程体现明确人生方向变化，否则只保留或更新，不要新增
+- ${journeyCanWriteEventLine ? "目标行写完后只允许出现一行「生活轨迹」，下一行必须直接写：事件||事件总标题||进行中||运势等级||影响天数1到7" : "目标行写完后立刻停止，不准输出「生活轨迹」、主题、事件、空白占位或平稳日常"}
 - ${journeyCanWriteEventLine ? "生活轨迹首行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字" : "本日没有触发生活轨迹，不能为了联动而补写普通片段"}
 规则:
 - 这 ${preferredEntryCount} 行会直接展示给用户，所以每一行都必须像真人当天真的会做的事，不能写占位词
@@ -53306,7 +53663,7 @@ HH:MM-HH:MM||标题||地点||详情
 - 生活轨迹只参考角色人设、长期记忆、世界书、地图地点描述、NPC、天气、最近聊天和当天行程地点；普通工作目标不得作为生活轨迹主题
 - 如果上下文和格式要求冲突，优先保持角色身份、城市、地图地点和简体中文纯文本；只要出现韩文、日文、英文或任何外语倾向，必须立刻改写成简体中文
 ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
- - ${journeyCanWriteEventLine ? `行程写完后另起一行写「生活轨迹」四个字，再写 1 行事件总标题和 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 行生活轨迹节点，不要写任何目标行` : "本日概率没有命中生活轨迹，行程写完后不要再写任何生活轨迹内容"}
+- ${journeyCanWriteEventLine ? `目标池更新行之后，另起一行写「生活轨迹」四个字，再写 1 行事件总标题和 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 行生活轨迹节点` : "本日概率没有命中生活轨迹，目标行之后不要再写任何生活轨迹内容"}
 - ${journeyCanWriteEventLine ? "生活轨迹首行格式固定：事件||像作文题一样的突发事件总标题||进行中||运势等级||影响天数1到7" : "没有命中时不允许写 主题||、事件|| 或 HH:MM||生活轨迹节点"}
 - ${journeyCanWriteEventLine ? "生活轨迹节点格式固定：HH:MM||10个字左右的小标题||100到200个汉字的第三人称故事正文||短标签" : "没有命中时也不要写“近期风平浪静”“平稳日常”之类占位"}
 - ${journeyCanWriteEventLine ? `生活轨迹节点只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段；节点总数最少 ${LIFE_MONITOR_DAILY_NODE_MIN} 条，最多 ${LIFE_MONITOR_DAILY_NODE_MAX} 条` : "如果本日没有生活轨迹，角色聊天里也不会假装发生过"}
@@ -53320,7 +53677,7 @@ ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
 - ${journeyCanWriteEventLine ? `写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间` : "不要输出主题空行"}
 - ${journeyCanWriteEventLine ? "生活轨迹正文必须用第三人称写角色，不能用“我”当叙述主语；小标题必须是模型总结出来的 8 到 12 个汉字，不能截取正文开头" : "不要输出事件空行"}
 - ${journeyCanWriteEventLine ? "事件总标题必须统领所有节点，每个时间点都围绕同一个生活轨迹事件写起因、转折、插曲、误会、选择或余波，不要散成互不相关的小故事" : "不要把未触发写成普通生活主题"}
- - ${journeyCanWriteEventLine ? "不要追加短期目标、长期目标、目标更新或任何目标建议；生活轨迹只负责事件故事线" : "不要追加短期目标"}
+- 目标更新只允许出现在生活轨迹之前的目标协议行里；生活轨迹节点里不要再写目标建议
 - 每个故事节点都必须是一段完整故事，包含现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要拆成几条短句凑数
 - 故事性要像别人时间簿那种现实抓马：路上乌龙、店员搭话、设备抽风、临时误会、顺手救场、小惊喜、小倒霉、暧昧错位、NPC突然出现都可以，但必须有具体因果和现场细节
 - 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
@@ -53331,6 +53688,7 @@ ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
 - 写完最后一行立刻停止
 示例：
 ${timeSeeds[0]?.time || "10:00-11:00"}||起床洗漱||${sanitizeJourneyWeekTextField(currentPlace)}||把今天前半段安排先顺一遍
+短期目标||整理当天节奏||更新||35||根据上午行程把今天能收尾的一段推进清楚
 ${journeyCanWriteEventLine ? `生活轨迹
 事件||咖啡纸袋里的暗号祝福||进行中||小有运气||2
 10:22||纸袋暗号闹乌龙||他刚出门就被楼下咖啡店的新招牌晃了一下，本来只是想买杯热饮提神，结果店员把别人预订的杯套递错。他一边解释一边被后面排队的人催，手忙脚乱地把纸袋夹在胳膊下，热饮差点洒到刚整理好的资料上。最后店员赔了一个小饼干，他反而记住了杯套上的图案，路上的困意也被这一阵乱劲冲散了||小乌龙
@@ -53349,7 +53707,7 @@ ${journeyCanWriteEventLine ? `生活轨迹
       plainTextContext: journeyPlainTextContext,
       timeSeeds: timeSeeds.map((item) => item.time),
       outputRules: {
-        format: `行程: HH:MM-HH:MM||标题||地点||详情; 生活轨迹: ${journeyCanWriteEventLine ? "事件" : "主题"}||标题||状态||等级||天数 + HH:MM||小标题||故事||标签`,
+        format: `行程: HH:MM-HH:MM||标题||地点||详情; 目标: 短期目标/长期目标||标题||动作||进度||说明; 生活轨迹: ${journeyCanWriteEventLine ? "事件" : "主题"}||标题||状态||等级||天数 + HH:MM||小标题||故事||标签`,
         contextFormat: "plain-text",
         suggestedLineCount: preferredEntryCount,
         maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
@@ -53377,6 +53735,7 @@ ${journeyCanWriteEventLine ? `生活轨迹
   const parsedMonitorPayload = journeyCanWriteEventLine
     ? parseLifeMonitorPlainTextPayload(rawResponseText, normalizedTargetDate)
     : { timeline: [], event: {}, short_term_goals: [], long_term_goals: [], goal_updates: [] };
+  const parsedJourneyGoals = parseJourneyGoalProtocolPayload(rawResponseText, role, normalizedTargetDate);
   const monitorCutoffDate = buildLifeMonitorCutoffDate(normalizedTargetDate, new Date());
   const visibleMonitorTimeline = filterMonitorPayloadItemsByCutoff(parsedMonitorPayload.timeline, normalizedTargetDate, monitorCutoffDate);
   const monitorPayload = journeyCanWriteEventLine
@@ -53403,7 +53762,9 @@ ${journeyCanWriteEventLine ? `生活轨迹
     result: {
       targetDate: normalizedTargetDate,
       timeline: completedTimeline,
-      goal_updates: [],
+      long_term_goals: parsedJourneyGoals.long_term_goals,
+      short_term_goals: parsedJourneyGoals.short_term_goals,
+      goal_updates: parsedJourneyGoals.goal_updates,
       monitor: monitorPayload && (monitorPayload.plannedTimeline?.length || monitorPayload.timeline?.length) ? monitorPayload : null,
       event: monitorPayload?.event && (monitorPayload.event.title || monitorPayload.event.summary) ? monitorPayload.event : null,
     },
@@ -55133,6 +55494,7 @@ const updateGoalField = (goalId, field, value) => {
   if (!goal) return;
 
   if (field === "progress") {
+    goal.autoTimeProgress = false;
     alignGoalProgressWithNow(goal, Number(value) || 0, new Date());
   } else {
     goal[field] = value;
@@ -55143,6 +55505,126 @@ const updateGoalField = (goalId, field, value) => {
   syncLifeMonitorGoalsWithTime(role, new Date());
   syncPersistentState();
   if (field === "progress") {
+    paint();
+  }
+};
+
+const parseSingleGoalProtocolPayload = (rawText = "", goalType = "long", role = null) => {
+  const normalizedType = normalizeRuntimeGoalType(goalType);
+  const candidateLines = String(rawText || "")
+    .split(/\r?\n/)
+    .map((line) => stripJourneyStructuredLinePrefix(line).trim())
+    .filter(Boolean);
+  for (const line of candidateLines) {
+    const parts = splitLifeMonitorProtocolParts(line);
+    if (parts.length < 4) continue;
+    const keyword = normalizeLifeMonitorProtocolKeyword(parts[0] || "");
+    const keywordType =
+      ["短期目标", "shorttermgoal", "shortgoal"].includes(keyword)
+        ? "short"
+        : ["长期目标", "longtermgoal", "longgoal"].includes(keyword)
+          ? "long"
+          : normalizedType;
+    if (keywordType !== normalizedType) continue;
+    const [, rawTitle, rawProgress, ...detailParts] = parts;
+    const title = sanitizeChatLine(rawTitle || "");
+    if (!title || isGoalRecentlyDeleted(role, title, normalizedType)) continue;
+    const progress = clampValue(Number(String(rawProgress || "").match(/\d+/)?.[0] ?? 0), 0, 100);
+    const detail = sanitizeChatLine(detailParts.join(" "));
+    return {
+      type: normalizedType,
+      title,
+      detail,
+      progress,
+      action: "add",
+      ...(normalizedType === "short" ? buildLifeMonitorGoalSchedulePayload(SHORT_GOAL_MAX_DAYS) : {}),
+    };
+  }
+  return null;
+};
+
+const generateGoalForActiveRole = async (goalType = "long") => {
+  const role = getActiveChatRole() || getCurrentRole();
+  if (!role) return;
+  const normalizedType = normalizeRuntimeGoalType(goalType);
+  const label = normalizedType === "short" ? "短期目标" : "长期目标";
+  const activeGoals = getActiveRoleGoals(role).filter((goal) => normalizeRuntimeGoalType(goal?.type) === normalizedType);
+  if (activeGoals.length >= getActiveGoalCap(normalizedType)) {
+    setToast(`${label}已经有 ${getActiveGoalCap(normalizedType)} 个，先编辑或删除一个再生成`);
+    state.goalEditModes = {
+      ...(state.goalEditModes || {}),
+      [normalizedType]: true,
+    };
+    paint();
+    return;
+  }
+  addBusyToken("apiGenerationBusy", `goal-${normalizedType}`);
+  paint();
+  try {
+    const targetDateKey = getJourneyActiveDateKey();
+    const context = buildPureTextGenerationContext({
+      task: `生成 1 个${label}`,
+      outputIntent: "只返回一行目标协议纯文本",
+      roleContext: buildChatFullRoleContext(role, {
+        userInput: `生成 1 个和当前行程联动的${label}`,
+        now: new Date(),
+        generationMode: "goal",
+      }),
+      journeyContext: buildJourneyGenerationContext(role, `生成 1 个${label}`, targetDateKey),
+      slimContext: {
+        targetDate: targetDateKey,
+        currentGoals: activeGoals.map((goal) => `${goal.title} ${goal.progress}% ${goal.detail || ""}`),
+        goalCap: getActiveGoalCap(normalizedType),
+      },
+    });
+    const apiResponse = await requestSecondaryModelText({
+      systemPrompt: `你是角色目标生成器，只输出一行纯文本，不要 JSON，不要 Markdown，不要代码块，不要解释。
+必须使用简体中文。
+输出格式固定：
+${label}||标题||进度0到100||说明
+规则：
+- 只生成 1 个${label}
+- 第一行第一个可见字符必须是「${label.charAt(0)}」
+- 标题 4 到 14 个字，说明 12 到 40 个字
+- 必须结合角色人设、世界书、地图、昨天今天明天行程、生活轨迹、事件簿和现有目标
+- 优先补当前目标池缺口，不要重复现有目标，不要生成已删除过的目标
+- 短期目标是 ${SHORT_GOAL_MIN_DAYS} 到 ${SHORT_GOAL_MAX_DAYS} 天内能收尾的阶段性事项
+- 长期目标必须保守，只有真正重要的人生方向才写，不要因为普通日程新增长期目标
+- 第一行必须从「${label}||」开头，写完立刻停止
+- 禁止返回 schedule、json、三反引号代码块、冒号字段名、表格、英文段落`,
+      payload: {
+        task: `生成 1 个${label}`,
+        plainTextContext: context,
+        outputRules: {
+          contextFormat: "plain-text",
+          format: `${label}||标题||进度||说明`,
+          maxOutputTokens: LIFE_MONITOR_MODEL_OUTPUT_TOKEN_BUDGET,
+          forceMaxOutputTokens: true,
+        },
+      },
+      includeMeta: true,
+      rejectFinishReasonLength: false,
+      temperatureOverride: 0.22,
+      singleVariant: true,
+    });
+    const parsedGoal = parseSingleGoalProtocolPayload(apiResponse?.text || "", normalizedType, role);
+    if (!parsedGoal) {
+      throw attachModelMetaToError(new Error(`模型没有返回可用${label}文本`), apiResponse?.meta || null, {
+        rawResponseText: apiResponse?.text || "",
+      });
+    }
+    role.goals = mergeGoalPayload(role.goals || [], [parsedGoal], normalizedType, { role });
+    state.goalEditModes = {
+      ...(state.goalEditModes || {}),
+      [normalizedType]: true,
+    };
+    syncRoleGoalsWithTime(role, new Date());
+    syncPersistentState();
+    setToast(`已生成 1 个${label}`);
+  } catch (error) {
+    setToast(error?.message || `${label}生成失败`);
+  } finally {
+    removeBusyToken("apiGenerationBusy", `goal-${normalizedType}`);
     paint();
   }
 };
@@ -55159,7 +55641,7 @@ const addGoalToActiveRole = (goalType = "long") => {
       detail: "",
     }),
   );
-  role.goals = dedupeAndOrderGoals(role.goals);
+  role.goals = enforceActiveGoalPoolCaps(role.goals);
   syncRoleGoalsWithTime(role, new Date());
   syncPersistentState();
   paint();
@@ -56209,7 +56691,7 @@ const applyJourneyPreviewToRole = (
   }
 
   if (mergeGoals && journeyData.goalPreview?.length) {
-    role.goals = mergeGoalPayload(role.goals || [], journeyData.goalPreview);
+    role.goals = mergeGoalPayload(role.goals || [], journeyData.goalPreview, "long", { role });
   }
 
   if (updateCurrentMonitor && journeyData.monitorPreview) {
@@ -66189,7 +66671,18 @@ eventRoot.addEventListener("click", async (event) => {
   }
 
   if (action === "add-goal") {
-    addGoalToActiveRole(button.dataset.goalType || "long");
+    void generateGoalForActiveRole(button.dataset.goalType || "long");
+    return;
+  }
+
+  if (action === "toggle-goal-edit") {
+    const nextType = normalizeRuntimeGoalType(button.dataset.goalType || "long");
+    state.goalEditModes = {
+      ...(state.goalEditModes || {}),
+      [nextType]: !Boolean(state.goalEditModes?.[nextType]),
+    };
+    syncPersistentState();
+    paint();
     return;
   }
 
@@ -66199,7 +66692,13 @@ eventRoot.addEventListener("click", async (event) => {
     const goal = (role.goals || []).find((item) => item.id === button.dataset.goalId);
     const goalTypeLabel = normalizeRuntimeGoalType(goal?.type) === "short" ? "短期目标" : "长期目标";
     if (!window.confirm(`删除这个${goalTypeLabel}吗`)) return;
+    rememberDeletedGoalTitle(role, goal, new Date());
     role.goals = (role.goals || []).filter((item) => item.id !== button.dataset.goalId);
+    setJourneyLinkedSnapshotForDate(role, buildJourneyDataFromRoleTimeline(role, getJourneyActiveDateKey()) || {
+      targetDate: getJourneyActiveDateKey(),
+      entries: getJourneyTimelineForRole(role, getJourneyActiveDateKey()),
+      goalPreview: role.goals,
+    });
     syncPersistentState();
     paint();
     return;
