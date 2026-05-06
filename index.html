@@ -23948,7 +23948,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-a3-life-track-text-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-role-goals-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27810,12 +27810,6 @@ const getOrderedDisplayGoals = (goals = []) => {
 const filterGoalsByType = (goals = [], goalType = "long") =>
   getOrderedDisplayGoals(goals).filter((goal) => normalizeUiGoalType(goal?.type) === normalizeUiGoalType(goalType));
 
-const getLifeMonitorDisplayGoals = (role) =>
-  getOrderedDisplayGoals([
-    ...(Array.isArray(role?.monitor?.shortGoals) ? role.monitor.shortGoals.map((goal) => ({ ...goal, source: "life-monitor" })) : []),
-    ...(Array.isArray(role?.goals) ? role.goals.map((goal) => ({ ...goal, source: "role-goal" })) : []),
-  ]);
-
 const formatGoalScheduleText = (goal) => {
   const target = parseLooseTimelineDate(goal?.targetAt || "");
   if (!target) return "现实时间联动中";
@@ -27866,40 +27860,34 @@ const renderGoalEditorList = (role, goalType = "long") => {
   `;
 };
 
-const renderLifeMonitorGoalList = (role) => {
-  const goals = getLifeMonitorDisplayGoals(role);
+const renderRoleGoalDisplayList = (role, goalType = "short") => {
+  const goals = filterGoalsByType(role?.goals || [], goalType);
+  const label = goalType === "short" ? "短期目标" : "长期目标";
   if (!goals.length) {
-    return `<div class="goal-empty">暂无目标，触发生活轨迹或添加角色目标后会出现</div>`;
+    return `<div class="goal-empty">暂无${label}</div>`;
   }
 
   return `
     <div class="goal-editor-list">
       ${goals
-        .map((goal) => {
-          const source = String(goal?.source || "").trim();
-          const typeLabel =
-            source === "life-monitor"
-              ? "生活轨迹"
-              : normalizeUiGoalType(goal?.type) === "short"
-                ? "短期目标"
-                : "长期目标";
-          return `
+        .map(
+          (goal) => `
             <article class="goal-item goal-editor-card">
               <div class="goal-editor-top">
                 <div class="goal-editor-title-stack">
-                  <strong>${escapeHtml(goal.title || "生活目标")}</strong>
-                  <span class="goal-type-pill">${escapeHtml(typeLabel)}</span>
+                  <strong>${escapeHtml(goal.title || label)}</strong>
+                  <span class="goal-type-pill">${label}</span>
                 </div>
               </div>
-              <p>${escapeHtml(goal.detail || (source === "life-monitor" ? "由生活轨迹事件自动生成的后续目标" : "角色原本目标"))}</p>
+              <p>${escapeHtml(goal.detail || "角色原本目标")}</p>
               <div class="goal-time-note">${escapeHtml(formatGoalScheduleText(goal))}</div>
               <div class="goal-editor-progress">
                 <div class="goal-bar"><span style="width:${Math.max(0, Math.min(100, Number(goal.progress || 0)))}%"></span></div>
                 <strong>${Number(goal.progress || 0)}%</strong>
               </div>
             </article>
-          `;
-        })
+          `,
+        )
         .join("")}
     </div>
   `;
@@ -28117,11 +28105,19 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
           <section class="panel-card">
             <div class="map-section-head">
               <div>
-                <div class="list-title">生活轨迹目标 <span>只显示突发生活事件的后续</span></div>
-                <p class="sheet-note">这里不再读取普通短期目标，避免生活轨迹被工作任务带跑。</p>
+                <div class="list-title">短期目标</div>
               </div>
             </div>
-            ${renderLifeMonitorGoalList(role)}
+            ${renderRoleGoalDisplayList(role, "short")}
+          </section>
+
+          <section class="panel-card">
+            <div class="map-section-head">
+              <div>
+                <div class="list-title">长期目标</div>
+              </div>
+            </div>
+            ${renderRoleGoalDisplayList(role, "long")}
           </section>
 
           <button class="gold-outline life-stream-archive-btn" type="button" data-action="open-panel" data-panel="life-events">查看往期事件簿 (${Math.max(0, (role.events || []).length)})</button>
@@ -38134,17 +38130,6 @@ const buildRoleGenerationContext = (
     timelineLimit: isVideoMode ? 2 : shouldPreserveLifeStoryContext ? 5 : 3,
     timelineTextLimit: isVideoMode ? 56 : shouldPreserveLifeStoryContext ? 340 : structuredTask ? 220 : 260,
   });
-  const compactLifeMonitorGoals = getLifeMonitorGoals(role)
-    .slice(0, shouldPreserveLifeStoryContext ? 5 : 3)
-    .map((item) => ({
-      type: "short",
-      source: "life-monitor",
-      title: truncateContextText(item?.title || "", 44),
-      progress: clampValue(Number(item?.progress ?? 0), 0, 100),
-      detail: truncateContextText(item?.detail || "", shouldPreserveLifeStoryContext ? 120 : 64),
-      targetAt: String(item?.targetAt || "").trim(),
-    }))
-    .filter((item) => item.title);
   const dailyLifeMemory = shouldPreserveLifeStoryContext
     ? buildRoleDailyLifeMemoryContext(role, now, {
         timelineLimit: isVideoMode ? 2 : 8,
@@ -38194,10 +38179,7 @@ const buildRoleGenerationContext = (
         }
       : userProfileContext,
     status: compactStatus,
-    monitor: {
-      ...compactMonitor,
-      lifeGoals: compactLifeMonitorGoals,
-    },
+    monitor: compactMonitor,
     dailyLifeMemory,
     goals: compactGoals,
     events: compactEvents,
@@ -38580,16 +38562,6 @@ const buildJourneyGenerationContext = (role, userInput = "", targetDateKey = for
         timelineLimit: 2,
         timelineTextLimit: 44,
       }),
-      lifeGoals: getLifeMonitorGoals(role)
-        .slice(0, 2)
-        .map((item) => ({
-          type: "short",
-          source: "life-monitor",
-          title: truncateContextText(item?.title || "", 36),
-          progress: clampValue(Number(item?.progress ?? 0), 0, 100),
-          detail: truncateContextText(item?.detail || "", 44),
-        }))
-        .filter((item) => item.title),
     },
     goals: getActiveRoleGoals(role).slice(0, 3).map((item) => ({
       type: normalizeRuntimeGoalType(item?.type || "long"),
@@ -39002,85 +38974,9 @@ const syncRoleGoalsWithTime = (role, now = new Date()) => {
 
 const syncLifeMonitorGoalsWithTime = (role, now = new Date()) => {
   if (!role) return false;
-  const monitorGoals = getLifeMonitorGoals(role);
-  if (!monitorGoals.length) {
-    if (Array.isArray(role?.monitor?.shortGoals) && role.monitor.shortGoals.length) {
-      setLifeMonitorGoals(role, []);
-      return true;
-    }
-    return false;
-  }
-
-  role.events = Array.isArray(role.events) ? role.events : [];
-  let changed = false;
-  const remainingGoals = [];
-
-  monitorGoals.forEach((goal) => {
-    if (!goal) return;
-    if (syncGoalProgressWithTime(goal, now)) changed = true;
-
-    const normalizedDetail = sanitizeGoalDetailText(goal?.detail || "", { completed: isGoalMarkedCompleted(goal) });
-    if (normalizedDetail !== String(goal?.detail || "").trim()) {
-      goal.detail = normalizedDetail;
-      goal.updatedAt = now.toISOString();
-      changed = true;
-    }
-
-    if (isGoalMarkedCompleted(goal)) {
-      const completedAt = goal.completedAt || now.toISOString();
-      const completedTitle = `《${String(goal.title || "生活目标").trim() || "生活目标"}》`;
-      const alreadyArchived = role.events.some(
-        (item) =>
-          String(item?.title || "").trim() === completedTitle &&
-          String(item?.source || "").trim() === "life-monitor-goal-complete",
-      );
-      if (!alreadyArchived) {
-        role.events = [
-          createEvent({
-            title: completedTitle,
-            status: "已完成",
-            summary: goal.detail ? `生活轨迹目标完成：${goal.detail}` : "生活轨迹目标完成，并归档进往期事件簿",
-            createdAt: completedAt,
-            source: "life-monitor-goal-complete",
-            level: "life-monitor-goal",
-            tags: ["生活轨迹", "目标归档"],
-            beats: [
-              {
-                id: `life-goal-complete-${String(goal?.id || goal.title || Date.now()).trim()}`,
-                time: new Intl.DateTimeFormat("zh-CN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }).format(new Date(completedAt)),
-                text: goal.detail || `生活轨迹目标《${String(goal.title || "生活目标").trim() || "生活目标"}》已经收尾`,
-                tag: "归档",
-                createdAt: completedAt,
-              },
-            ],
-          }),
-          ...role.events,
-        ].slice(0, 24);
-        changed = true;
-      }
-      return;
-    }
-
-    remainingGoals.push(goal);
-  });
-
-  const normalizedRemainingGoals = normalizeLifeMonitorGoals(remainingGoals);
-  if (
-    normalizedRemainingGoals.length !== monitorGoals.length ||
-    normalizedRemainingGoals.some((goal, index) => goal !== monitorGoals[index])
-  ) {
-    setLifeMonitorGoals(role, normalizedRemainingGoals);
-    changed = true;
-  } else if ((role.monitor?.shortGoals || []) !== monitorGoals) {
-    setLifeMonitorGoals(role, monitorGoals);
-    changed = true;
-  }
-
-  return changed;
+  if (!Array.isArray(role?.monitor?.shortGoals) || !role.monitor.shortGoals.length) return false;
+  setLifeMonitorGoals(role, []);
+  return true;
 };
 
 const getPrimaryApiConfig = () => ({
@@ -52686,10 +52582,6 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     .slice(0, 3)
     .map((item) => String(item?.title || "").trim())
     .filter(Boolean);
-  const lifeGoalTitles = getLifeMonitorGoals(role)
-    .slice(0, 2)
-    .map((item) => String(item?.title || "").trim())
-    .filter(Boolean);
   const npcNames = (role?.npcs || [])
     .slice(0, 4)
     .map((item) => String(item?.name || "").trim())
@@ -52719,7 +52611,6 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     weather: String(role?.profile?.weather || "").trim(),
     continuity: buildJourneyContinuityContext(role, normalizedTargetDate),
     goalTitles: journeyGoalTitles,
-    lifeGoalTitles,
     placeOptions: allowedPlaces,
     npcNames,
     wakeTime: role?.settings?.sleepEnd || "10:00",
@@ -52778,7 +52669,7 @@ HH:MM-HH:MM||标题||地点||详情
 - 生活轨迹只参考角色人设、长期记忆、世界书、地图地点描述、NPC、天气、最近聊天和当天行程地点；普通工作目标不得作为生活轨迹主题
 - 如果上下文和格式要求冲突，优先保持角色身份、城市、地图地点和简体中文纯文本；只要出现韩文、日文、英文或任何外语倾向，必须立刻改写成简体中文
 ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
-- ${journeyCanWriteEventLine ? `行程写完后另起一行写「生活轨迹」四个字，再写 1 行事件总标题和 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 行生活轨迹节点，可选 1 行短期目标` : "本日概率没有命中生活轨迹，行程写完后不要再写任何生活轨迹内容"}
+ - ${journeyCanWriteEventLine ? `行程写完后另起一行写「生活轨迹」四个字，再写 1 行事件总标题和 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 行生活轨迹节点，不要写任何目标行` : "本日概率没有命中生活轨迹，行程写完后不要再写任何生活轨迹内容"}
 - ${journeyCanWriteEventLine ? "生活轨迹首行格式固定：事件||像作文题一样的突发事件总标题||进行中||运势等级||影响天数1到7" : "没有命中时不允许写 主题||、事件|| 或 HH:MM||生活轨迹节点"}
 - ${journeyCanWriteEventLine ? "生活轨迹节点格式固定：HH:MM||10个字左右的小标题||100到200个汉字的第三人称故事正文||短标签" : "没有命中时也不要写“近期风平浪静”“平稳日常”之类占位"}
 - ${journeyCanWriteEventLine ? `生活轨迹节点只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段；节点总数最少 ${LIFE_MONITOR_DAILY_NODE_MIN} 条，最多 ${LIFE_MONITOR_DAILY_NODE_MAX} 条` : "如果本日没有生活轨迹，角色聊天里也不会假装发生过"}
@@ -52788,11 +52679,11 @@ ${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
 - 双竖线 || 只是字段分隔符，不是表格；禁止写表头、字段名、分隔线，不准输出 时间||动作||地点||描述||心情 这类旧格式
 - ${journeyCanWriteEventLine ? `每个节点第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文` : "不生成生活轨迹时不需要解释概率"}
 - ${journeyCanWriteEventLine ? "生活轨迹必须借用当天行程地点、NPC、天气、物件、临时互动或生活目标作锚点；不能借普通工作目标当主线，不能照搬行程标题和详情，不能写成“完成/收尾/归档/放松”这种状态词" : "行程仍必须贴合角色，不要把生活轨迹未触发写进详情"}
-- ${journeyCanWriteEventLine ? `每条生活轨迹目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字；短标签不计入字数` : "不要输出生活轨迹空标题"}
+ - ${journeyCanWriteEventLine ? `每条生活轨迹正文目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字；短标签不计入字数` : "不要输出生活轨迹空标题"}
 - ${journeyCanWriteEventLine ? `写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间` : "不要输出主题空行"}
 - ${journeyCanWriteEventLine ? "生活轨迹正文必须用第三人称写角色，不能用“我”当叙述主语；小标题必须是模型总结出来的 8 到 12 个汉字，不能截取正文开头" : "不要输出事件空行"}
 - ${journeyCanWriteEventLine ? "事件总标题必须统领所有节点，每个时间点都围绕同一个生活轨迹事件写起因、转折、插曲、误会、选择或余波，不要散成互不相关的小故事" : "不要把未触发写成普通生活主题"}
-- ${journeyCanWriteEventLine ? "事件影响可以推进或新增短期目标，若确实产生目标，追加一行：短期目标||目标标题||下一步||进度数字0到100||持续天数1到7" : "不要追加短期目标"}
+ - ${journeyCanWriteEventLine ? "不要追加短期目标、长期目标、目标更新或任何目标建议；生活轨迹只负责事件故事线" : "不要追加短期目标"}
 - 每个故事节点都必须是一段完整故事，包含现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要拆成几条短句凑数
 - 故事性要像别人时间簿那种现实抓马：路上乌龙、店员搭话、设备抽风、临时误会、顺手救场、小惊喜、小倒霉、暧昧错位、NPC突然出现都可以，但必须有具体因果和现场细节
 - 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
@@ -57425,10 +57316,6 @@ const requestLifeMonitorPlainTextData = async ({
   const roleName = liveRole?.profile?.note || liveRole?.profile?.name || "角色";
   const currentPlace = getRoleCurrentPlace(liveRole, cutoffDate) || liveRole?.profile?.location || "当前地点";
   const referenceCity = liveRole?.profile?.realCityReference || liveRole?.profile?.location || "";
-  const lifeGoalTitles = getLifeMonitorGoals(liveRole)
-    .slice(0, 3)
-    .map((item) => String(item?.title || "").trim())
-    .filter(Boolean);
   const npcNames = (liveRole?.npcs || []).slice(0, 4).map((item) => String(item?.name || "").trim()).filter(Boolean);
   const rawExistingEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
   const existingEvent = forceRegenerate || isLifeMonitorEventWorkDominant(rawExistingEvent) ? null : rawExistingEvent;
@@ -57451,7 +57338,7 @@ const requestLifeMonitorPlainTextData = async ({
     existingEvent,
     journeyAnchorText,
     sameDayMonitorTimeline,
-    goalTitles: lifeGoalTitles,
+    goalTitles: [],
     forceFreshEveryday: forceRegenerate,
   });
   const lifeMonitorUserInput = forceRegenerate
@@ -57488,7 +57375,7 @@ const requestLifeMonitorPlainTextData = async ({
         now: cutoffDate,
         generationMode: "monitor",
       })),
-    goals: lifeGoalTitles,
+    goals: [],
   };
   const journeyContext = {
     ...(forceRegenerate
@@ -57504,7 +57391,7 @@ const requestLifeMonitorPlainTextData = async ({
     roleName,
     currentPlace,
     referenceCity,
-    goals: lifeGoalTitles,
+    goals: [],
     npcNames,
     journeyAnchors: journeyAnchorText,
     dailyNodeCount,
@@ -57541,7 +57428,7 @@ const requestLifeMonitorPlainTextData = async ({
     normalizedTargetDate,
     cutoffClock,
     journeyAnchorText,
-    goalTitles: lifeGoalTitles,
+    goalTitles: [],
     npcNames,
     sameDayMonitorTimeline,
     existingEvent,
@@ -57570,17 +57457,16 @@ const requestLifeMonitorPlainTextData = async ({
 - 如果想写无聊状态词，比如生活推进、状态稳定、工作推进、归档、放松，必须改成具体发生的小事
 直接输出纯文本。`
       : `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. The first visible line must start exactly with 事件||, not 事||. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
-你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹事件节点。
-必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
-输出格式：
-事件||像作文题一样的生活轨迹总标题||进行中或收尾||运势等级||影响天数1到7
-HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事正文||短标签
-短期目标||目标标题||因为本节点产生或推进的下一步||进度数字0到100||持续天数1到7
-规则:
+ 你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹事件节点。
+ 必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
+ 输出格式：
+ 事件||像作文题一样的生活轨迹总标题||进行中或收尾||运势等级||影响天数1到7
+ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事正文||短标签
+ 规则:
 - 如果已有同一事件，本次只生成 1 个新节点，时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM，只写到 ${cutoffLabel}，不得预测后面
 - 如果这是今天第一次命中生活轨迹，本次生成同一事件主题下 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${Math.min(LIFE_MONITOR_DAILY_NODE_MAX, Math.max(LIFE_MONITOR_DAILY_NODE_MIN, remainingNodeCount || LIFE_MONITOR_DAILY_NODE_MAX))} 个节点，节点时间按当天行程灵活安排；第一条尽量接近 ${cutoffClock}，后续可以是稍后的计划节点，前端会到点再显示
 - 今天已经有 ${dailyNodeCount} 个生活轨迹节点，本次生成后一天最多只能到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个；不要为了补时段而多写
-- 第一行必须是 事件||，节点行必须匹配 HH:MM||小标题||故事||短标签，短期目标可选；影响天数、进度、持续天数都必须填具体数字
+ - 第一行必须是 事件||，节点行必须匹配 HH:MM||小标题||故事||短标签；影响天数必须填具体数字
 - 第一行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字
 - 第二行只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段
 - 最终输出第一行必须严格以“事件||”开头，禁止写成“事||”，也不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
@@ -57604,13 +57490,11 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
 - 突发事件必须结合概率设置：${String(fortuneRoll?.tierLabel || "平稳")} / 触发=${requiresArchiveEvent ? "是" : "否"} / 概率=${Number(lifeFateSettings?.eventTriggerChance || 0)}% / 有效概率=${Number(fortuneRoll?.effectiveTriggerChance || 0)}%
 - 好运写顺手被生活推一把，低运写被现实绊一下；都要现实可信
 - 影响天数按事件大小决定 1 到 7 天；小乌龙 1 天，中等误会/创作线索 2-4 天，重要关系/目标变化 5-7 天
-- 生活轨迹事件可以推进或新增生活轨迹专属短期目标，短期目标必须是 1 到 7 天能收尾的现实生活余波；不得生成工作、方案、视觉、设计、手册、采样、Demo、宣发类目标
-- ${forceRegenerate ? "手动重生成时，如果想写短期目标，只能写找回物品、解释误会、补买小物、约人还东西、处理门禁/充电/外卖/天气/社交余波这类生活目标" : "短期目标必须承接本次生活轨迹的现实余波"}
+ - 不要生成任何短期目标、长期目标、目标更新、目标建议；只推进生活轨迹事件本身
 - ${existingEvent ? `若已有同一事件，第一行总标题必须严格沿用这个标题，不要换新标题：${String(existingEvent.title || "").trim()}` : "若没有已有事件，第一行要新建一个有标题的生活轨迹事件线"}
 - ${existingEvent ? "若已有事件已经持续，新的节点必须写成续写转折或余波，不要重新开一个完全无关的小故事" : "新事件必须从现实日常打破平衡开始，后续节点围绕同一个主题展开"}
 - 当前角色固定「${roleName}」，当前位置「${currentPlace}」，参考城市「${referenceCity}」
-- 生活轨迹专属短期目标：${lifeGoalTitles.join(" / ") || "暂无"}
-- 可用人物：${npcNames.join(" / ") || "暂无"}
+ - 可用人物：${npcNames.join(" / ") || "暂无"}
 - 今日行程锚点：${journeyAnchorText}
 - 运势线索：${(fortuneRoll?.storyHooks || []).slice(0, 4).join(" / ") || fortuneRoll?.tierBlurb || "平稳日常"}
 - 你会收到下方纯文本参考上下文。写之前先锁定：角色姓名、人设、说话风格、长期记忆、总结记忆、世界书、NPC关系、地图地点、当天行程和最近聊天都以参考上下文为准
@@ -57949,28 +57833,6 @@ const generateLifeMonitorFromApi = async ({
         ),
       };
 
-      const rawGoalPayload = [
-        ...(Array.isArray(result?.short_term_goals)
-          ? result.short_term_goals.map((item) => ({ ...item, type: "short", source: "life-monitor" }))
-          : []),
-        ...(Array.isArray(result?.long_term_goals)
-          ? result.long_term_goals.map((item) => ({ ...item, type: "short", source: "life-monitor" }))
-          : []),
-      ];
-      const rawFallbackGoalPayload =
-        !rawGoalPayload.length && Array.isArray(result?.goal_updates)
-          ? result.goal_updates.map((item) => ({
-              ...item,
-              type: "short",
-              source: "life-monitor",
-            }))
-          : [];
-      const goalPayload = filterLifeMonitorNonWorkGoalPayload(rawGoalPayload);
-      const fallbackGoalPayload = filterLifeMonitorNonWorkGoalPayload(rawFallbackGoalPayload);
-
-      if (goalPayload.length || fallbackGoalPayload.length) {
-        mergeLifeMonitorGoalPayload(nextRole, goalPayload.length ? goalPayload : fallbackGoalPayload);
-      }
       syncRoleGoalsWithTime(nextRole, syntheticNow);
       syncLifeMonitorGoalsWithTime(nextRole, syntheticNow);
 
