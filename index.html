@@ -24155,7 +24155,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-goal-busy-dedupe-14";
+const APP_BUILD_VERSION_LABEL = "v2026.05.07-chat-today-detail-16";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -37773,10 +37773,26 @@ const getActiveWorldbookSummary = (role) =>
       importance: normalizeWorldbookImportance(entry.importance, 50),
     }));
 
-const getRecentMessagesSummary = (role, limit = 16, { now = new Date() } = {}) =>
-  (role.chats.messages || [])
-    .slice(-limit)
-    .map((message) => {
+const isSameLocalCalendarDay = (left, right = new Date()) => {
+  const leftDate = parseValidTimestamp(left);
+  const rightDate = right instanceof Date ? right : parseValidTimestamp(right);
+  if (!leftDate || !rightDate) return false;
+  return (
+    leftDate.getFullYear() === rightDate.getFullYear() &&
+    leftDate.getMonth() === rightDate.getMonth() &&
+    leftDate.getDate() === rightDate.getDate()
+  );
+};
+
+const getRecentMessagesSummary = (role, limit = 16, { now = new Date(), compactOlder = false, detailedRecentCount = 16 } = {}) => {
+  const messages = (role.chats.messages || []).slice(-limit);
+  const detailStartIndex = compactOlder
+    ? Math.max(0, messages.length - Math.max(0, Number(detailedRecentCount) || 0))
+    : 0;
+  return messages
+    .map((message, index) => {
+      const isTodayMessage = isSameLocalCalendarDay(message?.timestamp || "", now);
+      const isDetailed = isTodayMessage || index >= detailStartIndex;
       const sender = message.role === "user" ? "用户" : "角色";
       const typeLabel =
         message.type === "sticker"
@@ -37801,14 +37817,18 @@ const getRecentMessagesSummary = (role, limit = 16, { now = new Date() } = {}) =
               ? message.content
               : JSON.stringify(message.content || "");
       const quoted = getQuotedMessageForMessage(role, message);
-      const quotePrefix = quoted ? `[引用] ${summarizeMessageForArchive(quoted)} ` : "";
-      const content = truncateContextText(sanitizeAiContextMessageContent(message, `${quotePrefix}${rawContent}`.trim()), 96);
+      const quotePrefix = quoted && isDetailed ? `[引用] ${summarizeMessageForArchive(quoted)} ` : "";
+      const content = truncateContextText(
+        sanitizeAiContextMessageContent(message, `${quotePrefix}${rawContent}`.trim()),
+        isDetailed ? 96 : 42,
+      );
       if (!content) return null;
       const timestamp = String(message.timestamp || "").trim();
-      const timeTag = buildRecentMessageTimeTag(timestamp, now);
+      const timeTag = isDetailed ? buildRecentMessageTimeTag(timestamp, now) : buildCompactRecentMessageTimeTag(timestamp, now);
       return [sender, timeTag, typeLabel, content].filter(Boolean).join("|");
     })
     .filter(Boolean);
+};
 
 const getRecentVideoCallSummaryContext = (role, limit = 3, itemLimit = 180) =>
   (role?.chats?.messages || [])
@@ -37872,6 +37892,42 @@ const formatChatContextTimestamp = (timestamp, now = new Date()) => {
 
 const buildRecentMessageTimeTag = (timestamp, now = new Date()) => {
   const normalized = formatChatContextTimestamp(timestamp, now);
+  return normalized ? `[时间 ${normalized}]` : "";
+};
+
+const formatCompactChatContextTimestamp = (timestamp, now = new Date()) => {
+  const parsed = parseValidTimestamp(timestamp);
+  if (!parsed) return "";
+  const nowDate = now instanceof Date ? now : new Date(now || Date.now());
+  const dayDelta = Math.floor(
+    (new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate()).getTime() -
+      new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime()) /
+      (24 * 60 * 60 * 1000),
+  );
+  const dayLabel =
+    dayDelta === 0
+      ? "今天"
+      : dayDelta === 1
+        ? "昨天"
+        : dayDelta === 2
+          ? "前天"
+          : dayDelta > 2
+            ? `${dayDelta}天前`
+            : dayDelta === -1
+              ? "明天"
+              : dayDelta < -1
+                ? `${Math.abs(dayDelta)}天后`
+                : "";
+  const clockText = new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(parsed);
+  return [dayLabel, clockText].filter(Boolean).join(" ");
+};
+
+const buildCompactRecentMessageTimeTag = (timestamp, now = new Date()) => {
+  const normalized = formatCompactChatContextTimestamp(timestamp, now);
   return normalized ? `[时间 ${normalized}]` : "";
 };
 
@@ -38243,7 +38299,7 @@ const buildUserProfileContext = (profile = state.userProfile || {}, { structured
 });
 
 const GENERATION_CONTEXT_MESSAGE_LIMITS = Object.freeze({
-  chat: null,
+  chat: 150,
   video: 10,
   autonomous: 72,
   map: 56,
@@ -38481,7 +38537,11 @@ const buildRoleGenerationContext = (
       structuredTask,
       generationMode: normalizedMode,
     }),
-    recentMessages: getRecentMessagesSummary(role, contextLimit, { now }),
+    recentMessages: getRecentMessagesSummary(role, contextLimit, {
+      now,
+      compactOlder: normalizedMode === "chat",
+      detailedRecentCount: normalizedMode === "chat" ? 18 : 16,
+    }),
     videoCallSummaries: getRecentVideoCallSummaryContext(role, isVideoMode ? 1 : 3, isVideoMode ? 110 : 180),
     summaryArchive: summaryBlocks,
     memory: buildRoleMemoryContextItems(role, {
@@ -39971,9 +40031,9 @@ const buildChatPlainTextContext = ({
       ? `视频总结：${compactChatContextValue(roleContext.videoCallSummaries, { textLimit: 220, itemLimit: 6 })}`
       : "",
     Array.isArray(roleContext?.recentMessages) && roleContext.recentMessages.length
-      ? `最近聊天：\n${roleContext.recentMessages.join("\n")}`
+      ? `最近聊天轨迹：\n${roleContext.recentMessages.join("\n")}`
       : "",
-    "时间判定规则：最近聊天每条前面的 [时间 ...] 是真实发生时间；必须用它和当前真实时间比较，昨天、数小时前或更早的用户消息不能说成“刚刚”“刚买”“现在才要去买”，只能当作旧话题或后续追问来接",
+    "时间判定：最近聊天前面的 [时间 ...] 是这条消息真实发生时间；旧消息只能当作旧话题或后续追问来接，不能说成刚刚发生",
     userInput ? `本轮用户输入：${String(userInput || "").trim()}` : "",
   ];
 
@@ -44217,15 +44277,15 @@ const requestPrimaryChatReplyRescueRewrite = async (
 绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体、只能处理或生成文本，也不要说“我的设计用途只是处理和生成文本”
 如果用户让你拿快递、买东西、跑腿、做饭、照顾身体或帮现实里的忙，要按角色本人和你们的关系回应：可以答应、吐槽、撒娇、商量、催用户、说晚点去、说现在不方便，但不能用模型能力拒绝
 现实里做不到或暂时不方便的事，也要说成角色的处境限制，比如“我现在还在外面/手头走不开/你先别逞强”，不要说成系统或模型能力限制
-绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
+绝对不要把结果包进 JSON、数组、对象或任何字段结构里
 绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
-你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
-必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把地点、天气、行程、生活轨迹、事件、目标和最近聊天消化成角色此刻的自我生活线与关系反应线，再写成自然聊天；不要把上下文清单念给用户
+必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、昨天/今天/明天行程窗口、时间、生活轨迹、突发事件、地图、NPC 和目标；用户问到相关内容时按真实上下文回答
+优先消化“最高优先级：角色主观意识”里的自我生活线与关系反应线，再写自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
-${hasImageAttachments ? "如果 payload.imageAttachments 里带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再重写回复 看不清的部分不要硬编" : ""}
+${hasImageAttachments ? "如果这轮带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再重写回复 看不清的部分不要硬编" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
 ${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行消息里必须至少有 1 行使用 [图片] 标签，图片卡本身算一条消息，优先放在第 2 到第 4 行，格式写成 [图片] 上帝视角照片描述｜地点；必须由你根据当前角色和现场上下文新写具体照片描述，不能只写泛泛模板，也不能省略图片卡；把它当成文字版图片卡片，不需要真实图片文件" : ""}
-${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从 payload.stickerCatalog 里挑一个最近没发过的现有描述" : ""}
+${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从表情目录里挑一个最近没发过的现有描述" : ""}
 ${forceVoiceReply ? "这轮用户明确要求语音回复 所以后面的消息里必须至少有 1 行使用 [语音] 标签 并且内容适合直接念出来" : ""}
 ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你返回的消息里必须有一行严格等于这句原话：${JSON.stringify(explicitVoiceTargetText)}` : ""}
 ${quoteInstruction}
@@ -44338,15 +44398,15 @@ const requestPrimaryChatReplyTextFallback = async (
 绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体、只能处理或生成文本，也不要说“我的设计用途只是处理和生成文本”
 如果用户让你拿快递、买东西、跑腿、做饭、照顾身体或帮现实里的忙，要按角色本人和你们的关系回应：可以答应、吐槽、撒娇、商量、催用户、说晚点去、说现在不方便，但不能用模型能力拒绝
 现实里做不到或暂时不方便的事，也要说成角色的处境限制，比如“我现在还在外面/手头走不开/你先别逞强”，不要说成系统或模型能力限制
-绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
+绝对不要把结果包进 JSON、数组、对象或任何字段结构里
 绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
-你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
-必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把地点、天气、行程、生活轨迹、事件、目标和最近聊天消化成角色此刻的自我生活线与关系反应线，再写成自然聊天；不要把上下文清单念给用户
+必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、昨天/今天/明天行程窗口、时间、生活轨迹、突发事件、地图、NPC 和目标；用户问到相关内容时按真实上下文回答
+优先消化“最高优先级：角色主观意识”里的自我生活线与关系反应线，再写自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
-${hasImageAttachments ? "如果 payload.imageAttachments 里带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再回复 看不清的部分不要硬编 更不能把没看到的食物 商品 地点或品牌说成看到了" : ""}
+${hasImageAttachments ? "如果这轮带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再回复 看不清的部分不要硬编 更不能把没看到的食物 商品 地点或品牌说成看到了" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
 ${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行消息里必须至少有 1 行使用 [图片] 标签，图片卡本身算一条消息，优先放在第 2 到第 4 行，格式写成 [图片] 上帝视角照片描述｜地点；必须由你根据当前角色和现场上下文新写具体照片描述，不能只写泛泛模板，也不能省略图片卡；把它当成文字版图片卡片，不需要真实图片文件" : ""}
-${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从 payload.stickerCatalog 里挑一个最近没发过的现有描述" : ""}
+${explicitStickerRequested ? "这轮用户明确要发表情包 所以后面的消息里必须至少有 1 行使用 [表情包] 标签，并且表情包描述优先从表情目录里挑一个最近没发过的现有描述" : ""}
 ${forceVoiceReply ? "这轮用户明确要求语音回复 所以后面的消息里必须至少有 1 行使用 [语音] 标签 并且内容适合直接念出来" : ""}
 ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你返回的消息里必须有一行严格等于这句原话：${JSON.stringify(explicitVoiceTargetText)}` : ""}
 ${quoteInstruction}
@@ -44430,10 +44490,10 @@ const requestAutonomousChatReplyTextFallback = async (
 先按角色自己的“自我生活线”和对用户的“关系反应线”理解为什么此刻会发这几条消息
 主动或离线消息不是系统提醒，也不是近况报告；它应该来自角色自己的生活触发点、没散掉的情绪、目标余波、地点天气联想，或关系里对用户的等待感
 不要把原因完整解释出来，只露出一点生活痕迹和一点关系态度
-绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
+绝对不要把结果包进 JSON、数组、对象或任何字段结构里
 绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
-必须读取 payload.roleContext 的完整上下文：用户人设、角色人设、世界书、重要记忆、自动总结、最近聊天、行程只读取 timelineWindow 里的昨天/今天/明天三天（不要引用更早或更晚旧行程）、生活轨迹、突发事件、地图、NPC 和目标。
-必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把上下文消化成角色此刻的自我生活线与关系反应线，再写自然消息
+必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、昨天/今天/明天行程窗口、生活轨迹、突发事件、地图、NPC 和目标。
+优先消化“最高优先级：角色主观意识”里的自我生活线与关系反应线，再写自然消息
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
