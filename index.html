@@ -40436,7 +40436,7 @@ const requestModelTextWithConfig = async ({
             "现在只按【系统规则】输出最终标签文本。",
             "如果系统规则指定第一行固定文本，必须逐字保留；例如要求从 事件|| 开头，就不能把 事件 改成地点、题材或标题。",
             "最终答案必须是纯文本或标签文本，绝对不要输出 JSON、对象、数组、payload、plainTextContext、messages、items。",
-            "绝对不要用 ``` 或 ```json 代码块包裹；第一个字符必须直接属于最终文本格式。",
+            "绝对不要用三反引号或 json 代码块包裹；第一个字符必须直接属于最终文本格式。",
             "禁止额外开场白、解释、表格、代码块和自我介绍。",
           ]
         : [
@@ -43931,7 +43931,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
 不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
 不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
 绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
-绝对不要输出 ```、```json、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
+绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
 必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把地点、天气、行程、生活轨迹、事件、目标和最近聊天消化成角色此刻的自我生活线与关系反应线，再写成自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
@@ -44049,7 +44049,7 @@ const requestPrimaryChatReplyTextFallback = async (
 不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
 不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
 绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
-绝对不要输出 ```、```json、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
+绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 你必须读取 payload.roleContext 的完整上下文：用户人设 userProfile、角色人设 profile、启用世界书 worldbook、重要记忆 memory、自动总结 summaryArchive、最近聊天 recentMessages、行程只读取 timelineWindow 里的昨天/今天/明天三天（timeline 只代表今天，禁止引用更早或更晚旧行程）、timeContext、生活轨迹 monitor、突发事件 events、地图 mapPlaces、NPC、目标 goals；用户问到相关内容时必须按这些真实上下文回答
 必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把地点、天气、行程、生活轨迹、事件、目标和最近聊天消化成角色此刻的自我生活线与关系反应线，再写成自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
@@ -44141,7 +44141,7 @@ const requestAutonomousChatReplyTextFallback = async (
 主动或离线消息不是系统提醒，也不是近况报告；它应该来自角色自己的生活触发点、没散掉的情绪、目标余波、地点天气联想，或关系里对用户的等待感
 不要把原因完整解释出来，只露出一点生活痕迹和一点关系态度
 绝对不要把结果包进 JSON、数组、对象、payload、plainTextContext、messages、items 这些字段里
-绝对不要输出 ```、```json、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
+绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 必须读取 payload.roleContext 的完整上下文：用户人设、角色人设、世界书、重要记忆、自动总结、最近聊天、行程只读取 timelineWindow 里的昨天/今天/明天三天（不要引用更早或更晚旧行程）、生活轨迹、突发事件、地图、NPC 和目标。
 必须优先读取 payload.plainTextContext 最上面的“最高优先级：角色主观意识”，先把上下文消化成角色此刻的自我生活线与关系反应线，再写自然消息
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
