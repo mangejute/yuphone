@@ -23948,7 +23948,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.04-life-track-ios-nonwork-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-a3-life-track-text-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -23961,6 +23961,8 @@ const normalizeTokenConsoleErrorMessage = (value = "") =>
   String(value || "")
     .replace(/AI 精简第\s*\d+\s*段超时/g, "AI 精简超时")
     .replace(/AI精简第\s*\d+\s*段超时/g, "AI 精简超时")
+    .replace(/\s*\|\s*原始片段:\s*[\s\S]*$/g, " | 已保留原始响应诊断")
+    .replace(/^模型没有返回可用文本\s*\|\s*已保留原始响应诊断$/g, "模型这次返回了响应外壳，但正文是空的 | 已保留原始响应诊断")
     .trim();
 
 const nlToBr = (value = "") => escapeHtml(value).replaceAll("\n", "<br />");
@@ -37297,6 +37299,16 @@ const shouldOmitMaxTokensForConfig = (config = {}) => {
   const normalizedModel = normalizeApiConfigModel(config?.model);
   return normalizedUrl === PANDA_API_URL && PANDA_GEMINI3_MODELS.has(normalizedModel);
 };
+const getOpenAiCompatibleExtraRequestOptions = (config = {}) => {
+  if (shouldOmitMaxTokensForConfig(config)) {
+    return {
+      google: {
+        thinking_budget: 0,
+      },
+    };
+  }
+  return {};
+};
 const shouldDisableJsonResponseFormat = (config = {}) => /dzzi\.ai/i.test(String(config?.url || "").trim());
 
 const parseJsonLikeResponse = async (response) => {
@@ -39931,15 +39943,16 @@ const requestModelJsonWithConfig = async ({
             Authorization: `Bearer ${config.key}`,
           },
           signal,
-          body: JSON.stringify({
-            model: config.model,
-            temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
-            ...(omitMaxTokens ? {} : { max_tokens: maxOutputTokens || undefined }),
-            ...(geminiMode && !omitMaxTokens ? { max_completion_tokens: maxOutputTokens || undefined } : {}),
-            ...(allowStrictJsonResponseFormat ? { response_format: { type: "json_object" } } : {}),
-            messages: variant.messages,
-          }),
-        });
+        body: JSON.stringify({
+          model: config.model,
+          temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
+          ...(omitMaxTokens ? {} : { max_tokens: maxOutputTokens || undefined }),
+          ...(geminiMode && !omitMaxTokens ? { max_completion_tokens: maxOutputTokens || undefined } : {}),
+          ...(allowStrictJsonResponseFormat ? { response_format: { type: "json_object" } } : {}),
+          ...getOpenAiCompatibleExtraRequestOptions(config),
+          messages: variant.messages,
+        }),
+      });
         const { data, rawText } = await parseJsonLikeResponse(response);
         const meta = buildModelResponseMeta({
           data,
@@ -40335,14 +40348,15 @@ const requestModelTextWithConfig = async ({
             Authorization: `Bearer ${config.key}`,
           },
           signal,
-          body: JSON.stringify({
-            model: config.model,
-            temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
-            ...(omitMaxTokens ? {} : { max_tokens: maxOutputTokens || undefined }),
-            ...(geminiMode && !omitMaxTokens ? { max_completion_tokens: maxOutputTokens || undefined } : {}),
-            messages: variant.messages,
-          }),
-        });
+        body: JSON.stringify({
+          model: config.model,
+          temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
+          ...(omitMaxTokens ? {} : { max_tokens: maxOutputTokens || undefined }),
+          ...(geminiMode && !omitMaxTokens ? { max_completion_tokens: maxOutputTokens || undefined } : {}),
+          ...getOpenAiCompatibleExtraRequestOptions(config),
+          messages: variant.messages,
+        }),
+      });
         const { data, rawText } = await parseJsonLikeResponse(response);
         const meta = buildModelResponseMeta({
           data,
@@ -57993,16 +58007,25 @@ const generateLifeMonitorFromApi = async ({
     return true;
   } catch (error) {
     const rawResponseText = String(error?.rawResponseText || error?.modelMeta?.rawResponseText || "").trim();
+    const baseMessage = String(error?.message || "行程 / 生活轨迹 API 调用失败").trim();
+    const normalizedBaseMessage =
+      baseMessage === "模型没有返回可用文本" && rawResponseText
+        ? "模型这次返回了响应外壳，但正文是空的"
+        : baseMessage;
+    const modelName = String(error?.modelMeta?.model || "").trim();
+    const latencyText = Number(error?.modelMeta?.latencyMs || 0) > 0 ? `${Math.round(Number(error.modelMeta.latencyMs || 0))}ms` : "";
+    const reasoningTokens = Math.max(0, Number(error?.modelMeta?.reasoningTokens || 0) || 0);
+    const diagnosticParts = [
+      modelName ? `模型:${modelName}` : "",
+      latencyText ? `耗时:${latencyText}` : "",
+      reasoningTokens ? `思考:${reasoningTokens}` : "",
+      rawResponseText ? "已保留原始响应诊断" : "",
+    ].filter(Boolean);
     persistSecondaryTaskUsageSnapshot(role.id, {
       feature: "monitor",
       status: "error",
       meta: error?.modelMeta || null,
-      errorMessage: [
-        error?.message || "行程 / 生活轨迹 API 调用失败",
-        rawResponseText ? `原始片段:${truncateContextText(rawResponseText, 180)}` : "",
-      ]
-        .filter(Boolean)
-        .join(" | "),
+      errorMessage: [normalizedBaseMessage, diagnosticParts.join(" · ")].filter(Boolean).join(" | "),
     });
     if (!silent) {
       setToast(error.message || "行程 / 生活轨迹 API 调用失败");
