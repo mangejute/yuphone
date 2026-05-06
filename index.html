@@ -7035,6 +7035,22 @@ body {
   -webkit-backdrop-filter: blur(18px);
 }
 
+.life-stream-screen .panel-topbar {
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  column-gap: 8px;
+}
+
+.life-stream-screen .panel-topbar > h2 {
+  grid-column: 2;
+  justify-self: start;
+  text-align: left;
+}
+
+.life-stream-screen .panel-topbar > :last-child {
+  grid-column: 3;
+  justify-self: end;
+}
+
 .life-monitor-header-actions .tiny-header-btn {
   min-height: 30px;
   padding: 0 9px;
@@ -7514,6 +7530,7 @@ body {
 }
 
 .life-stream-screen .monitor-timeline-dot {
+  justify-self: center;
   background: #111111;
   box-shadow: 0 0 0 5px rgba(17, 17, 17, 0.06);
 }
@@ -7524,22 +7541,24 @@ body {
 
 .life-track-day-heading {
   display: grid;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
 .life-track-day-heading span {
-  color: #8a8f98;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  color: #111111;
+  font-size: 22px;
+  line-height: 1.22;
+  font-weight: 850;
+  letter-spacing: -0.04em;
 }
 
 .life-track-day-heading strong {
   color: #111111;
-  font-size: 24px;
-  line-height: 1.28;
-  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.22;
+  font-weight: 850;
+  letter-spacing: -0.04em;
   white-space: normal;
   word-break: break-word;
 }
@@ -7564,6 +7583,10 @@ body {
   }
 
   .life-track-day-heading strong {
+    font-size: 21px;
+  }
+
+  .life-track-day-heading span {
     font-size: 21px;
   }
 }
@@ -23948,7 +23971,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-event-title-07";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-ui-title-08";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27876,8 +27899,10 @@ const renderLinkedLifeTrackCard = (
   } = {},
 ) => {
   const kickerText = String(kicker || "").trim();
+  const titleText = String(title || "").trim();
   const subtitleText = String(subtitle || "").trim();
   const eventTitleText = String(eventTitle || "").trim();
+  const shouldShowCardHead = Boolean(kickerText || titleText || subtitleText);
   const groups = [];
   (Array.isArray(feedItems) ? feedItems : []).forEach((item) => {
     const dateKey = getLifeStatusFeedItemDateKey(item) || "";
@@ -27900,12 +27925,16 @@ const renderLinkedLifeTrackCard = (
 
   return `
     <section class="${escapeHtml(wrapperClass)}">
-      <div class="map-section-head journey-linked-track-head">
-        <div>
-          ${kickerText ? `<div class="sheet-kicker">${escapeHtml(kickerText)}</div>` : ""}
-          <div class="list-title">${escapeHtml(title)}${subtitleText ? ` <span>${escapeHtml(subtitleText)}</span>` : ""}</div>
-        </div>
-      </div>
+      ${
+        shouldShowCardHead
+          ? `<div class="map-section-head journey-linked-track-head">
+              <div>
+                ${kickerText ? `<div class="sheet-kicker">${escapeHtml(kickerText)}</div>` : ""}
+                ${titleText || subtitleText ? `<div class="list-title">${escapeHtml(titleText)}${subtitleText ? ` <span>${escapeHtml(subtitleText)}</span>` : ""}</div>` : ""}
+              </div>
+            </div>`
+          : ""
+      }
       ${
         groups.length
           ? groups
@@ -28046,7 +28075,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
         <div class="panel-scroll life-stream-scroll" data-scroll-key="panel-life-stream">
           ${renderLinkedLifeTrackCard(feedItems, {
             wrapperClass: "panel-card life-stream-track-card",
-            title: "生活轨迹",
+            title: "",
             eventTitle: latestEventTitle,
             emptyText: "这一天还没有新的生活轨迹",
           })}
@@ -41972,6 +42001,17 @@ const mergeMapPlacePreviewCandidates = (modelPlaces = [], fallbackDrafts = [], d
   return merged.slice(0, 8);
 };
 
+const VISIBLE_STICKER_BRACKET_COLON_TAG_PATTERN = /\s*\[(?:表情|表情包|贴图|sticker|emoji)\s*[：:]\s*[^\]\r\n]{0,80}\]\s*/giu;
+const VISIBLE_STICKER_BRACKET_TAG_TRAILING_PATTERN = /\s*\[(?:表情|表情包|贴图|sticker|emoji)\]\s*[^\[\]\r\n]{0,40}\s*$/giu;
+
+const stripVisibleStickerProtocolTags = (value = "") =>
+  sanitizeChatLine(
+    String(value || "")
+      .replace(VISIBLE_STICKER_BRACKET_COLON_TAG_PATTERN, " ")
+      .replace(VISIBLE_STICKER_BRACKET_TAG_TRAILING_PATTERN, " ")
+      .trim(),
+  );
+
 const sanitizeAiReplyTextContent = (value = "", { preserveStandalone = false } = {}) => {
   void preserveStandalone;
   const normalized = stripVisibleProtocolLeakText(String(value || "").trim());
@@ -41991,6 +42031,8 @@ const stripVisibleProtocolLeakText = (value = "") => {
     if (nextText === text) break;
     text = sanitizeChatLine(nextText);
   }
+  text = stripVisibleStickerProtocolTags(text);
+  if (!text) return "";
   if (/^(?:输出协议|输出格式|回复协议|视频回复协议|聊天协议|协议文本|直接输出协议文本|规则)\s*[:：]?$/iu.test(text)) {
     return "";
   }
@@ -42534,6 +42576,12 @@ const normalizeChatReplyItems = (result = {}) => {
         if (leadingBracketColonItems.length) {
           return leadingBracketColonItems;
         }
+        const trailingStickerItems = parseTrailingStickerProtocolItems(trimmed, {
+          allowedTypes: ["text", "voice", "image", "sticker"],
+        });
+        if (trailingStickerItems.length) {
+          return trailingStickerItems;
+        }
         const mediaMatch = trimmed.match(/^\[(图片|语音|表情包)\]\s*(.*)$/);
         if (mediaMatch) {
           const typeMap = { 图片: "image", 语音: "voice", 表情包: "sticker" };
@@ -42575,6 +42623,13 @@ const normalizeChatReplyItems = (result = {}) => {
       }
       const content = sanitizeChatLine(item.content || item.text || item.description || "");
       if (!content && type !== "sticker") return [];
+      if (type === "text" || type === "voice") {
+        const trailingStickerItems = parseTrailingStickerProtocolItems(content, {
+          allowedTypes: ["text", "voice", "image", "sticker"],
+          leadingType: type,
+        });
+        if (trailingStickerItems.length) return trailingStickerItems;
+      }
       if (type === "text") return splitChatLine(content).map((line) => ({ type: "text", content: line }));
       return [{ type, content }];
     })
@@ -42923,6 +42978,12 @@ const CHAT_PROTOCOL_BRACKET_COLON_TAG_PATTERN =
   /^\[(文本|文字|语音|音频|图片|照片|图片描述|图片URL|表情|表情包|贴图|text|voice|audio|image|photo|sticker|emoji)\s*[：:]\s*(.+?)\]$/iu;
 const CHAT_PROTOCOL_LEADING_BRACKET_COLON_TAG_PATTERN =
   /^\[(文本|文字|语音|音频|图片|照片|图片描述|图片URL|表情|表情包|贴图|text|voice|audio|image|photo|sticker|emoji)\s*[：:]\s*(.+?)\]\s*([\s\S]*)$/iu;
+const CHAT_PROTOCOL_TRAILING_STICKER_BRACKET_COLON_TAG_PATTERN =
+  /^([\s\S]*?)\s*\[(表情|表情包|贴图|sticker|emoji)\s*[：:]\s*(.+?)\]\s*$/iu;
+const CHAT_PROTOCOL_STANDALONE_STICKER_BRACKET_TAG_PATTERN =
+  /^\[(表情|表情包|贴图|sticker|emoji)\]\s*(.+)$/iu;
+const CHAT_PROTOCOL_TRAILING_STICKER_BRACKET_TAG_PATTERN =
+  /^([\s\S]*?)\s*\[(表情|表情包|贴图|sticker|emoji)\]\s*(.+)$/iu;
 
 const normalizeChatProtocolTag = (value = "") =>
   CHAT_PROTOCOL_TAG_ALIASES[String(value || "").replace(/[\s_\-]+/g, "").trim().toLowerCase()] || "";
@@ -43035,6 +43096,59 @@ const parseLeadingBracketColonChatProtocolItems = (
   return items;
 };
 
+const extractTrailingStickerProtocolParts = (value = "") => {
+  const normalized = normalizeApiText(value);
+  if (!normalized) return null;
+  const match =
+    normalized.match(CHAT_PROTOCOL_TRAILING_STICKER_BRACKET_COLON_TAG_PATTERN) ||
+    normalized.match(CHAT_PROTOCOL_TRAILING_STICKER_BRACKET_TAG_PATTERN);
+  if (!match) return null;
+  const prefix = sanitizeChatLine(match[1] || "");
+  const rawTag = String(match[2] || "").trim();
+  const stickerDescription = sanitizeChatLine(match[3] || "");
+  if (!prefix || !stickerDescription) return null;
+  if (normalizeChatProtocolTag(rawTag) !== "sticker") return null;
+  return {
+    prefix,
+    stickerDescription,
+  };
+};
+
+const parseTrailingStickerProtocolItems = (
+  value = "",
+  { allowedTypes = ["text", "voice", "image", "sticker"], leadingType = "text" } = {},
+) => {
+  const parts = extractTrailingStickerProtocolParts(value);
+  if (!parts) return [];
+  const normalizedLeadingType = leadingType === "voice" ? "voice" : "text";
+  const prefixItems = splitChatLine(parts.prefix)
+    .map((content) => sanitizeChatLine(content))
+    .filter(Boolean)
+    .map((content) =>
+      coerceChatProtocolItemToAllowedTypes(
+        {
+          type: normalizedLeadingType,
+          content,
+        },
+        allowedTypes,
+      ),
+    )
+    .filter(Boolean);
+  if (!prefixItems.length) return [];
+  const stickerItem = coerceChatProtocolItemToAllowedTypes(
+    {
+      type: "sticker",
+      content: parts.stickerDescription,
+    },
+    allowedTypes,
+  );
+  if (!stickerItem) return prefixItems;
+  return [
+    ...prefixItems,
+    stickerItem,
+  ];
+};
+
 const extractStickerBracketColonDescription = (value = "") => {
   const parsed = parseBracketColonChatProtocolItem(value, {
     allowedTypes: ["sticker"],
@@ -43043,10 +43157,17 @@ const extractStickerBracketColonDescription = (value = "") => {
     return sanitizeChatLine(parsed.content || "");
   }
   const parts = extractLeadingBracketColonChatProtocolParts(value);
-  if (!parts) return "";
-  if (normalizeChatProtocolTag(parts.rawTag) !== "sticker") return "";
-  if (hasMeaningfulChatProtocolTrailer(parts.trailer || "")) return "";
-  return sanitizeChatLine(parts.body || "");
+  if (parts) {
+    if (normalizeChatProtocolTag(parts.rawTag) !== "sticker") return "";
+    if (hasMeaningfulChatProtocolTrailer(parts.trailer || "")) return "";
+    return sanitizeChatLine(parts.body || "");
+  }
+  const normalized = normalizeApiText(value);
+  if (!normalized) return "";
+  const plainMatch = normalized.match(CHAT_PROTOCOL_STANDALONE_STICKER_BRACKET_TAG_PATTERN);
+  if (!plainMatch) return "";
+  if (normalizeChatProtocolTag(plainMatch[1]) !== "sticker") return "";
+  return sanitizeChatLine(plainMatch[2] || "");
 };
 
 const isStickerBracketColonOnlyText = (value = "") => Boolean(extractStickerBracketColonDescription(value));
@@ -43137,6 +43258,14 @@ const parseChatProtocolTextResponse = (
     const leadingBracketColonItems = parseLeadingBracketColonChatProtocolItems(line, { allowedTypes });
     if (leadingBracketColonItems.length) {
       leadingBracketColonItems
+        .slice(0, Math.max(0, maxItems - parsedItems.length))
+        .forEach((item) => pushItem(item));
+      return;
+    }
+
+    const trailingStickerItems = parseTrailingStickerProtocolItems(line, { allowedTypes });
+    if (trailingStickerItems.length) {
+      trailingStickerItems
         .slice(0, Math.max(0, maxItems - parsedItems.length))
         .forEach((item) => pushItem(item));
       return;
@@ -44615,6 +44744,20 @@ const annotateFirstAiMessageByType = (messages, mediaType, { trigger = "chance" 
   });
 };
 
+const stripVisibleStickerProtocolFromAiMessages = (messages = []) =>
+  (Array.isArray(messages) ? messages : [])
+    .map((item) => {
+      if (item?.role !== "ai" || !["text", "voice"].includes(item?.type)) return item;
+      const nextContent = sanitizeAiReplyTextContent(item.content || "", { preserveStandalone: false });
+      if (!nextContent) return null;
+      if (nextContent === item.content) return item;
+      return {
+        ...item,
+        content: nextContent,
+      };
+    })
+    .filter(Boolean);
+
 const applyAiImagePolicyToMessages = (role, messages, { userInput = "", forceImage = false, preserveMinCount = 0 } = {}) => {
   const list = Array.isArray(messages) ? messages.filter(Boolean) : [];
   if (!list.length) {
@@ -44643,7 +44786,7 @@ const applyAiImagePolicyToMessages = (role, messages, { userInput = "", forceIma
 };
 
 const applyAiStickerPolicyToMessages = (role, messages, { seedText = "", forceSticker = false, preserveMinCount = 0 } = {}) => {
-  const list = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  const list = stripVisibleStickerProtocolFromAiMessages(Array.isArray(messages) ? messages.filter(Boolean) : []);
   const stickerMessages = list.filter((item) => item?.role === "ai" && item?.type === "sticker");
   let nextList = list;
 
@@ -58755,15 +58898,72 @@ const repairVisibleStickerProtocolMessages = ({ persist = false } = {}) => {
 
     let roleChanged = false;
     const nextMessages = [];
+    let nextVoiceCache = role?.voiceCache && typeof role.voiceCache === "object" ? role.voiceCache : null;
+    const dropVoiceCacheForMessage = (message) => {
+      if (message?.type !== "voice" || !message?.id || !nextVoiceCache?.[message.id]) return;
+      if (nextVoiceCache === role.voiceCache) {
+        nextVoiceCache = { ...(role.voiceCache || {}) };
+      }
+      delete nextVoiceCache[message.id];
+    };
 
     messages.forEach((message, index) => {
-      if (!(message?.role === "ai" && message?.type === "text")) {
+      if (!(message?.role === "ai" && ["text", "voice"].includes(message?.type))) {
         nextMessages.push(message);
+        return;
+      }
+
+      const trailingStickerParts = extractTrailingStickerProtocolParts(message.content || "");
+      if (trailingStickerParts) {
+        const cleanedContent = sanitizeAiReplyTextContent(trailingStickerParts.prefix || "", { preserveStandalone: false });
+        const nearbySticker = [messages[index - 1], messages[index + 1]].some(
+          (item) => item?.role === "ai" && item?.type === "sticker",
+        );
+        const sticker = nearbySticker ? null : matchSharedSticker(trailingStickerParts.stickerDescription, role);
+        changed = true;
+        roleChanged = true;
+        dropVoiceCacheForMessage(message);
+        if (cleanedContent) {
+          nextMessages.push({
+            ...message,
+            content: cleanedContent,
+          });
+        }
+        if (sticker) {
+          nextMessages.push({
+            ...createMessage({
+              role: "ai",
+              type: "sticker",
+              timestamp: message.timestamp || "",
+              content: {
+                stickerId: sticker.id,
+                url: sticker.url,
+                description: sticker.description,
+              },
+            }),
+            mediaDebug: message.mediaDebug || {
+              mediaType: "sticker",
+              trigger: "chance",
+              label: getMediaDebugLabel("sticker", "chance"),
+            },
+          });
+        }
         return;
       }
 
       const stickerDescription = extractStickerBracketColonDescription(message.content || "");
       if (!stickerDescription) {
+        const cleanedContent = sanitizeAiReplyTextContent(message.content || "", { preserveStandalone: false });
+        if (cleanedContent && cleanedContent !== message.content) {
+          changed = true;
+          roleChanged = true;
+          dropVoiceCacheForMessage(message);
+          nextMessages.push({
+            ...message,
+            content: cleanedContent,
+          });
+          return;
+        }
         nextMessages.push(message);
         return;
       }
@@ -58774,6 +58974,7 @@ const repairVisibleStickerProtocolMessages = ({ persist = false } = {}) => {
       if (nearbySticker) {
         changed = true;
         roleChanged = true;
+        dropVoiceCacheForMessage(message);
         return;
       }
 
@@ -58785,6 +58986,7 @@ const repairVisibleStickerProtocolMessages = ({ persist = false } = {}) => {
 
       changed = true;
       roleChanged = true;
+      dropVoiceCacheForMessage(message);
       nextMessages.push({
         ...message,
         type: "sticker",
@@ -58799,6 +59001,7 @@ const repairVisibleStickerProtocolMessages = ({ persist = false } = {}) => {
     if (!roleChanged) return role;
     return {
       ...role,
+      ...(nextVoiceCache && nextVoiceCache !== role.voiceCache ? { voiceCache: nextVoiceCache } : {}),
       chats: {
         ...(role.chats || {}),
         messages: nextMessages,
