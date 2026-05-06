@@ -7518,6 +7518,32 @@ body {
   box-shadow: 0 0 0 5px rgba(17, 17, 17, 0.06);
 }
 
+.life-track-day-group + .life-track-day-group {
+  margin-top: 22px;
+}
+
+.life-track-day-heading {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.life-track-day-heading span {
+  color: #8a8f98;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.life-track-day-heading strong {
+  color: #111111;
+  font-size: 24px;
+  line-height: 1.28;
+  font-weight: 800;
+  white-space: normal;
+  word-break: break-word;
+}
+
 @media (max-width: 520px) {
   .life-stream-overview-metric {
     flex-basis: 100%;
@@ -7535,6 +7561,10 @@ body {
   .life-stream-city-grid,
   .life-stream-helper-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .life-track-day-heading strong {
+    font-size: 21px;
   }
 }
 
@@ -27867,30 +27897,58 @@ const renderLinkedLifeTrackCard = (
   feedItems = [],
   {
     wrapperClass = "panel-card",
-    kicker = "人生事件流",
+    kicker = "",
     title = "生活轨迹",
-    subtitle = "跟着当天行程往下推进",
+    subtitle = "",
     eventTitle = "",
     emptyText = "这一天还没有新的生活轨迹",
   } = {},
 ) => {
   const kickerText = String(kicker || "").trim();
+  const subtitleText = String(subtitle || "").trim();
   const eventTitleText = String(eventTitle || "").trim();
+  const groups = [];
+  (Array.isArray(feedItems) ? feedItems : []).forEach((item) => {
+    const dateKey = getLifeStatusFeedItemDateKey(item) || "";
+    const groupKey = dateKey || "unknown";
+    let group = groups.find((entry) => entry.key === groupKey);
+    if (!group) {
+      group = {
+        key: groupKey,
+        dateLabel: dateKey ? formatJourneyDateLabel(dateKey) : "未标日期",
+        eventTitle: "",
+        items: [],
+      };
+      groups.push(group);
+    }
+    if (!group.eventTitle && String(item?.eventTitle || "").trim()) {
+      group.eventTitle = String(item.eventTitle || "").trim();
+    }
+    group.items.push(item);
+  });
 
   return `
     <section class="${escapeHtml(wrapperClass)}">
       <div class="map-section-head journey-linked-track-head">
         <div>
           ${kickerText ? `<div class="sheet-kicker">${escapeHtml(kickerText)}</div>` : ""}
-          <div class="list-title">${escapeHtml(title)} <span>${escapeHtml(subtitle)}</span></div>
-          ${eventTitleText ? `<p class="sheet-note">突发事件：${escapeHtml(eventTitleText)}</p>` : ""}
+          <div class="list-title">${escapeHtml(title)}${subtitleText ? ` <span>${escapeHtml(subtitleText)}</span>` : ""}</div>
         </div>
       </div>
-      <div class="timeline-list monitor-timeline-list">
-        ${
-          feedItems.length
-            ? feedItems
-                .map((item) => {
+      ${
+        groups.length
+          ? groups
+              .map((group) => {
+                const groupTitle = String(group.eventTitle || eventTitleText || `${group.dateLabel}生活轨迹`).trim();
+                return `
+                  <div class="life-track-day-group">
+                    <div class="life-track-day-heading">
+                      <span>${escapeHtml(group.dateLabel)}</span>
+                      <strong>${escapeHtml(groupTitle)}</strong>
+                    </div>
+                    <div class="timeline-list monitor-timeline-list">
+                      ${group.items
+                        .map((item) => {
                   const displayItem = normalizeLifeTrackDisplayItem(item);
                   const itemTitle = buildLifeTrackItemTitle({
                     ...item,
@@ -27907,11 +27965,15 @@ const renderLinkedLifeTrackCard = (
                       </div>
                     </div>
                   `;
-                })
-                .join("")
-            : `<div class="goal-empty">${escapeHtml(emptyText)}</div>`
-        }
-      </div>
+                        })
+                        .join("")}
+                    </div>
+                  </div>
+                `;
+              })
+              .join("")
+          : `<div class="goal-empty">${escapeHtml(emptyText)}</div>`
+      }
     </section>
   `;
 };
@@ -27993,12 +28055,6 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
   const recentEventText =
     String(latestFeed?.text || "").trim() ||
     (fortune.eventTriggered ? fortune.summary || "今天已经有一条生活轨迹在推进" : "");
-  const overviewStatus = role.status?.liveHeaderText || role.status?.headerText || role.status?.physical || "";
-  const overviewTitle = role.monitor?.headline || recentEventTitle || "生活轨迹";
-  const overviewSummary = role.monitor?.summary || statusNote || recentEventText || "当前日期若未触发生活轨迹，这里会保持空白，不再生成占位故事";
-  const overviewPlace = getRoleCurrentPlace(role) || role.profile.location || "未知地点";
-  const overviewWeather = role.profile.weather || "天气未知";
-  const overviewFortune = fortune.tierLabel || "平平无奇";
   const isLifeMonitorBusy = hasBusyToken(state.apiGenerationBusy, "monitor") || hasBusyToken(state.apiGenerationBusy, `monitor-auto:${role.id}`);
 
   return `
@@ -28017,40 +28073,9 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
           `,
         )}
         <div class="panel-scroll life-stream-scroll" data-scroll-key="panel-life-stream">
-          <section class="panel-card life-stream-overview-card" style="display:block; overflow:visible; background:linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,249,252,0.96) 100%); border:1px solid rgba(219,224,235,0.92); box-shadow:0 16px 36px rgba(86,98,123,0.08), 0 2px 8px rgba(86,98,123,0.04);">
-            <div class="life-stream-overview-top" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px 8px;">
-              <span class="life-stream-overview-eyebrow" style="display:inline-flex; align-items:center; min-height:28px; padding:0 12px; border-radius:999px; background:rgba(244,245,248,0.96); color:#6b7280; font-size:12px; font-weight:800; letter-spacing:0.01em;">实时概览</span>
-              <span class="life-stream-overview-status" style="display:inline-flex; align-items:center; min-height:30px; max-width:100%; padding:4px 12px; border-radius:999px; background:rgba(17,17,17,0.06); color:#111111; font-size:13px; font-weight:700; line-height:1.4; white-space:normal; word-break:break-word;">${escapeHtml(overviewStatus)}</span>
-            </div>
-            <div class="life-stream-overview-title" style="display:block; margin-top:14px; color:#111111; font-size:24px; font-weight:800; line-height:1.24; white-space:normal; word-break:break-word;">${escapeHtml(overviewTitle)}</div>
-            <div class="life-stream-overview-copy" style="display:block; margin-top:8px; color:#4b4d53; font-size:14px; line-height:1.75; white-space:normal; word-break:break-word;">${escapeHtml(overviewSummary)}</div>
-            <p class="sheet-note" style="margin-top:10px;">${escapeHtml(syncMeta.note)}</p>
-            <div class="life-monitor-chip-row life-stream-overview-chip-row" style="margin-top:14px;">
-              <span class="life-monitor-fortune-pill tone-${escapeHtml(fortune.tone || "neutral")}">今日运势 · ${escapeHtml(fortune.tierLabel || "平平无奇")}</span>
-              <span class="life-monitor-fortune-pill is-muted">${fortune.eventTriggered ? "已触发生活轨迹" : "今日未触发"}</span>
-              <span class="life-monitor-fortune-pill is-muted">${escapeHtml(syncMeta.badge)}</span>
-            </div>
-            <div class="life-stream-overview-metrics" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
-              <div class="life-stream-overview-metric" style="flex:1 1 120px; min-width:0; padding:12px 14px; border-radius:18px; background:rgba(255,255,255,0.82); border:1px solid rgba(219,224,235,0.88);">
-                <span class="life-stream-overview-metric-label" style="display:block; color:#8a8f98; font-size:11px; font-weight:700; letter-spacing:0.04em;">当前地点</span>
-                <span class="life-stream-overview-metric-value" style="display:block; margin-top:6px; color:#111111; font-size:14px; font-weight:700; line-height:1.45; white-space:normal; word-break:break-word;">${icons.location} ${escapeHtml(overviewPlace)}</span>
-              </div>
-              <div class="life-stream-overview-metric" style="flex:1 1 120px; min-width:0; padding:12px 14px; border-radius:18px; background:rgba(255,255,255,0.82); border:1px solid rgba(219,224,235,0.88);">
-                <span class="life-stream-overview-metric-label" style="display:block; color:#8a8f98; font-size:11px; font-weight:700; letter-spacing:0.04em;">当前天气</span>
-                <span class="life-stream-overview-metric-value" style="display:block; margin-top:6px; color:#111111; font-size:14px; font-weight:700; line-height:1.45; white-space:normal; word-break:break-word;">${escapeHtml(overviewWeather)}</span>
-              </div>
-              <div class="life-stream-overview-metric" style="flex:1 1 120px; min-width:0; padding:12px 14px; border-radius:18px; background:rgba(255,255,255,0.82); border:1px solid rgba(219,224,235,0.88);">
-                <span class="life-stream-overview-metric-label" style="display:block; color:#8a8f98; font-size:11px; font-weight:700; letter-spacing:0.04em;">联动状态</span>
-                <span class="life-stream-overview-metric-value" style="display:block; margin-top:6px; color:#111111; font-size:14px; font-weight:700; line-height:1.45; white-space:normal; word-break:break-word;">${escapeHtml(syncMeta.detail)}</span>
-              </div>
-            </div>
-          </section>
-
           ${renderLinkedLifeTrackCard(feedItems, {
             wrapperClass: "panel-card life-stream-track-card",
-            kicker: "人生事件流",
             title: "生活轨迹",
-            subtitle: "跟着当天行程一起推进",
             eventTitle: latestEventTitle,
             emptyText: "这一天还没有新的生活轨迹",
           })}
