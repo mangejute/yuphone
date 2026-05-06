@@ -23948,7 +23948,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-a3-plain-5000-05";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-event-title-07";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -25171,7 +25171,11 @@ const buildLifeStatusFeedItems = (role, { dateKey = "", limit = 10, dateWindowKe
     tag: String(item?.tag || "").trim(),
     journeyDateKey: String(item?.journeyDateKey || "").trim(),
     createdAt: item?.createdAt || item?.time || "",
-    eventTitle: String(item?.eventTitle || getEventTitleForDate(item?.journeyDateKey || normalizedDateKey)).trim(),
+    eventTitle: String(
+      item?.eventTitle ||
+        getEventTitleForDate(item?.journeyDateKey || normalizedDateKey) ||
+        (item?.journeyDateKey && String(role?.monitor?.headline || "").trim() ? role.monitor.headline : ""),
+    ).trim(),
   }));
   const nextMonitorItems = normalizedDateKey
     ? dedupeLifeStatusFeedItems(sortTimelineItemsByOldest(filterLifeStatusFeedItemsByDate(monitorItems, normalizedDateKey)))
@@ -27906,7 +27910,7 @@ const renderLinkedLifeTrackCard = (
         groups.length
           ? groups
               .map((group) => {
-                const groupTitle = String(group.eventTitle || eventTitleText || `${group.dateLabel}生活轨迹`).trim();
+                const groupTitle = String(group.eventTitle || eventTitleText || "生活轨迹").trim();
                 return `
                   <div class="life-track-day-group">
                     <div class="life-track-day-heading">
@@ -49084,7 +49088,7 @@ const parseLifeMonitorPlainTextPayload = (rawText = "", targetDateKey = formatDa
   const safeBeats = beats.filter((item) => item.text);
   const shouldKeepEvent = Boolean(eventTitle || eventSummary || safeBeats.length);
   const result = {
-    headline: headline || buildLifeMonitorCompactTitle(safeTimeline[0]?.text || summary, "生活轨迹"),
+    headline: headline || eventTitle || buildLifeMonitorCompactTitle(safeTimeline[0]?.text || summary, "生活轨迹"),
     summary: summary || safeTimeline[safeTimeline.length - 1]?.text || safeBeats[safeBeats.length - 1]?.text || "",
     timeline: safeTimeline,
     plannedTimeline: safeTimeline,
@@ -56751,6 +56755,7 @@ const buildMonitorTimelineItems = (items = [], targetDateKey = formatDateKey()) 
         title: String(item?.title || "").trim(),
         text,
         tag: String(item?.tag || "").trim(),
+        eventTitle: String(item?.eventTitle || "").trim(),
         journeyDateKey: String(item?.journeyDateKey || targetDateKey || "").trim(),
       };
     })
@@ -56766,6 +56771,7 @@ const mergeMonitorTimelineEntries = (existing = [], incoming = []) => {
       title: String(item.title || "").trim(),
       text: String(item.text || "").trim(),
       tag: String(item.tag || "").trim(),
+      eventTitle: String(item.eventTitle || "").trim(),
       journeyDateKey: String(item.journeyDateKey || "").trim(),
     }));
 
@@ -57828,7 +57834,6 @@ const generateLifeMonitorFromApi = async ({
         Array.isArray(result?.timeline) && result.timeline.length
           ? result.timeline
           : buildLifeMonitorTimelineFallback(fortuneRoll, normalizedTargetDate, cutoffDate);
-      const apiTimeline = buildMonitorTimelineItems(timelineSource, normalizedTargetDate);
       const shouldArchiveMonitorEvent = Boolean(mergedMonitorEvent);
       const eventTimeline = shouldArchiveMonitorEvent
         ? (mergedMonitorEvent?.beats || []).map((item) => ({
@@ -57838,10 +57843,17 @@ const generateLifeMonitorFromApi = async ({
             title: item.title,
             text: item.text,
             tag: item.tag,
+            eventTitle: mergedMonitorEvent.title,
           }))
         : [];
+      const resolvedMonitorEventTitle = String(mergedMonitorEvent?.title || nextEvent?.title || result?.event?.title || "").trim();
+      const apiTimeline = buildMonitorTimelineItems(timelineSource, normalizedTargetDate).map((item) => ({
+        ...item,
+        eventTitle: String(item.eventTitle || resolvedMonitorEventTitle).trim(),
+      }));
       const nextHeadline =
-        String(result?.headline || "").trim() || (requiresArchiveEvent ? `${fortuneRoll.tierLabel}命中日` : `${fortuneRoll.tierLabel}的日常底色`);
+        String(mergedMonitorEvent?.title || nextEvent?.title || result?.event?.title || result?.headline || "").trim() ||
+        (requiresArchiveEvent ? `${fortuneRoll.tierLabel}命中日` : `${fortuneRoll.tierLabel}的日常底色`);
       const nextSummary =
         String(result?.summary || "").trim() ||
         (requiresArchiveEvent
