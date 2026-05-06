@@ -23948,7 +23948,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-role-goals-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.06-life-track-a3-plain-5000-05";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27860,39 +27860,6 @@ const renderGoalEditorList = (role, goalType = "long") => {
   `;
 };
 
-const renderRoleGoalDisplayList = (role, goalType = "short") => {
-  const goals = filterGoalsByType(role?.goals || [], goalType);
-  const label = goalType === "short" ? "短期目标" : "长期目标";
-  if (!goals.length) {
-    return `<div class="goal-empty">暂无${label}</div>`;
-  }
-
-  return `
-    <div class="goal-editor-list">
-      ${goals
-        .map(
-          (goal) => `
-            <article class="goal-item goal-editor-card">
-              <div class="goal-editor-top">
-                <div class="goal-editor-title-stack">
-                  <strong>${escapeHtml(goal.title || label)}</strong>
-                  <span class="goal-type-pill">${label}</span>
-                </div>
-              </div>
-              <p>${escapeHtml(goal.detail || "角色原本目标")}</p>
-              <div class="goal-time-note">${escapeHtml(formatGoalScheduleText(goal))}</div>
-              <div class="goal-editor-progress">
-                <div class="goal-bar"><span style="width:${Math.max(0, Math.min(100, Number(goal.progress || 0)))}%"></span></div>
-                <strong>${Number(goal.progress || 0)}%</strong>
-              </div>
-            </article>
-          `,
-        )
-        .join("")}
-    </div>
-  `;
-};
-
 const renderLinkedLifeTrackCard = (
   feedItems = [],
   {
@@ -28108,7 +28075,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
                 <div class="list-title">短期目标</div>
               </div>
             </div>
-            ${renderRoleGoalDisplayList(role, "short")}
+            ${renderGoalEditorList(role, "short")}
           </section>
 
           <section class="panel-card">
@@ -28117,7 +28084,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
                 <div class="list-title">长期目标</div>
               </div>
             </div>
-            ${renderRoleGoalDisplayList(role, "long")}
+            ${renderGoalEditorList(role, "long")}
           </section>
 
           <button class="gold-outline life-stream-archive-btn" type="button" data-action="open-panel" data-panel="life-events">查看往期事件簿 (${Math.max(0, (role.events || []).length)})</button>
@@ -33174,6 +33141,7 @@ const DZZI_LEGACY_KEYS = new Set([
 ]);
 const MODEL_OUTPUT_TOKEN_BUDGET = 65536;
 const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 3600;
+const LIFE_MONITOR_MODEL_OUTPUT_TOKEN_BUDGET = 5000;
 
 const MINIMAX_VOICE_DEFAULTS = Object.freeze({
   url: "https://api.minimaxi.com/v1",
@@ -37057,7 +37025,7 @@ const MONITOR_SUBTASK_VARIETY_RULE =
 const ROLE_LIFE_MEMORY_CHAT_RULE =
   "如果 payload.roleContext.monitor.timeline 有内容 这些是角色今天已经发生或正在发生的真实生活轨迹 不是给用户看的设定 如果 payload.roleContext.events 有内容 这些是角色真实经历过的突发事件和事件簿节点 用户问今天 刚才 路上 突发事件 灵感 某个 NPC 或生活轨迹时 必须优先按这些记忆自然回答 记不清细节可以说记不太准 但不要否认发生过 也不要把它说成系统生成的小故事";
 const ROLE_REAL_TIME_PROGRESS_CHAT_RULE =
-  "每轮聊天都必须读取 payload.roleContext.currentTimePlainText 或 payload.roleContext.currentTime 作为当前真实时间，按现实合理时间推进剧情、地点和手头动作。当前行程是持续状态范围，不是一句固定台词；进入某个长时间段后，角色应已经在该地点展开子动作、遇到新细节或切到下一个合理小步骤，不能连续多轮停在“刚准备去”“刚拎着东西要出发”“马上过去”这种起步动作里。如果 09:00-12:00 都在便利店，09:50 就应表现为已经在便利店内处理、等待、补货、和人搭话或被小插曲打断，而不是还在去便利店路上；除非用户明确问时间，不要机械报时。";
+  "每轮聊天都必须读取 payload.roleContext.currentTimePlainText 或 payload.roleContext.currentTime 作为当前真实时间，并逐条读取 recentMessages 里的 [时间 ...] 标签来判断旧消息距现在多久。昨天、数小时前或更早的用户消息只能当作旧话题或后续追问来接，严禁说成“刚刚”“刚买”“现在才要去买”“这会儿才提到”；只有时间标签显示几分钟内，才可以用刚刚/刚才。按现实合理时间推进剧情、地点和手头动作。当前行程是持续状态范围，不是一句固定台词；进入某个长时间段后，角色应已经在该地点展开子动作、遇到新细节或切到下一个合理小步骤，不能连续多轮停在“刚准备去”“刚拎着东西要出发”“马上过去”这种起步动作里。如果 09:00-12:00 都在便利店，09:50 就应表现为已经在便利店内处理、等待、补货、和人搭话或被小插曲打断，而不是还在去便利店路上；除非用户明确问时间，不要机械报时。";
 const ROLE_CHAT_PUNCTUATION_SOFT_RULE =
   "问号和感叹号只在语气自然需要时使用 不要每条消息都带";
 
@@ -37532,7 +37500,7 @@ const getActiveWorldbookSummary = (role) =>
       importance: normalizeWorldbookImportance(entry.importance, 50),
     }));
 
-const getRecentMessagesSummary = (role, limit = 16) =>
+const getRecentMessagesSummary = (role, limit = 16, { now = new Date() } = {}) =>
   (role.chats.messages || [])
     .slice(-limit)
     .map((message) => {
@@ -37564,9 +37532,8 @@ const getRecentMessagesSummary = (role, limit = 16) =>
       const content = truncateContextText(sanitizeAiContextMessageContent(message, `${quotePrefix}${rawContent}`.trim()), 96);
       if (!content) return null;
       const timestamp = String(message.timestamp || "").trim();
-      return timestamp
-        ? `${sender}|${timestamp}|${typeLabel}|${content}`
-        : `${sender}|${typeLabel}|${content}`;
+      const timeTag = buildRecentMessageTimeTag(timestamp, now);
+      return [sender, timeTag, typeLabel, content].filter(Boolean).join("|");
     })
     .filter(Boolean);
 
@@ -37586,6 +37553,54 @@ const getRecentVideoCallSummaryContext = (role, limit = 3, itemLimit = 180) =>
     })
     .filter(Boolean)
     .slice(0, Math.max(1, Number(limit) || 1));
+
+const formatChatContextTimestamp = (timestamp, now = new Date()) => {
+  const parsed = parseValidTimestamp(timestamp);
+  if (!parsed) return "";
+  const absolute = new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(parsed);
+  const nowDate = now instanceof Date ? now : new Date(now || Date.now());
+  const deltaMinutes = Math.max(0, Math.round((nowDate.getTime() - parsed.getTime()) / 60_000));
+  const dayDelta = Math.floor(
+    (new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate()).getTime() -
+      new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime()) /
+      (24 * 60 * 60 * 1000),
+  );
+  const dayLabel =
+    dayDelta === 0
+      ? "今天"
+      : dayDelta === 1
+        ? "昨天"
+        : dayDelta === 2
+          ? "前天"
+          : dayDelta > 2
+            ? `${dayDelta}天前`
+            : dayDelta === -1
+              ? "明天"
+              : dayDelta < -1
+                ? `${Math.abs(dayDelta)}天后`
+                : "";
+  const relativeLabel =
+    deltaMinutes < 1
+      ? "刚刚"
+      : deltaMinutes < 60
+        ? `${deltaMinutes}分钟前`
+        : deltaMinutes < 24 * 60
+          ? `${Math.floor(deltaMinutes / 60)}小时${deltaMinutes % 60 ? `${deltaMinutes % 60}分` : ""}前`
+          : `${Math.floor(deltaMinutes / (24 * 60))}天${Math.floor((deltaMinutes % (24 * 60)) / 60) ? `${Math.floor((deltaMinutes % (24 * 60)) / 60)}小时` : ""}前`;
+  return [absolute, [dayLabel, relativeLabel].filter(Boolean).join("，")].filter(Boolean).join("（") + (dayLabel || relativeLabel ? "）" : "");
+};
+
+const buildRecentMessageTimeTag = (timestamp, now = new Date()) => {
+  const normalized = formatChatContextTimestamp(timestamp, now);
+  return normalized ? `[时间 ${normalized}]` : "";
+};
 
 const truncateContextText = (value, limit = 600) => {
   const text = String(value || "").replace(/\s+/g, " ").trim();
@@ -38193,7 +38208,7 @@ const buildRoleGenerationContext = (
       structuredTask,
       generationMode: normalizedMode,
     }),
-    recentMessages: getRecentMessagesSummary(role, contextLimit),
+    recentMessages: getRecentMessagesSummary(role, contextLimit, { now }),
     videoCallSummaries: getRecentVideoCallSummaryContext(role, isVideoMode ? 1 : 3, isVideoMode ? 110 : 180),
     summaryArchive: summaryBlocks,
     memory: buildRoleMemoryContextItems(role, {
@@ -38321,11 +38336,13 @@ const buildRoleLightTextContext = (role, { userInput = "", now = new Date(), rec
       : Math.max(0, Number(recentLimit) || 0);
   const recentMessages = (role?.chats?.messages || [])
     .slice(-resolvedRecentLimit)
-    .map((message) => ({
-      role: message?.role === "user" ? "user" : "ai",
-      text: truncateContextText(getReadableMessageSpeechText(message), 80),
-    }))
-    .filter((item) => item.text);
+    .map((message) => {
+      const sender = message?.role === "user" ? "用户" : "角色";
+      const timestamp = buildRecentMessageTimeTag(String(message?.timestamp || "").trim(), now);
+      const text = truncateContextText(getReadableMessageSpeechText(message), 80);
+      return text ? [sender, timestamp, text].filter(Boolean).join("|") : "";
+    })
+    .filter(Boolean);
   return {
     roleName: String(role?.profile?.name || role?.profile?.note || "角色").trim(),
     userName: String(state.userProfile?.name || "用户").trim(),
@@ -39336,6 +39353,11 @@ const buildChatFullArrayLines = (items = [], formatItem) =>
 
 const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = null, imageAttachments = [], stickerCatalog = [] } = {}) => {
   const profile = roleContext?.profile || {};
+  const timeContext = roleContext?.timeContext || {};
+  const contextNow = parseValidTimestamp(roleContext?.currentTimePlainText || roleContext?.currentTime || timeContext.nowText) || new Date();
+  const lastMessageTimeText = timeContext.lastMessageAt
+    ? formatChatContextTimestamp(timeContext.lastMessageAt, contextNow)
+    : "";
   const roleProfileText = [
     profile?.note || profile?.name,
     profile?.bio,
@@ -39356,7 +39378,13 @@ const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = nu
     roleProfileText ? `角色资料：${roleProfileText}` : "",
     roleContext?.userProfile ? `用户设定：${compactChatContextValue(roleContext.userProfile, { textLimit: 240, itemLimit: 10 })}` : "",
     roleContext?.status ? `当前状态：${compactChatContextValue(roleContext.status, { textLimit: 180, itemLimit: 10 })}` : "",
-    roleContext?.currentTime ? `状态与时间：${roleContext.currentTime}` : "",
+    roleContext?.currentTime || roleContext?.currentTimePlainText
+      ? `当前真实时间：${roleContext.currentTimePlainText || roleContext.currentTime}`
+      : "",
+    lastMessageTimeText ? `上一条聊天时间：${lastMessageTimeText}` : "",
+    Number.isFinite(Number(timeContext.minutesSinceLastMessage))
+      ? `距离上一条聊天：约 ${Math.max(0, Math.round(Number(timeContext.minutesSinceLastMessage)))} 分钟`
+      : "",
     roleContext?.timeContext ? `时间上下文：${compactChatContextValue(roleContext.timeContext, { textLimit: 180, itemLimit: 10 })}` : "",
     Array.isArray(roleContext?.goals) && roleContext.goals.length
       ? `目标：${compactChatContextValue(roleContext.goals, { textLimit: 220, itemLimit: 12 })}`
@@ -39400,6 +39428,7 @@ const buildChatPlainTextContext = ({ task = "", userInput = "", roleContext = nu
     Array.isArray(roleContext?.recentMessages) && roleContext.recentMessages.length
       ? `最近聊天：\n${roleContext.recentMessages.join("\n")}`
       : "",
+    "时间判定规则：最近聊天每条前面的 [时间 ...] 是真实发生时间；必须用它和当前真实时间比较，昨天、数小时前或更早的用户消息不能说成“刚刚”“刚买”“现在才要去买”，只能当作旧话题或后续追问来接",
     userInput ? `本轮用户输入：${String(userInput || "").trim()}` : "",
   ];
 
@@ -39654,7 +39683,7 @@ const requestModelJsonWithConfig = async ({
   const allowStrictJsonResponseFormat = !shouldDisableJsonResponseFormat(config);
   const finalSystemPrompt =
     payload?.roleContext ? `${String(systemPrompt || "").trim()}\n${GROUNDING_RULE}` : systemPrompt;
-  const omitMaxTokens = shouldOmitMaxTokensForConfig(config);
+  const omitMaxTokens = shouldOmitMaxTokensForConfig(config) && !payload?.outputRules?.forceMaxOutputTokens;
   const requestedMaxOutputTokens = clampValue(
     Number(payload?.outputRules?.maxOutputTokens ?? MODEL_OUTPUT_TOKEN_BUDGET) || MODEL_OUTPUT_TOKEN_BUDGET,
     120,
@@ -40038,7 +40067,7 @@ const requestModelTextWithConfig = async ({
   const geminiMode = shouldUseGeminiCompatibleMode(config);
   const finalSystemPrompt =
     payload?.roleContext ? `${String(systemPrompt || "").trim()}\n${GROUNDING_RULE}` : systemPrompt;
-  const omitMaxTokens = shouldOmitMaxTokensForConfig(config);
+  const omitMaxTokens = shouldOmitMaxTokensForConfig(config) && !payload?.outputRules?.forceMaxOutputTokens;
   const requestedMaxOutputTokens = clampValue(
     Number(payload?.outputRules?.maxOutputTokens ?? MODEL_OUTPUT_TOKEN_BUDGET) || MODEL_OUTPUT_TOKEN_BUDGET,
     120,
@@ -40071,7 +40100,7 @@ const requestModelTextWithConfig = async ({
 
   const buildGeminiTextContent = () =>
     [
-      "这是普通文本生成任务，不要自称模型，不要问候，不要写标题",
+      "这是普通文本生成任务，不要自称模型，不要问候，不要写额外标题",
       "下面的系统规则和任务上下文都必须严格遵守",
       "",
       "【系统规则】",
@@ -40082,8 +40111,16 @@ const requestModelTextWithConfig = async ({
       "",
       "【最终输出】",
       "不要复述、整理、转换或解释上面的只读参考资料。",
-      "现在只按【系统规则】输出最终答案；系统规则要求纯文本就只输出纯文本，要求 JSON 才输出目标 JSON。",
-      "如果系统规则指定第一行或固定格式，最终输出的第一个字符就必须属于那个格式；禁止额外开场白、表格、Markdown 和自我介绍。",
+      ...(shouldUsePlainTextContext
+        ? [
+            "现在只按【系统规则】输出最终标签文本。",
+            "如果系统规则指定第一行固定文本，必须逐字保留；例如要求从 事件|| 开头，就不能把 事件 改成地点、题材或标题。",
+            "禁止额外开场白、解释、表格、代码块和自我介绍。",
+          ]
+        : [
+            "现在只按【系统规则】输出最终答案；系统规则要求纯文本就只输出纯文本，要求 JSON 才输出目标 JSON。",
+            "如果系统规则指定第一行或固定格式，最终输出的第一个字符就必须属于那个格式；禁止额外开场白、表格、Markdown 和自我介绍。",
+          ]),
     ].join("\n");
 
   const buildGeminiUserContent = () =>
@@ -48933,7 +48970,7 @@ const parseLifeMonitorPlainTextPayload = (rawText = "", targetDateKey = formatDa
       return;
     }
     if (!timeline.length && !beats.length && !eventTitle && pipeParts.length >= 4 && !/^\d{1,2}:\d{2}$/.test(pipeParts[0] || "")) {
-      eventTitle = sanitizeChatLine(pipeParts[0] || pipeParts[1] || "");
+      eventTitle = sanitizeChatLine(["事件", "event", "突发事件", "事件总标题"].includes(pipeKeyword) ? pipeParts[1] || "" : pipeParts[1] || pipeParts[0] || "");
       eventStatus = sanitizeChatLine(pipeParts[2] || eventStatus || "进行中") || "进行中";
       eventLevel = sanitizeChatLine(pipeParts[3] || eventLevel || "");
       eventImpactDays = parseLifeMonitorImpactDays(pipeParts[4] || pipeParts[3] || "") || eventImpactDays;
@@ -57438,11 +57475,13 @@ const requestLifeMonitorPlainTextData = async ({
   });
   const response = await requestPlannerModelText({
     systemPrompt: useA3SlimContext
-      ? `纯文本格式任务：只输出双竖线分隔纯文本。
+      ? `纯文本格式任务：只输出双竖线分隔标签文本。
 你现在只负责生成 ${targetDateLabel} ${cutoffClock} 的生活轨迹事件节点。
 必须简体中文。
-第一行必须严格是：事件||总标题||进行中或收尾||运势等级||影响天数1到7
-后续每个节点必须严格是：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
+第一行固定格式：事件||总标题||进行中或收尾||运势等级||影响天数1到7
+第一行第一段必须逐字保留“事件”，这不是占位符，不能改成地点、题材或标题。
+正确开头示例：事件||手机没电引发的便利店乌龙||进行中||小吉||2
+后续每个节点固定格式：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
 规则：
 - 第一个可见字符必须是“事”，也就是第一行从事件||开头
 - 如果已有同一事件，只生成 1 个新节点，时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM
@@ -57514,14 +57553,15 @@ const requestLifeMonitorPlainTextData = async ({
       cutoffTime: cutoffClock,
       fortuneSettings: lifeFateSettings,
       fortuneRoll,
-      slimContext: lifeMonitorSlimContext,
-      roleContext,
-      journeyContext,
+      slimContext: useA3SlimContext ? null : lifeMonitorSlimContext,
+      roleContext: useA3SlimContext ? null : roleContext,
+      journeyContext: useA3SlimContext ? null : journeyContext,
       plainTextContext: useA3SlimContext ? lifeMonitorA3PlainTextContext : lifeMonitorPlainTextContext,
       outputRules: {
         format: "life-monitor-node-text",
         contextFormat: "plain-text",
-        maxOutputTokens: useA3SlimContext ? 2400 : JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: LIFE_MONITOR_MODEL_OUTPUT_TOKEN_BUDGET,
+        forceMaxOutputTokens: useA3SlimContext,
       },
     },
     includeMeta: true,
