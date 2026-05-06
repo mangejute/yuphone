@@ -22155,6 +22155,12 @@ const createDefaultApiConfig = () => ensureDefaultPandaApiConfig({
   filterCliche: false,
   backgroundKeepAlive: false,
   browserNotifications: false,
+  tencentAsr: {
+    appId: "",
+    secretId: "",
+    secretKey: "",
+    engineModelType: "16k_zh",
+  },
   planner: {
     id: uid("api"),
     name: "\u884c\u7a0b / \u4eba\u751f\u72b6\u6001 API",
@@ -22932,6 +22938,16 @@ const mergeState = (incoming = {}) => {
           repairKnownText(incoming.appConfig?.planner?.purpose) ||
           incoming.appConfig?.planner?.purpose ||
           fallback.appConfig.planner.purpose,
+      },
+      tencentAsr: {
+        ...fallback.appConfig.tencentAsr,
+        ...((incoming.appConfig?.tencentAsr && typeof incoming.appConfig.tencentAsr === "object")
+          ? incoming.appConfig.tencentAsr
+          : {}),
+        appId: String(incoming.appConfig?.tencentAsr?.appId || "").trim(),
+        secretId: String(incoming.appConfig?.tencentAsr?.secretId || "").trim(),
+        secretKey: String(incoming.appConfig?.tencentAsr?.secretKey || "").trim(),
+        engineModelType: String(incoming.appConfig?.tencentAsr?.engineModelType || fallback.appConfig.tencentAsr?.engineModelType || "16k_zh").trim() || "16k_zh",
       },
       presets:
         normalizeArray(incoming.appConfig?.presets).length > 0
@@ -24155,7 +24171,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.07-chat-output-cap-19";
+const APP_BUILD_VERSION_LABEL = "v2026.05.07-tencent-asr-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -26218,6 +26234,7 @@ const renderPresetSection = (config, state) =>
       ${renderApiSection(config, state)}
       ${config.secondary.map((api, index) => renderSubApiCard(api, index, state)).join("")}
       ${renderPlannerApiCard(config.planner || {}, state)}
+      ${renderTencentAsrSection(config.tencentAsr || {}, config.apiEnabled !== false)}
       ${renderMinimaxVoiceSection(config.minimaxVoice || {}, state, config.apiEnabled !== false)}
       ${renderReplyTuningSection(config)}
     `,
@@ -26408,6 +26425,44 @@ const renderPlannerApiCard = (api = {}, state = {}) => `
     ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起行程 / 生活轨迹 API 请求。</div>' : ""}
   </section>
 `;
+
+const RENDER_TENCENT_ASR_ENGINE_OPTIONS = Object.freeze([
+  { value: "16k_zh", label: "普通话 16k" },
+  { value: "16k_zh-PY", label: "普通话 + 拼音 16k" },
+  { value: "16k_yue", label: "粤语 16k" },
+  { value: "16k_en", label: "英语 16k" },
+  { value: "8k_zh", label: "普通话 8k" },
+  { value: "8k_en", label: "英语 8k" },
+]);
+
+const renderTencentAsrSection = (asrConfig = {}, apiEnabled = true) => {
+  const engineModelType = String(asrConfig.engineModelType || "16k_zh").trim() || "16k_zh";
+  return `
+    <section class="setting-section setting-subpanel card-enter">
+      <div class="setting-heading">腾讯云实时语音识别</div>
+      <div class="setting-grid">
+        <label class="setting-label">AppID</label>
+        <input class="soft-input" data-config="tencentAsr.appId" value="${escapeHtml(asrConfig.appId || "")}" placeholder="腾讯云 ASR AppID" />
+
+        <label class="setting-label">SecretId</label>
+        <input class="soft-input" data-config="tencentAsr.secretId" value="${escapeHtml(asrConfig.secretId || "")}" placeholder="SecretId" />
+
+        <label class="setting-label">SecretKey</label>
+        <input class="soft-input" data-config="tencentAsr.secretKey" type="password" value="${escapeHtml(asrConfig.secretKey || "")}" placeholder="SecretKey" />
+
+        <label class="setting-label">识别模型</label>
+        <select class="soft-input" data-config="tencentAsr.engineModelType">
+          ${RENDER_TENCENT_ASR_ENGINE_OPTIONS.map(
+            (item) => `
+              <option value="${escapeHtml(item.value)}" ${engineModelType === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>
+            `,
+          ).join("")}
+        </select>
+        ${apiEnabled ? "" : '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，视频通话不会连接腾讯云语音识别。</div>'}
+      </div>
+    </section>
+  `;
+};
 
 const renderMinimaxVoiceSection = (voiceConfig = {}, state = {}, apiEnabled = true) => `
   <section class="setting-section setting-subpanel card-enter">
@@ -30292,6 +30347,7 @@ const renderIosApiSettingsPage = (state) => {
     ${renderIosApiAvailabilityRow(apiEnabled)}
     ${renderIosCardListSection("预设与主 API", `${renderPresetCard(config, state)}${renderApiSection(config, state)}`)}
     ${renderIosCardListSection("副 API", `${config.secondary.map((api, index) => renderSubApiCard(api, index, state)).join("")}${renderPlannerApiCard(config.planner || {}, state)}`)}
+    ${renderIosSection("视频语音识别", renderTencentAsrSection(config.tencentAsr || {}, apiEnabled))}
     ${renderIosSection("回复参数", renderReplyTuningSection(config))}
   `;
   return renderIosSubpageShell(
@@ -31566,7 +31622,7 @@ const renderVideoSessionSheet = (state, role) => {
     Math.max(
       8000,
       Math.round(
-        (Math.max(5000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 5000))) +
+        (Math.max(3000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 3000))) +
           Math.max(20000, Math.min(180000, Number(session.roleAutoReplyDelayMs || 20000)))) / 3,
       ),
     ),
@@ -31577,8 +31633,8 @@ const renderVideoSessionSheet = (state, role) => {
       : "";
   const micEngineLabel =
     {
+      tencent: "腾讯云实时语音识别",
       local: "本地转写",
-      browser: "浏览器实时字幕",
       unsupported: "语音不可用",
     }[String(session.micEngine || "").trim().toLowerCase()] ||
     (inputMode === "text" ? "文字输入" : "麦克风待命");
@@ -31696,10 +31752,10 @@ const renderVideoSessionSheet = (state, role) => {
                       <input
                         class="video-session-setting-slider voice-chance-slider"
                         type="range"
-                        min="5000"
+                        min="3000"
                         max="12000"
                         step="500"
-                        value="${escapeHtml(String(Math.max(5000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 5000)))))}"
+                        value="${escapeHtml(String(Math.max(3000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 3000)))))}"
                         data-video-setting="speechAutoSubmitDelayMs"
                         aria-label="设置你停顿多久后自动发送"
                       />
@@ -32746,10 +32802,6 @@ const runVideoSessionEntryPreflight = async ({ wantsVoiceInput = true } = {}) =>
     });
   }
 };
-const getBrowserSpeechRecognitionCtor = () => {
-  const ctor = globalThis?.SpeechRecognition || globalThis?.webkitSpeechRecognition || null;
-  return typeof ctor === "function" ? ctor : null;
-};
 const isGlobalKeepAliveSupported = () => typeof globalThis?.Audio === "function";
 const isGlobalNotificationSupported = () => typeof globalThis?.Notification !== "undefined";
 const isServiceWorkerNotificationSupported = () =>
@@ -32867,7 +32919,6 @@ const readSystemChromeBatteryStatus = (batteryManager = systemChromeRuntime.batt
     batteryCharging: Boolean(batteryManager?.charging),
   };
 };
-const isSpeechRecognitionAvailable = () => Boolean(getBrowserSpeechRecognitionCtor());
 const isVideoSessionLocalAsrDisabledByRelease = () => {
   const flag = globalThis?.__LIFETALK_DISABLE_LOCAL_ASR__;
   if (flag === true || flag === 1) return true;
@@ -32878,8 +32929,8 @@ const isVideoSessionLocalAsrAvailable = () =>
   !isVideoSessionLocalAsrDisabledByRelease() &&
   Boolean(getVideoSessionAudioContextCtor() && navigator?.mediaDevices?.getUserMedia);
 const getInitialVideoSessionMicEngine = () =>
-  isSpeechRecognitionAvailable() ? "browser" : isVideoSessionLocalAsrAvailable() ? "local" : "unsupported";
-const VIDEO_SESSION_BROWSER_SPEECH_LABEL = "浏览器语音识别";
+  isVideoSessionLocalAsrAvailable() ? "local" : "unsupported";
+const VIDEO_SESSION_TENCENT_ASR_LABEL = "腾讯云实时语音识别";
 const VIDEO_SESSION_SENSEVOICE_LOCAL_BASE = (() => {
   try {
     return new URL("./vendor/sensevoice/", globalThis?.location?.href || "./").href;
@@ -32910,9 +32961,8 @@ const VIDEO_SESSION_MAX_OUTPUT_TOKENS = 1200;
 const VIDEO_SESSION_REPLY_TIMEOUT_MS = 120_000;
 const VIDEO_CALL_SUMMARY_TIMEOUT_MS = 190_000;
 const VIDEO_SESSION_RESTART_DELAY_MS = 160;
-const VIDEO_SESSION_BROWSER_SPEECH_READY_GRACE_MS = 420;
-const VIDEO_SESSION_AUTO_SUBMIT_DELAY_MS = 5000;
-const VIDEO_SESSION_AUTO_SUBMIT_MIN_MS = 5000;
+const VIDEO_SESSION_AUTO_SUBMIT_DELAY_MS = 3000;
+const VIDEO_SESSION_AUTO_SUBMIT_MIN_MS = 3000;
 const VIDEO_SESSION_AUTO_SUBMIT_MAX_MS = 12000;
 const VIDEO_SESSION_VISUAL_AUTO_REPLY_DELAY_MS = 20000;
 const VIDEO_SESSION_ROLE_AUTO_REPLY_MIN_MS = 20000;
@@ -32960,7 +33010,7 @@ const createVideoSessionState = () => ({
   cameraReady: false,
   micListening: false,
   micRecording: false,
-  speechSupported: isSpeechRecognitionAvailable() || isVideoSessionLocalAsrAvailable(),
+  speechSupported: isVideoSessionLocalAsrAvailable(),
   micEngine: getInitialVideoSessionMicEngine(),
   micPermissionState: "unknown",
   micHealthState: "idle",
@@ -33439,6 +33489,22 @@ const MINIMAX_SPEECH_MODELS = Object.freeze([
   "speech-02-turbo",
 ]);
 
+const TENCENT_ASR_DEFAULTS = Object.freeze({
+  appId: "",
+  secretId: "",
+  secretKey: "",
+  engineModelType: "16k_zh",
+});
+
+const TENCENT_ASR_ENGINE_OPTIONS = Object.freeze([
+  "16k_zh",
+  "16k_zh-PY",
+  "16k_yue",
+  "16k_en",
+  "8k_zh",
+  "8k_en",
+]);
+
 const MESSAGE_SOUND_DEFAULTS = Object.freeze({
   user: Object.freeze({ url: "", label: "" }),
   role: Object.freeze({ url: "", label: "" }),
@@ -33562,6 +33628,23 @@ const normalizeMinimaxVoiceConfig = (config = {}) => ({
   bitrate: 128000,
   channel: 1,
 });
+
+const normalizeTencentAsrEngine = (value = "") => {
+  const normalized = String(value || "").trim();
+  return TENCENT_ASR_ENGINE_OPTIONS.includes(normalized) ? normalized : TENCENT_ASR_DEFAULTS.engineModelType;
+};
+
+const normalizeTencentAsrConfig = (config = {}) => ({
+  ...TENCENT_ASR_DEFAULTS,
+  ...(config || {}),
+  appId: String(config?.appId || "").trim(),
+  secretId: String(config?.secretId || "").trim(),
+  secretKey: String(config?.secretKey || "").trim(),
+  engineModelType: normalizeTencentAsrEngine(config?.engineModelType),
+});
+
+const hasTencentAsrConfigValues = (config = {}) =>
+  Boolean(String(config?.appId || "").trim() && String(config?.secretId || "").trim() && String(config?.secretKey || "").trim());
 
 const normalizeMessageSoundEntry = (entry = {}, fallback = MESSAGE_SOUND_DEFAULTS.user) => ({
   url: String(entry?.url || fallback?.url || "").trim(),
@@ -33721,6 +33804,7 @@ const normalizeSessionState = () => {
     planner: { ...plannerConfig, preset: normalizedPrimaryPreset },
     geminiMode: false,
     minimaxVoice: normalizeMinimaxVoiceConfig(state.appConfig?.minimaxVoice || {}),
+    tencentAsr: normalizeTencentAsrConfig(state.appConfig?.tencentAsr || {}),
     messageSounds: normalizeMessageSoundConfig(state.appConfig?.messageSounds || {}),
     presetEntries,
     presets: presetEntries.map((entry) => entry.name),
@@ -33785,7 +33869,6 @@ let videoSessionRuntime = {
   clockTimer: 0,
   frameBuffer: [],
   frameCaptureCount: 0,
-  recognition: null,
   suppressNextEnd: false,
   restartTimer: 0,
   autoSubmitTimer: 0,
@@ -33819,6 +33902,15 @@ let videoSessionRuntime = {
   audioStopResolve: null,
   audioStopReject: null,
   audioDiscardNextStop: false,
+  tencentAsrSocket: null,
+  tencentAsrSocketId: "",
+  tencentAsrReady: false,
+  tencentAsrOpeningPromise: null,
+  tencentAsrAudioQueue: [],
+  tencentAsrSendTimer: 0,
+  tencentAsrLastFinalText: "",
+  tencentAsrFinalText: "",
+  tencentAsrInterimText: "",
   localAsrModule: null,
   localAsrBaseUrl: "",
   localAsrModulePromise: null,
@@ -33844,7 +33936,6 @@ let videoSessionRuntime = {
   pendingReadyCue: false,
   readyCueReason: "",
   readyCueTimer: 0,
-  browserReadyTimer: 0,
   holdToTalkActive: false,
   holdToTalkPointerId: null,
   holdToTalkRequestId: 0,
@@ -36951,12 +37042,6 @@ const clearVideoSessionReadyCue = ({ paintNow = false } = {}) => {
   if (paintNow) paint();
 };
 
-const clearVideoSessionBrowserReadyTimer = () => {
-  if (!videoSessionRuntime.browserReadyTimer) return;
-  window.clearTimeout(videoSessionRuntime.browserReadyTimer);
-  videoSessionRuntime.browserReadyTimer = 0;
-};
-
 const queueVideoSessionReadyCue = (reason = "reply-finished") => {
   videoSessionRuntime.pendingReadyCue = true;
   videoSessionRuntime.readyCueReason = String(reason || "reply-finished").trim() || "reply-finished";
@@ -36996,26 +37081,6 @@ const triggerVideoSessionReadyCue = (message = "现在说话") => {
 const consumePendingVideoSessionReadyCue = () => {
   if (!videoSessionRuntime.pendingReadyCue) return false;
   triggerVideoSessionReadyCue(getVideoSessionReadyCueMessage());
-  return true;
-};
-
-const completeVideoSessionBrowserSpeechWarmup = (recognition) => {
-  if (!recognition || videoSessionRuntime.recognition !== recognition) return false;
-  clearVideoSessionBrowserReadyTimer();
-  if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") return false;
-  state.videoSession.micEngine = "browser";
-  state.videoSession.speechSupported = true;
-  videoSessionRuntime.lastInputReadyAt = Date.now();
-  refreshVideoSessionMicHealth({
-    messageOverride: isVideoSessionTapToRecordMode()
-      ? "绿麦已亮，正在录音，再点一次麦克风就发送"
-      : "绿麦已亮，现在说话会被识别，停顿后自动发送",
-    syncNow: true,
-  });
-  consumePendingVideoSessionReadyCue();
-  resumePendingVideoSessionVisualAutoReply();
-  paint();
-  patchVideoSessionMicHealthDom();
   return true;
 };
 
@@ -39565,6 +39630,10 @@ const getPlannerApiConfig = () => {
 const getPlannerTextApiConfig = () => getStableDzziTextApiConfig(getPlannerApiConfig());
 
 const getMinimaxVoiceConfig = () => normalizeMinimaxVoiceConfig(state.appConfig?.minimaxVoice || {});
+
+const getTencentAsrConfig = () => normalizeTencentAsrConfig(state.appConfig?.tencentAsr || {});
+
+const hasTencentAsrConfig = (config = getTencentAsrConfig()) => hasTencentAsrConfigValues(config);
 
 const getRoleMinimaxVoiceConfig = (role) => {
   const globalConfig = getMinimaxVoiceConfig();
@@ -61520,9 +61589,11 @@ const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) =>
   const holdMode = isVideoSessionTapToRecordMode(session);
   if (healthState === "checking") {
     return {
-      label: holdMode ? "录音启动中" : engine === "local" ? "转写中" : "正在检查",
+      label: holdMode ? "录音启动中" : engine === "tencent" ? "云端连接中" : engine === "local" ? "转写中" : "正在检查",
       message: holdMode
         ? "先等绿色麦克风亮起，亮起后开始录音"
+        : engine === "tencent"
+          ? "正在连接腾讯云语音识别"
         : engine === "local"
           ? "正在准备语音转写"
           : "正在检查麦克风",
@@ -61530,9 +61601,11 @@ const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) =>
   }
   if (healthState === "ready") {
     return {
-      label: holdMode ? "点按开始录音" : engine === "local" ? "本地已就绪" : "已授权待命",
+      label: holdMode ? "点按开始录音" : engine === "tencent" ? "腾讯云已就绪" : engine === "local" ? "本地已就绪" : "已授权待命",
       message: holdMode
         ? "点一下麦克风开始录音，再点一下结束并发送"
+        : engine === "tencent"
+          ? "开口后会实时转成文字"
         : engine === "local"
           ? "开口后会自动转字"
           : "开口后会实时显示",
@@ -61540,9 +61613,11 @@ const getVideoSessionMicHealthSnapshot = (session = state.videoSession || {}) =>
   }
   if (healthState === "listening") {
     return {
-      label: holdMode ? "录音中" : engine === "local" ? "录音中" : "识别中",
+      label: holdMode ? "录音中" : engine === "tencent" ? "腾讯云识别中" : engine === "local" ? "录音中" : "识别中",
       message: holdMode
         ? "正在录音，再点一下麦克风就发送"
+        : engine === "tencent"
+          ? "正在收音，停顿后自动发送"
         : engine === "local"
           ? "正在收音，停顿后自动发送"
           : "正在实时转字",
@@ -61603,9 +61678,9 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
   const busy = ["processing", "replying"].includes(String(state.videoSession?.status || "").trim());
   const accessIssue = getVideoSessionDeviceAccessIssue("麦克风");
   const capabilities = getVideoSessionMicCapabilities();
-  const currentEngine = capabilities.browser ? "browser" : capabilities.local ? "local" : "unsupported";
+  const currentEngine = capabilities.tencent ? "tencent" : capabilities.local ? "local" : "unsupported";
   state.videoSession.micEngine = currentEngine;
-  state.videoSession.speechSupported = capabilities.browser || capabilities.local;
+  state.videoSession.speechSupported = capabilities.tencent || capabilities.local;
 
   if (inputMode === "text") {
     setVideoSessionMicHealth("text-mode", "当前是键盘输入模式", {
@@ -61626,9 +61701,9 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
     return;
   }
 
-  if (!capabilities.browser && !capabilities.local) {
+  if (!capabilities.tencent && !capabilities.local) {
     state.videoSession.speechSupported = false;
-    setVideoSessionMicHealth("unsupported", "当前浏览器不支持网页内语音转文字", {
+    setVideoSessionMicHealth("unsupported", "视频语音识别暂未配置", {
       permissionState: "unsupported",
       paintNow,
       syncNow,
@@ -61662,14 +61737,27 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
     return;
   }
 
+  if (currentEngine === "tencent" && videoSessionRuntime.tencentAsrOpeningPromise) {
+    setVideoSessionMicHealth("checking", messageOverride || `${VIDEO_SESSION_TENCENT_ASR_LABEL} 正在连接`, {
+      permissionState,
+      paintNow,
+      syncNow,
+    });
+    return;
+  }
+
   if (state.videoSession.micListening) {
     const listeningMessage =
       messageOverride ||
       (holdMode
-        ? currentEngine === "local"
+        ? currentEngine === "tencent"
+          ? `${VIDEO_SESSION_TENCENT_ASR_LABEL} 收音中，再点麦克风结束并发送`
+          : currentEngine === "local"
           ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 收音中，再点麦克风结束并发送`
           : "识别中，你说的话会实时显示，再点麦克风结束并发送"
-        : currentEngine === "local"
+        : currentEngine === "tencent"
+          ? `${VIDEO_SESSION_TENCENT_ASR_LABEL} 收音中，停顿后自动发送`
+          : currentEngine === "local"
           ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 收音中，新增内容会按字逐步显示，停顿后才会自动发送`
           : "识别中，你说的话会实时显示，停顿后才会自动发送这一轮");
     setVideoSessionMicHealth("listening", listeningMessage, {
@@ -61696,12 +61784,16 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
   const readyMessage =
     messageOverride ||
     (holdMode
-      ? currentEngine === "local"
+      ? currentEngine === "tencent"
+        ? `${VIDEO_SESSION_TENCENT_ASR_LABEL} 已就绪，点一下麦克风开始录音`
+        : currentEngine === "local"
         ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 已就绪，点一下麦克风开始录音`
-        : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已就绪，点一下麦克风开始录音`
-      : currentEngine === "local"
+        : "点一下麦克风开始录音"
+      : currentEngine === "tencent"
+        ? `${VIDEO_SESSION_TENCENT_ASR_LABEL} 已就绪，开口后会实时显示`
+        : currentEngine === "local"
         ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 已就绪，开口后新增内容会按字逐步显示`
-        : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已就绪，开口后会实时显示`);
+        : "开口后会实时显示");
   setVideoSessionMicHealth("ready", readyMessage, {
     permissionState,
     paintNow,
@@ -61718,7 +61810,7 @@ const syncVideoSessionMicPermissionState = async ({ bindWatcher = true, paintNow
     return "blocked";
   }
   const capabilities = getVideoSessionMicCapabilities();
-  if (!capabilities.browser && !capabilities.local) {
+  if (!capabilities.tencent && !capabilities.local) {
     state.videoSession.micPermissionState = "unsupported";
     refreshVideoSessionMicHealth({ paintNow, syncNow });
     return "unsupported";
@@ -62483,7 +62575,8 @@ const feedVideoSessionSenseVoiceSamples = (samples) => {
 };
 
 const getVideoSessionMicCapabilities = () => ({
-  browser: isSpeechRecognitionAvailable() && !getVideoSessionDeviceAccessIssue("麦克风"),
+  tencent: hasTencentAsrConfigValues(state.appConfig?.tencentAsr || {}) && !getVideoSessionDeviceAccessIssue("麦克风"),
+  browser: false,
   local: isVideoSessionLocalAsrAvailable() && !getVideoSessionDeviceAccessIssue("麦克风"),
 });
 
@@ -62491,7 +62584,7 @@ const shouldPreferLocalVideoSessionAsr = ({
   permissionState = state.videoSession?.micPermissionState,
   capabilities = getVideoSessionMicCapabilities(),
 } = {}) => {
-  if (capabilities.browser) return false;
+  if (capabilities.tencent) return true;
   if (!capabilities.local) return false;
   const normalizedPermissionState = normalizeBootVideoMicPermissionState(permissionState);
   return normalizedPermissionState !== "denied";
@@ -62500,10 +62593,13 @@ const shouldPreferLocalVideoSessionAsr = ({
 const isVideoSessionLocalRecorderActive = () =>
   Boolean(videoSessionRuntime.audioProcessorNode && videoSessionRuntime.audioSourceNode);
 
+const isTencentAsrActive = () =>
+  Boolean(videoSessionRuntime.tencentAsrSocket || videoSessionRuntime.tencentAsrOpeningPromise);
+
 const syncVideoSessionMicLiveFlags = ({ paintNow = false, syncNow = false } = {}) => {
   if (!state.videoSession) return;
   state.videoSession.micRecording = isVideoSessionLocalRecorderActive();
-  state.videoSession.micListening = Boolean(videoSessionRuntime.recognition || state.videoSession.micRecording);
+  state.videoSession.micListening = Boolean(state.videoSession.micRecording || isTencentAsrActive());
   if (paintNow) paint();
   if (paintNow || syncNow) {
     queueVideoSessionStateSync({ flush: false });
@@ -62517,6 +62613,7 @@ const clearVideoSessionAudioStopPromise = () => {
 };
 
 const disconnectVideoSessionLocalAudioGraph = () => {
+  closeTencentAsrSocket({ sendEnd: true, keepTranscript: true });
   const processorNode = videoSessionRuntime.audioProcessorNode;
   const sourceNode = videoSessionRuntime.audioSourceNode;
   const sinkNode = videoSessionRuntime.audioSinkNode;
@@ -62608,25 +62705,6 @@ const ensureVideoSessionAudioStreamReady = async () => {
   return nextStream;
 };
 
-const requestVideoSessionBrowserMicAccess = async () => {
-  if (normalizeBootVideoMicPermissionState(state.videoSession?.micPermissionState) === "granted") {
-    return true;
-  }
-  const accessIssue = getVideoSessionDeviceAccessIssue("麦克风");
-  if (accessIssue) {
-    throw new Error(accessIssue);
-  }
-  if (!navigator?.mediaDevices?.getUserMedia) {
-    throw new Error("当前浏览器不支持麦克风权限请求");
-  }
-  await ensureVideoSessionAudioStreamReady();
-  if (state.videoSession) {
-    state.videoSession.micPermissionState = "granted";
-    state.videoSession.error = "";
-  }
-  return true;
-};
-
 const ensureVideoSessionAudioContextReady = async () => {
   const AudioContextCtor = getVideoSessionAudioContextCtor();
   if (!AudioContextCtor) {
@@ -62679,6 +62757,7 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
     return false;
   }
   if (isDocumentHidden() || !isVideoSessionLocalAsrAvailable()) return false;
+  const useTencentAsr = hasTencentAsrConfig();
   if (isVideoSessionLocalRecorderActive()) {
     videoSessionRuntime.lastInputReadyAt = Date.now();
     syncVideoSessionMicLiveFlags({ syncNow: true });
@@ -62688,12 +62767,25 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
 
   videoSessionRuntime.localAsrTranscribing = true;
   try {
-    await loadVideoSessionLocalAsrPipeline();
+    if (useTencentAsr) {
+      state.videoSession.micEngine = "tencent";
+      state.videoSession.speechSupported = true;
+      setVideoSessionMicHealth("checking", `${VIDEO_SESSION_TENCENT_ASR_LABEL} 正在连接`, {
+        syncNow: true,
+      });
+      paint();
+    } else {
+      await loadVideoSessionLocalAsrPipeline();
+    }
     const stream = await ensureVideoSessionAudioStreamReady();
     const audioContext = await ensureVideoSessionAudioContextReady();
 
     disconnectVideoSessionLocalAudioGraph();
-    resetVideoSessionSenseVoiceWindow();
+    if (useTencentAsr) {
+      await ensureTencentAsrSocketReady();
+    } else {
+      resetVideoSessionSenseVoiceWindow();
+    }
 
     const sourceNode = audioContext.createMediaStreamSource(stream);
     const processorNode = audioContext.createScriptProcessor(VIDEO_SESSION_LOCAL_ASR_CAPTURE_BUFFER_SIZE, 1, 1);
@@ -62713,7 +62805,11 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
         VIDEO_SESSION_LOCAL_ASR_EXPECTED_SAMPLE_RATE,
         videoSessionRuntime.audioInputSampleRate || Number(audioContext.sampleRate || VIDEO_SESSION_LOCAL_ASR_EXPECTED_SAMPLE_RATE),
       );
-      feedVideoSessionSenseVoiceSamples(chunk);
+      if (useTencentAsr) {
+        enqueueTencentAsrPcmSamples(chunk);
+      } else {
+        feedVideoSessionSenseVoiceSamples(chunk);
+      }
     };
 
     sourceNode.connect(processorNode);
@@ -62724,11 +62820,13 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
     videoSessionRuntime.audioProcessorNode = processorNode;
     videoSessionRuntime.audioSinkNode = sinkNode;
     videoSessionRuntime.audioCaptureStartedAt = Date.now();
-    videoSessionRuntime.audioRecorder = { state: "recording", mode: "sensevoice" };
+    videoSessionRuntime.audioRecorder = { state: "recording", mode: useTencentAsr ? "tencent" : "sensevoice" };
 
     if (state.videoSession) {
       state.videoSession.speechSupported = true;
-      if (setAsPrimary || !getVideoSessionRecognitionCtor()) {
+      if (useTencentAsr) {
+        state.videoSession.micEngine = "tencent";
+      } else if (setAsPrimary) {
         state.videoSession.micEngine = "local";
       }
       state.videoSession.error = "";
@@ -62740,7 +62838,7 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
     resumePendingVideoSessionVisualAutoReply();
     return true;
   } catch (error) {
-    throw new Error(getFriendlyVideoSessionLocalAsrErrorMessage(error));
+    throw new Error(useTencentAsr ? error?.message || `${VIDEO_SESSION_TENCENT_ASR_LABEL} 启动失败` : getFriendlyVideoSessionLocalAsrErrorMessage(error));
   } finally {
     videoSessionRuntime.localAsrTranscribing = false;
     refreshVideoSessionMicHealth({ syncNow: true });
@@ -62786,6 +62884,7 @@ const transcribeVideoSessionAudioBlob = async (blob) => {
 
 const stopVideoSessionLocalAsrCapture = async ({ transcribe = false, discard = false, releaseStream = false } = {}) => {
   const wasActive = isVideoSessionLocalRecorderActive();
+  const wasTencent = String(videoSessionRuntime.audioRecorder?.mode || "").trim() === "tencent";
   const durationMs = wasActive
     ? Math.max(0, Date.now() - Number(videoSessionRuntime.audioCaptureStartedAt || Date.now()))
     : 0;
@@ -62793,7 +62892,18 @@ const stopVideoSessionLocalAsrCapture = async ({ transcribe = false, discard = f
   disconnectVideoSessionLocalAudioGraph();
 
   let transcript = "";
-  if (transcribe && !discard && durationMs >= VIDEO_SESSION_LOCAL_ASR_MIN_DURATION_MS) {
+  if (wasTencent) {
+    transcript = mergeVideoSessionTextParts(
+      videoSessionRuntime.tencentAsrFinalText,
+      videoSessionRuntime.tencentAsrInterimText,
+      state.videoSession?.transcript,
+      state.videoSession?.interimTranscript,
+    );
+    state.videoSession.interimTranscript = "";
+    if (transcript) {
+      state.videoSession.transcript = transcript;
+    }
+  } else if (transcribe && !discard && durationMs >= VIDEO_SESSION_LOCAL_ASR_MIN_DURATION_MS) {
     transcript = drainVideoSessionSenseVoiceSegments({ flush: true, queueSubmit: false });
   }
 
@@ -62802,7 +62912,11 @@ const stopVideoSessionLocalAsrCapture = async ({ transcribe = false, discard = f
     await closeVideoSessionLocalAudioContext();
   }
 
-  resetVideoSessionSenseVoiceWindow();
+  if (wasTencent) {
+    resetTencentAsrRuntime({ keepTranscript: true });
+  } else {
+    resetVideoSessionSenseVoiceWindow();
+  }
 
   videoSessionRuntime.audioRecorder = null;
   syncVideoSessionMicLiveFlags({ syncNow: true });
@@ -62989,26 +63103,11 @@ const destroyVideoSessionRecognition = () => {
   clearVideoSessionRestartTimer();
   clearVideoSessionAutoSubmitTimer();
   clearVideoSessionVisualAutoReplyTimer();
-  clearVideoSessionBrowserReadyTimer();
   videoSessionRuntime.lastInputReadyAt = 0;
   resetVideoSessionHoldToTalkRuntime();
-  const recognition = videoSessionRuntime.recognition;
-  videoSessionRuntime.recognition = null;
   videoSessionRuntime.suppressNextEnd = false;
+  closeTencentAsrSocket({ sendEnd: true, keepTranscript: true });
   syncVideoSessionMicLiveFlags({ syncNow: true });
-  if (!recognition) return;
-  recognition.onstart = null;
-  recognition.onaudiostart = null;
-  recognition.onsoundstart = null;
-  recognition.onspeechstart = null;
-  recognition.onresult = null;
-  recognition.onerror = null;
-  recognition.onend = null;
-  try {
-    recognition.stop();
-  } catch {
-    // ignore
-  }
 };
 
 const shutdownVideoSession = ({ preserveResponseMode = true, paintNow = true } = {}) => {
@@ -63076,7 +63175,7 @@ const resumeVideoSessionAfterForeground = async () => {
       hydrateVideoSessionPanel();
       startVideoSessionClockTimer();
       await syncVideoSessionMicPermissionState();
-      if (!isBusyStatus && shouldAutoStartVideoSessionRecognition(state.videoSession) && !videoSessionRuntime.recognition) {
+      if (!isBusyStatus && shouldAutoStartVideoSessionRecognition(state.videoSession) && !isVideoSessionLocalRecorderActive()) {
         await startVideoSessionRecognition();
       } else if (!isBusyStatus && String(state.videoSession?.inputMode || "voice").trim() === "voice") {
         refreshVideoSessionMicHealth({ syncNow: true });
@@ -63513,7 +63612,7 @@ const setVideoSessionMicTriggerMode = async (mode = "auto") => {
   }
 
   resetVideoSessionHoldToTalkRuntime();
-  if (videoSessionRuntime.recognition || isVideoSessionLocalRecorderActive()) {
+  if (isTencentAsrActive() || isVideoSessionLocalRecorderActive()) {
     destroyVideoSessionRecognition();
     teardownVideoSessionLocalAsrCapture({ releaseStream: false });
   }
@@ -63716,7 +63815,295 @@ const queueVideoSessionVisualAutoReply = ({ delayMs, awaitInputReady = true } = 
   }, waitMs);
 };
 
-const getVideoSessionRecognitionCtor = () => getBrowserSpeechRecognitionCtor();
+const createTencentAsrVoiceId = () => `lifetalk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return globalThis.btoa(binary);
+};
+
+const hmacSha1Base64 = async (message, secretKey) => {
+  const subtle = globalThis?.crypto?.subtle;
+  if (!subtle || typeof TextEncoder === "undefined") {
+    throw new Error("当前浏览器不支持腾讯云语音签名");
+  }
+  const encoder = new TextEncoder();
+  const key = await subtle.importKey(
+    "raw",
+    encoder.encode(String(secretKey || "")),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signature = await subtle.sign("HMAC", key, encoder.encode(String(message || "")));
+  return arrayBufferToBase64(signature);
+};
+
+const encodeTencentAsrQueryValue = (value) => encodeURIComponent(String(value ?? ""));
+
+const buildTencentAsrSignedUrl = async (config = getTencentAsrConfig()) => {
+  const normalizedConfig = normalizeTencentAsrConfig(config);
+  if (!hasTencentAsrConfig(normalizedConfig)) {
+    throw new Error("请先填写腾讯云语音识别 AppID、SecretId 和 SecretKey");
+  }
+  const appId = String(normalizedConfig.appId || "").trim();
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const params = {
+    secretid: normalizedConfig.secretId,
+    timestamp: nowSeconds,
+    expired: nowSeconds + 24 * 60 * 60,
+    nonce: Math.floor(Math.random() * 1000000000),
+    engine_model_type: normalizeTencentAsrEngine(normalizedConfig.engineModelType),
+    voice_id: createTencentAsrVoiceId(),
+    voice_format: 1,
+    needvad: 1,
+    filter_dirty: 0,
+    filter_modal: 0,
+    filter_punc: 0,
+    convert_num_mode: 1,
+    word_info: 0,
+  };
+  const sortedQuery = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join("&");
+  const signatureSource = `asr.cloud.tencent.com/asr/v2/${appId}?${sortedQuery}`;
+  const signature = await hmacSha1Base64(signatureSource, normalizedConfig.secretKey);
+  const urlQuery = `${sortedQuery}&signature=${encodeTencentAsrQueryValue(signature)}`;
+  return `wss://asr.cloud.tencent.com/asr/v2/${encodeURIComponent(appId)}?${urlQuery}`;
+};
+
+const float32ToPcm16ArrayBuffer = (samples) => {
+  const source = samples instanceof Float32Array ? samples : new Float32Array(samples || []);
+  const buffer = new ArrayBuffer(source.length * 2);
+  const view = new DataView(buffer);
+  for (let index = 0; index < source.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, Number(source[index]) || 0));
+    view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return buffer;
+};
+
+const sliceTencentAsrPcmPacket = (buffer, maxBytes = 1280) => {
+  if (!(buffer instanceof ArrayBuffer) || !buffer.byteLength) return [];
+  const chunkSize = Math.max(2, Math.floor(Number(maxBytes || 1280) / 2) * 2);
+  if (buffer.byteLength <= chunkSize) return [buffer];
+  const chunks = [];
+  for (let offset = 0; offset < buffer.byteLength; offset += chunkSize) {
+    chunks.push(buffer.slice(offset, Math.min(buffer.byteLength, offset + chunkSize)));
+  }
+  return chunks;
+};
+
+const resetTencentAsrTranscriptState = () => {
+  videoSessionRuntime.tencentAsrLastFinalText = "";
+  videoSessionRuntime.tencentAsrFinalText = "";
+  videoSessionRuntime.tencentAsrInterimText = "";
+};
+
+const resetTencentAsrRuntime = ({ keepTranscript = false } = {}) => {
+  if (videoSessionRuntime.tencentAsrSendTimer) {
+    window.clearTimeout(videoSessionRuntime.tencentAsrSendTimer);
+  }
+  videoSessionRuntime.tencentAsrSendTimer = 0;
+  videoSessionRuntime.tencentAsrAudioQueue = [];
+  videoSessionRuntime.tencentAsrReady = false;
+  videoSessionRuntime.tencentAsrOpeningPromise = null;
+  videoSessionRuntime.tencentAsrSocketId = "";
+  if (!keepTranscript) {
+    resetTencentAsrTranscriptState();
+  }
+};
+
+const flushTencentAsrSendQueue = () => {
+  videoSessionRuntime.tencentAsrSendTimer = 0;
+  const socket = videoSessionRuntime.tencentAsrSocket;
+  if (!socket || socket.readyState !== WebSocket.OPEN || !videoSessionRuntime.tencentAsrReady) return;
+  const packet = videoSessionRuntime.tencentAsrAudioQueue.shift();
+  if (!packet) return;
+  try {
+    socket.send(packet);
+    if (videoSessionRuntime.tencentAsrAudioQueue.length) {
+      videoSessionRuntime.tencentAsrSendTimer = window.setTimeout(flushTencentAsrSendQueue, 40);
+    }
+  } catch (error) {
+    state.videoSession.error = error?.message || "腾讯云语音识别发送失败";
+    setVideoSessionMicHealth("error", state.videoSession.error, { syncNow: true });
+    patchVideoSessionMicHealthDom();
+  }
+};
+
+const enqueueTencentAsrPcmSamples = (samples) => {
+  if (!(samples instanceof Float32Array) || !samples.length) return;
+  const socket = videoSessionRuntime.tencentAsrSocket;
+  if (!socket || socket.readyState !== WebSocket.OPEN || !videoSessionRuntime.tencentAsrReady) return;
+  videoSessionRuntime.tencentAsrAudioQueue.push(...sliceTencentAsrPcmPacket(float32ToPcm16ArrayBuffer(samples)));
+  if (videoSessionRuntime.tencentAsrSendTimer) return;
+  videoSessionRuntime.tencentAsrSendTimer = window.setTimeout(flushTencentAsrSendQueue, 0);
+};
+
+const applyTencentAsrTranscript = ({ finalText = "", interimText = "", queueSubmit = true } = {}) => {
+  if (!state.videoSession || String(state.videoSession.inputMode || "voice").trim() !== "voice") return;
+  const normalizedFinal = sanitizeVideoSessionLocalTranscript(finalText);
+  const normalizedInterim = sanitizeVideoSessionLocalTranscript(interimText);
+  state.videoSession.transcript = normalizedFinal;
+  state.videoSession.interimTranscript = normalizedInterim;
+  state.videoSession.error = "";
+  state.videoSession.speechSupported = true;
+  state.videoSession.micEngine = "tencent";
+  videoSessionRuntime.lastVoiceActivityAt = Date.now();
+  if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
+    state.videoSession.status = getVideoSessionIdleStatus();
+  }
+  if (normalizedFinal && !normalizedInterim && queueSubmit && !isVideoSessionHoldToTalkMode(state.videoSession)) {
+    queueVideoSessionSpeechAutoSubmit();
+  } else {
+    clearVideoSessionAutoSubmitTimer();
+    clearVideoSessionVisualAutoReplyTimer();
+  }
+  paint();
+  queueVideoSessionStateSync();
+  patchVideoSessionMicHealthDom();
+};
+
+const handleTencentAsrMessage = (event) => {
+  let data = null;
+  try {
+    data = JSON.parse(String(event?.data || ""));
+  } catch {
+    return;
+  }
+  if (!data || typeof data !== "object") return;
+  const code = Number(data.code ?? 0);
+  if (Number.isFinite(code) && code !== 0) {
+    const message = String(data.message || data.error || "腾讯云语音识别失败").trim();
+    state.videoSession.error = message;
+    setVideoSessionMicHealth("error", message, { syncNow: true });
+    patchVideoSessionMicHealthDom();
+    return;
+  }
+  const result = data.result && typeof data.result === "object" ? data.result : data;
+  const rawText = sanitizeVideoSessionLocalTranscript(result.voice_text_str || result.text || result.result || "");
+  if (!rawText) return;
+  const sliceType = Number(result.slice_type ?? data.slice_type ?? 0);
+  if (sliceType === 2) {
+    videoSessionRuntime.tencentAsrLastFinalText = rawText;
+    videoSessionRuntime.tencentAsrFinalText = mergeVideoSessionTextParts(
+      videoSessionRuntime.tencentAsrFinalText,
+      rawText,
+    );
+    videoSessionRuntime.tencentAsrInterimText = "";
+  } else if (sliceType === 1 || sliceType === 0) {
+    videoSessionRuntime.tencentAsrInterimText = rawText;
+  } else {
+    videoSessionRuntime.tencentAsrInterimText = rawText;
+  }
+  applyTencentAsrTranscript({
+    finalText: videoSessionRuntime.tencentAsrFinalText,
+    interimText: videoSessionRuntime.tencentAsrInterimText,
+  });
+};
+
+const closeTencentAsrSocket = ({ sendEnd = true, keepTranscript = false } = {}) => {
+  if (videoSessionRuntime.tencentAsrSendTimer) {
+    window.clearTimeout(videoSessionRuntime.tencentAsrSendTimer);
+    flushTencentAsrSendQueue();
+  }
+  const socket = videoSessionRuntime.tencentAsrSocket;
+  videoSessionRuntime.tencentAsrSocket = null;
+  if (socket) {
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    try {
+      if (sendEnd && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "end" }));
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      if (
+        typeof WebSocket !== "undefined" &&
+        (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+      ) {
+        socket.close();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  resetTencentAsrRuntime({ keepTranscript });
+};
+
+const ensureTencentAsrSocketReady = async () => {
+  if (videoSessionRuntime.tencentAsrSocket?.readyState === WebSocket.OPEN && videoSessionRuntime.tencentAsrReady) {
+    return true;
+  }
+  if (videoSessionRuntime.tencentAsrOpeningPromise) return videoSessionRuntime.tencentAsrOpeningPromise;
+  const config = getTencentAsrConfig();
+  if (!hasTencentAsrConfig(config)) {
+    throw new Error("请先填写腾讯云语音识别 AppID、SecretId 和 SecretKey");
+  }
+  closeTencentAsrSocket({ sendEnd: false, keepTranscript: false });
+  resetTencentAsrTranscriptState();
+  videoSessionRuntime.tencentAsrOpeningPromise = new Promise(async (resolve, reject) => {
+    try {
+      const signedUrl = await buildTencentAsrSignedUrl(config);
+      const socket = new WebSocket(signedUrl);
+      videoSessionRuntime.tencentAsrSocket = socket;
+      videoSessionRuntime.tencentAsrReady = false;
+      socket.binaryType = "arraybuffer";
+      socket.onopen = () => {
+        videoSessionRuntime.tencentAsrReady = true;
+        videoSessionRuntime.lastInputReadyAt = Date.now();
+        if (state.videoSession) {
+          state.videoSession.micEngine = "tencent";
+          state.videoSession.speechSupported = true;
+          state.videoSession.error = "";
+        }
+        setVideoSessionMicHealth("ready", `${VIDEO_SESSION_TENCENT_ASR_LABEL} 已连接`, { syncNow: true });
+        consumePendingVideoSessionReadyCue();
+        resumePendingVideoSessionVisualAutoReply();
+        patchVideoSessionMicHealthDom();
+        resolve(true);
+      };
+      socket.onmessage = handleTencentAsrMessage;
+      socket.onerror = () => {
+        const error = new Error("腾讯云语音识别连接失败");
+        if (!videoSessionRuntime.tencentAsrReady) {
+          reject(error);
+        }
+        if (state.videoSession?.active) {
+          state.videoSession.error = error.message;
+          setVideoSessionMicHealth("error", error.message, { syncNow: true });
+          patchVideoSessionMicHealthDom();
+        }
+      };
+      socket.onclose = () => {
+        videoSessionRuntime.tencentAsrSocket = null;
+        videoSessionRuntime.tencentAsrReady = false;
+        if (state.videoSession?.active && state.videoSession.micEngine === "tencent") {
+          syncVideoSessionMicLiveFlags({ syncNow: true });
+          if (!["processing", "replying"].includes(String(state.videoSession.status || "").trim())) {
+            refreshVideoSessionMicHealth({ syncNow: true });
+          }
+        }
+      };
+    } catch (error) {
+      reject(error);
+    }
+  }).finally(() => {
+    videoSessionRuntime.tencentAsrOpeningPromise = null;
+  });
+  return videoSessionRuntime.tencentAsrOpeningPromise;
+};
 
 const queueVideoSessionRecognitionRestart = () => {
   clearVideoSessionRestartTimer();
@@ -63758,19 +64145,14 @@ const finishVideoSessionHoldToTalk = async ({ requestId = Number(videoSessionRun
   clearVideoSessionRestartTimer();
   clearVideoSessionAutoSubmitTimer();
   clearVideoSessionVisualAutoReplyTimer();
-  clearVideoSessionBrowserReadyTimer();
   clearVideoSessionReadyCue({ paintNow: false });
-  if (videoSessionRuntime.recognition) {
-    videoSessionRuntime.holdToTalkReleasePending = true;
-    try {
-      videoSessionRuntime.recognition.stop();
-      return true;
-    } catch {
-      videoSessionRuntime.holdToTalkReleasePending = false;
-    }
-  }
   if (isVideoSessionLocalRecorderActive()) {
     await finalizeVideoSessionLocalVoiceTranscript({ silent: true });
+    videoSessionRuntime.holdToTalkReleasePending = false;
+    return submitVideoSessionHoldToTalkInput();
+  }
+  if (isTencentAsrActive()) {
+    closeTencentAsrSocket({ sendEnd: true, keepTranscript: true });
     videoSessionRuntime.holdToTalkReleasePending = false;
     return submitVideoSessionHoldToTalkInput();
   }
@@ -63793,7 +64175,7 @@ const beginVideoSessionHoldToTalk = (event = null) => {
   clearVideoSessionRestartTimer();
   clearVideoSessionVisualAutoReplyTimer();
   clearVideoSessionReadyCue({ paintNow: false });
-  if (!videoSessionRuntime.recognition && !isVideoSessionLocalRecorderActive()) {
+  if (!isTencentAsrActive() && !isVideoSessionLocalRecorderActive()) {
     setVideoSessionMicHealth("checking", "正在打开麦克风，等绿麦亮起后开始录音", {
       syncNow: true,
     });
@@ -63840,7 +64222,7 @@ const finishVideoSessionHoldToTalkGesture = (event) => {
 const toggleVideoSessionTapToRecord = (event = null) => {
   if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") return false;
   if (!isVideoSessionTapToRecordMode(state.videoSession)) return false;
-  if (videoSessionRuntime.holdToTalkActive || videoSessionRuntime.recognition || isVideoSessionLocalRecorderActive()) {
+  if (videoSessionRuntime.holdToTalkActive || isVideoSessionLocalRecorderActive() || isTencentAsrActive()) {
     return finishVideoSessionHoldToTalkGesture();
   }
   return beginVideoSessionHoldToTalk();
@@ -63858,11 +64240,10 @@ const startVideoSessionRecognition = async () => {
     paint();
     return false;
   }
-  if (videoSessionRuntime.recognition) return true;
+  if (isTencentAsrActive()) return true;
 
-  const RecognitionCtor = getVideoSessionRecognitionCtor();
   const capabilities = getVideoSessionMicCapabilities();
-  if (!capabilities.browser && !capabilities.local) {
+  if (!capabilities.tencent && !capabilities.local) {
     state.videoSession.speechSupported = false;
     state.videoSession.micListening = false;
     state.videoSession.micPermissionState = "unsupported";
@@ -63878,7 +64259,7 @@ const startVideoSessionRecognition = async () => {
     return false;
   }
 
-  setVideoSessionMicHealth("checking", `正在检查麦克风和${RecognitionCtor ? VIDEO_SESSION_BROWSER_SPEECH_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL}`, {
+  setVideoSessionMicHealth("checking", `正在检查麦克风和${capabilities.tencent ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL}`, {
     paintNow: true,
     syncNow: true,
   });
@@ -63897,12 +64278,12 @@ const startVideoSessionRecognition = async () => {
     return false;
   }
 
-  const startLocalFallback = async ({ setAsPrimary = false } = {}) => {
+  const startLocalFallback = async ({ setAsPrimary = false, preferTencent = capabilities.tencent } = {}) => {
     if (!capabilities.local) return false;
     try {
       const started = await startVideoSessionLocalAsrCapture({ setAsPrimary });
       if (started && setAsPrimary) {
-        state.videoSession.micEngine = "local";
+        state.videoSession.micEngine = preferTencent ? "tencent" : "local";
         state.videoSession.speechSupported = true;
         if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
           state.videoSession.status = getVideoSessionIdleStatus();
@@ -63913,7 +64294,7 @@ const startVideoSessionRecognition = async () => {
       return started;
     } catch (error) {
       if (setAsPrimary) {
-        state.videoSession.error = error?.message || `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 启动失败`;
+        state.videoSession.error = error?.message || `${preferTencent ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 启动失败`;
         setVideoSessionMicHealth("error", state.videoSession.error, {
           syncNow: true,
         });
@@ -63923,38 +64304,7 @@ const startVideoSessionRecognition = async () => {
     }
   };
 
-  if (shouldPreferLocalVideoSessionAsr({ permissionState, capabilities })) {
-    const localStarted = await startLocalFallback({ setAsPrimary: true });
-    if (!localStarted) {
-      if (!RecognitionCtor || !capabilities.browser) {
-        state.videoSession.speechSupported = false;
-        state.videoSession.micListening = false;
-        state.videoSession.micEngine = "unsupported";
-        if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
-          state.videoSession.status = "manual";
-        }
-        setVideoSessionMicHealth(
-          "error",
-          isVideoSessionFileOrigin()
-            ? `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 已启用，但麦克风流启动失败`
-            : `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 启动失败`,
-          {
-            syncNow: true,
-          },
-        );
-        paint();
-        return false;
-      }
-      setVideoSessionMicHealth("checking", `${VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 启动失败，正在切回${VIDEO_SESSION_BROWSER_SPEECH_LABEL}`, {
-        syncNow: true,
-      });
-      paint();
-    } else {
-      return true;
-    }
-  }
-
-  if (!RecognitionCtor) {
+  if (capabilities.tencent) {
     const localStarted = await startLocalFallback({ setAsPrimary: true });
     if (!localStarted) {
       state.videoSession.speechSupported = false;
@@ -63963,243 +64313,29 @@ const startVideoSessionRecognition = async () => {
       if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
         state.videoSession.status = "manual";
       }
-      refreshVideoSessionMicHealth({ paintNow: true, syncNow: true });
+      setVideoSessionMicHealth("error", state.videoSession.error || `${VIDEO_SESSION_TENCENT_ASR_LABEL} 启动失败`, {
+        syncNow: true,
+      });
       paint();
       return false;
+    } else {
+      return true;
     }
-    return true;
   }
 
-  try {
-    state.videoSession.micEngine = "browser";
-    await requestVideoSessionBrowserMicAccess();
-    await startVideoSessionMicLevelMonitor();
-    await syncVideoSessionMicPermissionState({ syncNow: true });
-    const recognition = new RecognitionCtor();
-    videoSessionRuntime.recognition = recognition;
-    videoSessionRuntime.suppressNextEnd = false;
-    recognition.lang = "zh-CN";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      clearVideoSessionBrowserReadyTimer();
-      state.videoSession.speechSupported = true;
-      state.videoSession.micEngine = "browser";
-      state.videoSession.error = "";
-      videoSessionRuntime.lastInputReadyAt = Date.now() + VIDEO_SESSION_BROWSER_SPEECH_READY_GRACE_MS;
-      syncVideoSessionMicLiveFlags({ syncNow: true });
-      if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
-        state.videoSession.status = getVideoSessionIdleStatus();
-      }
-      const holdMode = isVideoSessionTapToRecordMode(state.videoSession);
-      setVideoSessionMicHealth(
-        "checking",
-        holdMode
-          ? `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 正在接管麦克风，绿麦亮起后开始录音`
-          : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 正在接管麦克风，等绿麦亮起再说`,
-        {
-          syncNow: true,
-        },
-      );
-      paint();
-      patchVideoSessionMicHealthDom();
-      videoSessionRuntime.browserReadyTimer = window.setTimeout(() => {
-        videoSessionRuntime.browserReadyTimer = 0;
-        completeVideoSessionBrowserSpeechWarmup(recognition);
-      }, VIDEO_SESSION_BROWSER_SPEECH_READY_GRACE_MS);
-    };
-
-    recognition.onaudiostart = () => {
-      if (videoSessionRuntime.browserReadyTimer) {
-        const holdMode = isVideoSessionTapToRecordMode(state.videoSession);
-        setVideoSessionMicHealth(
-          "checking",
-          holdMode
-            ? `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已听到麦克风，马上开始录音`
-            : `${VIDEO_SESSION_BROWSER_SPEECH_LABEL} 已听到麦克风，正在进入识别`,
-          {
-            syncNow: true,
-          },
-        );
-        patchVideoSessionMicHealthDom();
-      }
-    };
-
-    recognition.onspeechstart = () => {
-      videoSessionRuntime.lastVoiceActivityAt = Date.now();
-      if (videoSessionRuntime.browserReadyTimer) {
-        completeVideoSessionBrowserSpeechWarmup(recognition);
-      }
-    };
-
-    recognition.onresult = (event) => {
-      videoSessionRuntime.lastVoiceActivityAt = Date.now();
-      let finalText = String(state.videoSession.transcript || "").trim();
-      let interimText = "";
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const transcript = String(event.results[index]?.[0]?.transcript || "").trim();
-        if (!transcript) continue;
-        if (event.results[index].isFinal) {
-          finalText = mergeVideoSessionTextParts(finalText, transcript);
-        } else {
-          interimText = mergeVideoSessionTextParts(interimText, transcript);
-        }
-      }
-      state.videoSession.transcript = finalText;
-      state.videoSession.interimTranscript = interimText;
-      if (finalText && !interimText && !isVideoSessionHoldToTalkMode(state.videoSession)) {
-        queueVideoSessionSpeechAutoSubmit();
-      } else {
-        clearVideoSessionAutoSubmitTimer();
-        clearVideoSessionVisualAutoReplyTimer();
-      }
-      paint();
-      queueVideoSessionStateSync();
-      patchVideoSessionMicHealthDom();
-    };
-
-    recognition.onerror = (event) => {
-      clearVideoSessionBrowserReadyTimer();
-      clearVideoSessionAutoSubmitTimer();
-      const code = String(event?.error || "").trim();
-      if (["not-allowed", "service-not-allowed"].includes(code)) {
-        state.videoSession.speechSupported = false;
-        state.videoSession.micPermissionState = "denied";
-        setVideoSessionMicHealth("blocked", "麦克风权限未打开，请到浏览器里允许", {
-          syncNow: true,
-        });
-      } else if (code === "audio-capture") {
-        state.videoSession.speechSupported = false;
-        setVideoSessionMicHealth("blocked", "没有检测到可用麦克风设备", {
-          syncNow: true,
-        });
-      } else if (code && !["no-speech", "aborted"].includes(code)) {
-        if (capabilities.local && isVideoSessionLocalRecorderActive()) {
-          state.videoSession.micEngine = "local";
-          state.videoSession.speechSupported = true;
-          setVideoSessionMicHealth("ready", "浏览器识别异常，已切到本地转写，新增内容会按字逐步显示，停顿后才会自动发送", {
-            syncNow: true,
-          });
-        } else {
-          setVideoSessionMicHealth("error", `语音识别异常：${code}`, {
-            syncNow: true,
-          });
-        }
-      } else {
-        refreshVideoSessionMicHealth({ syncNow: true });
-      }
-      if (code && !["no-speech", "aborted"].includes(code)) {
-        state.videoSession.error = `麦克风转文字失败：${code}`;
-      }
-      syncVideoSessionMicLiveFlags({ syncNow: true });
-      if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
-        state.videoSession.status = getVideoSessionIdleStatus();
-      }
-      if (state.videoSession.micHealthState === "blocked" || state.videoSession.micHealthState === "error") {
-        stopVideoSessionMicLevelMonitor({ resetLevel: true });
-      }
-      paint();
-      if (
-        (!code || ["no-speech", "aborted"].includes(code)) &&
-        !(isVideoSessionHoldToTalkMode(state.videoSession) && videoSessionRuntime.holdToTalkReleasePending)
-      ) {
-        if (queueVideoSessionTapRecordingRestart()) {
-          return;
-        }
-        queueVideoSessionVisualAutoReply();
-      }
-    };
-
-    recognition.onend = async () => {
-      clearVideoSessionBrowserReadyTimer();
-      const shouldSuppress = videoSessionRuntime.suppressNextEnd;
-      videoSessionRuntime.suppressNextEnd = false;
-      videoSessionRuntime.recognition = null;
-      syncVideoSessionMicLiveFlags({ syncNow: true });
-      if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
-        state.videoSession.status = getVideoSessionIdleStatus();
-      }
-      refreshVideoSessionMicHealth({ syncNow: true });
-      patchVideoSessionMicHealthDom();
-
-      if (shouldSuppress || !state.videoSession?.active || !isVideoSessionPanelOpen()) {
-        return;
-      }
-
-      if (queueVideoSessionTapRecordingRestart()) {
-        return;
-      }
-
-      if (isVideoSessionHoldToTalkMode(state.videoSession) && videoSessionRuntime.holdToTalkReleasePending) {
-        videoSessionRuntime.holdToTalkReleasePending = false;
-        const heldInput = getVideoSessionPendingInputText(state.videoSession, { mode: "voice" });
-        if (heldInput) {
-          void submitVideoSessionRound({ source: "manual" });
-          return;
-        }
-        queueVideoSessionVisualAutoReply({ awaitInputReady: false });
-        return;
-      }
-
-      const hasInput = Boolean(
-        mergeVideoSessionTextParts(
-          state.videoSession.transcript,
-          state.videoSession.interimTranscript,
-          state.videoSession.manualText,
-        ),
-      );
-      if (hasInput) {
-        if (!String(state.videoSession.interimTranscript || "").trim()) {
-          queueVideoSessionSpeechAutoSubmit();
-        }
-        queueVideoSessionRecognitionRestart();
-        return;
-      }
-      if (isVideoSessionLocalRecorderActive()) {
-        const fallbackText = await finalizeVideoSessionLocalVoiceTranscript({ silent: true });
-        if (fallbackText) {
-          void submitVideoSessionRound();
-          return;
-        }
-      }
-      queueVideoSessionVisualAutoReply();
-      queueVideoSessionRecognitionRestart();
-    };
-
-    recognition.start();
-    return true;
-  } catch (error) {
-    clearVideoSessionBrowserReadyTimer();
-    videoSessionRuntime.recognition = null;
-    syncVideoSessionMicLiveFlags({ syncNow: true });
-    if (!RecognitionCtor || !capabilities.browser) {
-      const localStarted = await startLocalFallback({ setAsPrimary: true });
-      if (localStarted) {
-        return true;
-      }
-    }
-    videoSessionRuntime.pendingReadyCue = false;
-    videoSessionRuntime.readyCueReason = "";
-    stopVideoSessionMicLevelMonitor({ resetLevel: true });
+  const localStarted = await startLocalFallback({ setAsPrimary: true, preferTencent: false });
+  if (!localStarted) {
     state.videoSession.speechSupported = false;
-    state.videoSession.status = getVideoSessionIdleStatus();
-    state.videoSession.error = error?.message || "麦克风启动失败";
-    const loweredMessage = String(error?.message || "").trim().toLowerCase();
-    if (/not.?allow|denied|permission/.test(loweredMessage)) {
-      state.videoSession.micPermissionState = "denied";
-      setVideoSessionMicHealth("blocked", "麦克风权限未打开，请到浏览器里允许", {
-        syncNow: true,
-      });
-    } else {
-      setVideoSessionMicHealth("error", state.videoSession.error, {
-        syncNow: true,
-      });
+    state.videoSession.micListening = false;
+    state.videoSession.micEngine = "unsupported";
+    if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
+      state.videoSession.status = "manual";
     }
+    refreshVideoSessionMicHealth({ paintNow: true, syncNow: true });
     paint();
     return false;
   }
+  return true;
 };
 
 const requestPrimaryVideoReply = async (
@@ -64476,16 +64612,14 @@ const startVideoSession = async () => {
   if (wantsVoiceInput) {
     try {
       const capabilities = getVideoSessionMicCapabilities();
-      const preferredSpeechLabel = capabilities.browser
-        ? VIDEO_SESSION_BROWSER_SPEECH_LABEL
-        : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL;
+      const preferredSpeechLabel = capabilities.tencent ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL;
       setVideoSessionMicHealth("checking", `正在请求麦克风权限，并准备 ${preferredSpeechLabel}`, {
         syncNow: true,
       });
       paint();
       queueVideoSessionStateSync();
-      if (capabilities.browser) {
-        await requestVideoSessionBrowserMicAccess();
+      if (capabilities.tencent) {
+        await ensureVideoSessionAudioStreamReady();
       } else if (capabilities.local) {
         await ensureVideoSessionAudioStreamReady();
         if (isMobileLikeRuntime()) {
