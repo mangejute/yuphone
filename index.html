@@ -24155,7 +24155,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.07-chat-today-detail-16";
+const APP_BUILD_VERSION_LABEL = "v2026.05.07-chat-output-cap-19";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -33409,7 +33409,8 @@ const DZZI_LEGACY_KEYS = new Set([
   "sk-4NkbjwUREJ06W3CMg9nyLoArRLMLk0Z0m7vjyrzUpnHVlnFT",
 ]);
 const MODEL_OUTPUT_TOKEN_BUDGET = 65536;
-const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 3600;
+const CHAT_REPLY_OUTPUT_TOKEN_BUDGET = 3200;
+const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 5000;
 const LIFE_MONITOR_MODEL_OUTPUT_TOKEN_BUDGET = 5000;
 
 const MINIMAX_VOICE_DEFAULTS = Object.freeze({
@@ -37534,7 +37535,7 @@ const shouldUseGeminiCompatibleMode = (config = null) => {
 const shouldOmitMaxTokensForConfig = (config = {}) => {
   const normalizedUrl = normalizeApiConfigUrl(config?.url);
   const normalizedModel = normalizeApiConfigModel(config?.model);
-  return normalizedUrl === PANDA_API_URL && PANDA_GEMINI3_MODELS.has(normalizedModel);
+  return (normalizedUrl === PANDA_API_URL || PANDA_LEGACY_URLS.has(normalizedUrl)) && PANDA_GEMINI3_MODELS.has(normalizedModel);
 };
 const getOpenAiCompatibleExtraRequestOptions = (config = {}) => {
   if (shouldOmitMaxTokensForConfig(config)) {
@@ -40300,9 +40301,10 @@ const requestModelJsonWithConfig = async ({
     120,
     MODEL_OUTPUT_TOKEN_BUDGET,
   );
+  const forceExactOutputBudget = Boolean(payload?.outputRules?.forceMaxOutputTokens);
   const prefersCompactJsonBudget = Boolean(payload?.outputRules?.compactBudget);
   const needsHighJsonBudget = geminiMode && /dzzi\.ai/i.test(String(config?.url || ""));
-  const maxOutputTokens = prefersCompactJsonBudget
+  const maxOutputTokens = forceExactOutputBudget || prefersCompactJsonBudget
     ? requestedMaxOutputTokens
     : needsHighJsonBudget
       ? Math.max(requestedMaxOutputTokens, 3200)
@@ -44304,7 +44306,9 @@ ${dailyLifeMemoryPrompt}
       plainTextContext,
       outputRules: {
         contextFormat: "plain-text",
-        unbounded: true,
+        maxOutputTokens: CHAT_REPLY_OUTPUT_TOKEN_BUDGET,
+        forceMaxOutputTokens: true,
+        targetReplyChars: { min: 80, preferredMin: 120, preferredMax: 260 },
       },
     },
     includeMeta: true,
@@ -44423,7 +44427,9 @@ ${dailyLifeMemoryPrompt}
       plainTextContext,
       outputRules: {
         contextFormat: "plain-text",
-        unbounded: true,
+        maxOutputTokens: CHAT_REPLY_OUTPUT_TOKEN_BUDGET,
+        forceMaxOutputTokens: true,
+        targetReplyChars: { min: 80, preferredMin: 120, preferredMax: 260 },
       },
     },
     includeMeta: true,
@@ -44510,7 +44516,8 @@ ${dailyLifeMemoryPrompt}
         minMessages: 3,
         maxMessages: 5,
         statusMaxLength: 10,
-        maxOutputTokens: MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: CHAT_REPLY_OUTPUT_TOKEN_BUDGET,
+        forceMaxOutputTokens: true,
         targetReplyChars: { min: 68, preferredMin: 92, preferredMax: 180 },
       },
     },
@@ -53660,6 +53667,105 @@ const buildLifeMonitorA3PlainTextContext = ({
   return lines.filter(Boolean).join("\n");
 };
 
+const buildJourneyA3PlainTextContext = ({
+  role,
+  roleName = "",
+  normalizedTargetDate = formatDateKey(),
+  targetDateLabel = "",
+  normalizedJourneyPrompt = "",
+  currentPlace = "",
+  allowedPlaces = [],
+  journeyGoalTitles = [],
+  activeShortGoals = [],
+  activeLongGoals = [],
+  npcNames = [],
+  timeSeeds = [],
+  preferredEntryCount = JOURNEY_DYNAMIC_ENTRY_MIN,
+  targetHoliday = null,
+  mealTimes = [],
+  journeyCanWriteEventLine = false,
+  fortuneRoll = null,
+  lifeFateSettings = null,
+  lifeNodeClockHint = "",
+} = {}) => {
+  const profile = role?.profile || {};
+  const continuity = buildJourneyContinuityContext(role, normalizedTargetDate);
+  const previousTimeline = normalizeArray(continuity.previousTimeline || [])
+    .slice(-3)
+    .map((item) => [item?.time, item?.title, item?.place].filter(Boolean).join(" "))
+    .filter(Boolean);
+  const previousLife = normalizeArray(continuity.previousLifeTimeline || [])
+    .slice(-3)
+    .map((item) => [item?.date || getRoleMonitorEntryDateKey(item), item?.time, item?.title || item?.tag].filter(Boolean).join(" "))
+    .filter(Boolean);
+  const activeEvents = normalizeArray(continuity.targetEvents || continuity.previousEvents || [])
+    .slice(-2)
+    .map((event) => [event?.title, event?.status, truncateContextText(event?.summary || "", 56)].filter(Boolean).join(" "))
+    .filter(Boolean);
+  const worldbook = getActiveWorldbookSummary(role)
+    .slice(0, 2)
+    .map((item) => [item?.title, truncateContextText(item?.content || item?.keywords || "", 54)].filter(Boolean).join("："))
+    .filter(Boolean);
+  const memories = buildRoleMemoryContextItems(role, { limit: 3, textLimit: 54 });
+  const summaryArchive = String(role?.chats?.summaryArchive || "")
+    .split("────────────────────────────────")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(-1)
+    .map((item) => truncateContextText(item, 72));
+  const recentMessages = getRecentMessagesSummary(role, 6)
+    .slice(-3)
+    .map((item) => truncateContextText(item, 54))
+    .filter(Boolean);
+  const mapPlaces = normalizeArray(allowedPlaces).length
+    ? normalizeArray(allowedPlaces)
+    : getRoleUsableMapPlaceNames(role, 6);
+  const shortGoalLines = normalizeArray(activeShortGoals)
+    .slice(0, ACTIVE_GOAL_CAPS.short)
+    .map((item) => `${item.title || "短期目标"}(${Number(item.progress || 0)}%)`);
+  const longGoalLines = normalizeArray(activeLongGoals)
+    .slice(0, ACTIVE_GOAL_CAPS.long)
+    .map((item) => `${item.title || "长期目标"}(${Number(item.progress || 0)}%)`);
+  const seedLines = normalizeArray(timeSeeds)
+    .slice(0, Math.max(1, preferredEntryCount))
+    .map((item) => item?.time || item)
+    .filter(Boolean);
+  const lines = [
+    `任务：生成 ${targetDateLabel || normalizedTargetDate} 的当天行程纯文本`,
+    `角色：${roleName || profile.note || profile.name || "角色"}`,
+    profile?.bio ? `人设：${truncateContextText(profile.bio, 90)}` : "",
+    profile?.onlineStyle ? `说话风格：${truncateContextText(profile.onlineStyle, 54)}` : "",
+    `当前地点：${currentPlace || getRoleCurrentPlace(role) || profile.location || "当前地点"}`,
+    profile?.realCityReference || profile?.location ? `参考城市：${profile.realCityReference || profile.location}` : "",
+    profile?.weatherLiveHint || profile?.weather ? `天气：${profile.weatherLiveHint || profile.weather}` : "",
+    mapPlaces.length ? `可用地点：${mapPlaces.join(" / ")}` : "",
+    npcNames.length ? `NPC：${npcNames.join(" / ")}` : "",
+    normalizedJourneyPrompt ? `用户要求：${truncateContextText(normalizedJourneyPrompt, 90)}` : "",
+    targetHoliday?.name || targetHoliday?.promptHint
+      ? `日期节奏：${targetHoliday?.name || "普通日"} ${truncateContextText(targetHoliday?.promptHint || "", 72)}`
+      : "",
+    seedLines.length ? `建议时间段：${seedLines.join(" / ")}` : "",
+    mealTimes.length ? `用餐时间：${mealTimes.filter(Boolean).join(" / ")}` : "",
+    shortGoalLines.length ? `当前短期目标：${shortGoalLines.join(" / ")}` : "当前短期目标：暂无",
+    longGoalLines.length ? `当前长期目标：${longGoalLines.join(" / ")}` : "当前长期目标：暂无",
+    journeyGoalTitles.length ? `目标关键词：${journeyGoalTitles.slice(0, 6).join(" / ")}` : "",
+    previousTimeline.length ? `昨天行程尾声：${previousTimeline.join("；")}` : "",
+    previousLife.length ? `昨天生活轨迹：${previousLife.join("；")}` : "",
+    activeEvents.length ? `影响期事件：${activeEvents.join("；")}` : "",
+    worldbook.length ? `世界书：${worldbook.join("；")}` : "",
+    memories.length ? `重要记忆：${memories.join("；")}` : "",
+    summaryArchive.length ? `自动总结：${summaryArchive.join("；")}` : "",
+    recentMessages.length ? `最近聊天：${recentMessages.join("；")}` : "",
+    `行程条数：建议 ${preferredEntryCount} 条，前端完整保留，不要少写`,
+    `生活轨迹：${journeyCanWriteEventLine ? `本日概率命中，行程后追加 事件||总标题||进行中||运势||天数 和 ${LIFE_MONITOR_DAILY_NODE_MIN}-${LIFE_MONITOR_DAILY_NODE_MAX} 个 HH:MM 节点；第一节点靠近 ${lifeNodeClockHint}` : "本日概率未命中，行程后不要写生活轨迹"}`,
+    `概率：每日${Number(lifeFateSettings?.eventTriggerChance || 0)}%，本次有效${Number(fortuneRoll?.effectiveTriggerChance || 0)}%，运势${fortuneRoll?.tierLabel || "平稳"}`,
+    Array.isArray(fortuneRoll?.storyHooks) && fortuneRoll.storyHooks.length
+      ? `题材钩子：${fortuneRoll.storyHooks.slice(0, 4).join(" / ")}`
+      : "",
+  ];
+  return lines.filter(Boolean).join("\n");
+};
+
 const requestJourneyPreviewTimelineOnlyTextData = async (
   role,
   {
@@ -53676,7 +53782,9 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   const roleName = role?.profile?.note || role?.profile?.name || "角色";
   const allAllowedPlaces = getJourneyAllowedPlaceNames(role, 8);
   const plannerConfig = getPlannerApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
+  const useA3SlimContext = shouldOmitMaxTokensForConfig(plannerConfig);
+  const preferredVariantMode =
+    shouldUseGeminiCompatibleMode(plannerConfig) && useA3SlimContext ? "openai-fallback" : shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
   const allowedPlaces = allAllowedPlaces.slice(0, 6);
   const currentPlace = allowedPlaces[0] || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const activeShortGoals = getActiveRoleGoals(role).filter((item) => normalizeRuntimeGoalType(item?.type) === "short");
@@ -53737,89 +53845,58 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     fortuneSettings: lifeFateSettings,
     fortuneRoll,
   });
+  const journeyA3PlainTextContext = buildJourneyA3PlainTextContext({
+    role,
+    roleName,
+    normalizedTargetDate,
+    targetDateLabel,
+    normalizedJourneyPrompt,
+    currentPlace,
+    allowedPlaces,
+    journeyGoalTitles,
+    activeShortGoals,
+    activeLongGoals,
+    npcNames,
+    timeSeeds,
+    preferredEntryCount,
+    targetHoliday,
+    mealTimes,
+    journeyCanWriteEventLine,
+    fortuneRoll,
+    lifeFateSettings,
+    lifeNodeClockHint,
+  });
+  const journeySystemPrompt = `纯文本格式任务：只输出双竖线分隔文本，不要 JSON，不要 Markdown，不要代码块，不要解释。
+你负责生成 ${targetDateLabel} 的当天行程${journeyCanWriteEventLine ? "和生活轨迹" : ""}。
+第一行必须从数字开头，格式固定：HH:MM-HH:MM||标题||地点||详情
+输出规则：
+- 必须简体中文，不能写日文、英文段落、代码块、表格、字段名或开场白。
+- 行程输出 ${preferredEntryCount} 行左右，按时间正序，不重叠；前端会完整保留，不要故意少写。
+- 地点只能从参考上下文“可用地点”里选；角色、城市、NPC、昨天余波都以参考上下文为准。
+- 至少包含起床/早餐、白天主线、晚餐、晚饭后的具体安排；晚饭后不能写“收尾/放松/推进”这种空标题。
+- 目标行可选，只在已有目标确实需要变化时写：短期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明 或 长期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明；不要每天硬凑新目标。
+${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：生活轨迹
+- 生活轨迹总标题行必须是：事件||事件总标题||进行中||运势等级||影响天数1到7
+- 再写 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个同主题节点：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
+- 生活轨迹必须是现实生活突发事件，优先手机、钥匙、外卖、排队、路人、朋友、天气、错拿物品、小额好运、社交误会；工作只能当背景，不能写成工作进度。
+- 每个节点围绕同一个事件总标题推进，有起因、转折和余波；正文用第三人称，不能用“我”。` : "- 本日概率未命中生活轨迹，只输出行程和必要目标行；不要写生活轨迹、事件或占位。"}
+写完最后一行立刻停止。`
 
   const response = await requestJourneyModelText({
-    systemPrompt: `纯文本格式任务：只输出指定的双竖线分隔纯文本。不要 JSON，不要 Markdown，不要代码块，不要解释。第一个可见字符必须是数字。${journeyCanWriteEventLine ? "生活轨迹首行必须正好 5 段。生活轨迹节点行必须正好 4 段并用 || 分隔。生活轨迹节点第一段只能是 HH:MM，不能写日期。每个故事正文目标 120 到 160 个简体汉字，最多不超过 200 个汉字。" : "本日概率未触发生活轨迹，只输出行程行，不要输出生活轨迹标题、主题、事件或任何占位。"}
-你现在负责生成 ${targetDateLabel} 的当天行程${journeyCanWriteEventLine ? "，并在行程后生成生活轨迹事件线" : ""}。
-必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
-每行格式固定：
-HH:MM-HH:MM||标题||地点||详情
-硬性开头:
-- 第一行必须直接从 HH:MM-HH:MM|| 开头，前面不能有标题、编号、说明或空话
-- 最终输出第一个字符必须是数字，不能出现 你好、我是、标题、###、表格、代码块符号 或任何开场白
-- 行程区写完后可以追加目标池更新行，格式只能是：短期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明 或 长期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明
-- 目标行是可选的，只在当天行程确实让已有目标需要更新、完成、替换，或池子有空位且有重要新目标时才写；不要为了每天生成而硬凑
-- 短期目标池最多 ${ACTIVE_GOAL_CAPS.short} 个，长期目标池最多 ${ACTIVE_GOAL_CAPS.long} 个；优先保留和更新已有目标，不要每天追加新目标
-- 当前短期目标：${activeShortGoals.map((item) => `${item.title}(${Number(item.progress || 0)}%)`).join(" / ") || "暂无"}
-- 当前长期目标：${activeLongGoals.map((item) => `${item.title}(${Number(item.progress || 0)}%)`).join(" / ") || "暂无"}
-- 长期目标必须保守，除非行程体现明确人生方向变化，否则只保留或更新，不要新增
-- ${journeyCanWriteEventLine ? "目标行写完后只允许出现一行「生活轨迹」，下一行必须直接写：事件||事件总标题||进行中||运势等级||影响天数1到7" : "目标行写完后立刻停止，不准输出「生活轨迹」、主题、事件、空白占位或平稳日常"}
-- ${journeyCanWriteEventLine ? "生活轨迹首行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字" : "本日没有触发生活轨迹，不能为了联动而补写普通片段"}
-规则:
-- 这 ${preferredEntryCount} 行会直接展示给用户，所以每一行都必须像真人当天真的会做的事，不能写占位词
-- 建议输出 ${preferredEntryCount} 行；如果当天确实更忙，可以多写，前端会完整保留，不要为了凑条数删掉已经写好的真实安排
-- 按时间先后排序，不要重叠
-- 时间段可直接参考这些种子：${timeSeeds.map((item) => item.time).join(" / ")}
-- 标题 2 到 8 个字，地点 2 到 10 个字，详情 10 到 22 个字
-- 地点只能从这些地点里选：${allowedPlaces.join(" / ") || currentPlace}
-- 至少包含 1 条起床或早餐相关、1 条白天主线、1 条晚餐、1 条晚饭后的后续安排
-- 晚饭后的每一条都必须是具体事件名，严禁出现 晚间续忙 / 夜里续忙 / 继续处理 / 主线推进 / 整理安排 / 晚间收尾 这种偷懒标题
-- 不允许把晚饭和后半夜合成一条超长行程；晚饭后如果还在继续活动，就写真实的下一条标题和内容
-- 如果拿不准晚饭后做什么，也要写成明确动作，比如 回工作室改版 / 去便利店补给后回住处对稿 / 夜里混音收尾，不能写抽象总结
-- 行程可以参考这些普通目标推进：${journeyGoalTitles.join(" / ") || "暂无目标"}
-- 如果涉及 NPC，只能在详情里自然带上 @名字，可用 NPC：${npcNames.join(" / ") || "暂无"}
-- 当前地点锚点是「${currentPlace}」，参考真实城市是「${role?.profile?.realCityReference || role?.profile?.location || ""}」
-- 日期类型必须参与行程节奏：${targetHoliday?.name || "普通工作日"} ${targetHoliday?.promptHint || ""}；如果是节假日或周末休息日，除非角色人设/目标/用户输入明确要求工作，否则不要按普通工作日塞满工作安排，可以更偏生活、朋友、外出、休息或目标的轻量推进
-- 只写现代城市日常生活，不允许玄幻、古风、旅游攻略、游戏任务、异世界
-- 不要提 AI、模型、Gemini、OpenAI、DeepSeek
-- 你会收到下方纯文本参考上下文。生成前必须先锁定角色：姓名、人设、说话风格、长期记忆、总结记忆、世界书、NPC关系、地图地点和当天行程都以参考上下文为准
-- 地理锁定：地点只能使用当前地点、当天行程地点和参考上下文里的地图地点；严禁把城市改成东京、涩谷、原宿、京都、大阪等无关日本地点，除非角色地图里本来就有
-- 人物锁定：只允许使用参考上下文里的 NPC，或用户昵称；不要编造佐藤、田中、山田等无关日文姓名
-- 生活轨迹只参考角色人设、长期记忆、世界书、地图地点描述、NPC、天气、最近聊天和当天行程地点；普通工作目标不得作为生活轨迹主题
-- 如果上下文和格式要求冲突，优先保持角色身份、城市、地图地点和简体中文纯文本；只要出现韩文、日文、英文或任何外语倾向，必须立刻改写成简体中文
-${buildJourneyDateContinuityPrompt(role, normalizedTargetDate)}
-- ${journeyCanWriteEventLine ? `目标池更新行之后，另起一行写「生活轨迹」四个字，再写 1 行事件总标题和 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 行生活轨迹节点` : "本日概率没有命中生活轨迹，目标行之后不要再写任何生活轨迹内容"}
-- ${journeyCanWriteEventLine ? "生活轨迹首行格式固定：事件||像作文题一样的突发事件总标题||进行中||运势等级||影响天数1到7" : "没有命中时不允许写 主题||、事件|| 或 HH:MM||生活轨迹节点"}
-- ${journeyCanWriteEventLine ? "生活轨迹节点格式固定：HH:MM||10个字左右的小标题||100到200个汉字的第三人称故事正文||短标签" : "没有命中时也不要写“近期风平浪静”“平稳日常”之类占位"}
-- ${journeyCanWriteEventLine ? `生活轨迹节点只能有 4 段：HH:MM、小标题、故事正文、短标签；短标签后面不准再追加第 5 段；节点总数最少 ${LIFE_MONITOR_DAILY_NODE_MIN} 条，最多 ${LIFE_MONITOR_DAILY_NODE_MAX} 条` : "如果本日没有生活轨迹，角色聊天里也不会假装发生过"}
-- ${journeyCanWriteEventLine ? "每个生活轨迹节点行必须以 HH:MM|| 开头，不能写项目符号、编号、JSON、Markdown 或代码块" : "行程生成仍要完整，不要因为没有生活轨迹而缩短行程"}
-- ${journeyCanWriteEventLine ? "生活轨迹必须围绕同一个事件主题分成起因、转折、余波等 3 到 5 个节点；时间不固定，按故事节奏和当天行程挑合理时间点" : "本日未触发生活轨迹时，输出最后一条行程后立刻停止"}
-- ${journeyCanWriteEventLine ? `如果目标日期就是今天，可以规划今天稍后会到点显示的节点；第一条生活轨迹时间尽量使用当前真实时间附近：${lifeNodeClockHint}，后续节点按故事节奏安排，前端会只显示已发生节点` : "不要输出任何未触发说明"}
-- 双竖线 || 只是字段分隔符，不是表格；禁止写表头、字段名、分隔线，不准输出 时间||动作||地点||描述||心情 这类旧格式
-- ${journeyCanWriteEventLine ? `每个节点第三段必须直接是一整段故事正文，目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字，不能把地点、人物、数值、心情字段塞进去冒充正文` : "不生成生活轨迹时不需要解释概率"}
-- ${journeyCanWriteEventLine ? "生活轨迹必须借用当天行程地点、NPC、天气、物件、临时互动或生活目标作锚点；不能借普通工作目标当主线，不能照搬行程标题和详情，不能写成“完成/收尾/归档/放松”这种状态词" : "行程仍必须贴合角色，不要把生活轨迹未触发写进详情"}
- - ${journeyCanWriteEventLine ? `每条生活轨迹正文目标${LIFE_MONITOR_STORY_TARGET_CHARS}个汉字左右，硬性范围${LIFE_MONITOR_STORY_MIN_CHARS}到${LIFE_MONITOR_STORY_MAX_CHARS}个汉字；短标签不计入字数` : "不要输出生活轨迹空标题"}
-- ${journeyCanWriteEventLine ? `写到${LIFE_MONITOR_STORY_TARGET_CHARS}字左右就要完整收句并立刻接上短标签，不准停在半句话中间` : "不要输出主题空行"}
-- ${journeyCanWriteEventLine ? "生活轨迹正文必须用第三人称写角色，不能用“我”当叙述主语；小标题必须是模型总结出来的 8 到 12 个汉字，不能截取正文开头" : "不要输出事件空行"}
-- ${journeyCanWriteEventLine ? "事件总标题必须统领所有节点，每个时间点都围绕同一个生活轨迹事件写起因、转折、插曲、误会、选择或余波，不要散成互不相关的小故事" : "不要把未触发写成普通生活主题"}
-- 目标更新只允许出现在生活轨迹之前的目标协议行里；生活轨迹节点里不要再写目标建议
-- 每个故事节点都必须是一段完整故事，包含现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要拆成几条短句凑数
-- 故事性要像别人时间簿那种现实抓马：路上乌龙、店员搭话、设备抽风、临时误会、顺手救场、小惊喜、小倒霉、暧昧错位、NPC突然出现都可以，但必须有具体因果和现场细节
-- 生活轨迹题材必须现实向且好坏均衡：约 30% 纯好运、30% 小麻烦、40% 好坏交织反转；优先来自外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹，工作只占少数，不能连续写成工作推进
-- 生活轨迹不是工作进度簿；即使当天行程或目标是工作，也必须优先生成非工作日常事件，主矛盾从外卖、手机、钥匙、路人、朋友、天气、通勤、购物、排队、社交误会、小店、宠物、邻里热闹里选
-- 事件总标题禁止以 工作、视觉、手册、宣发、设计、方案、灵感、Demo、母带、采样、猫影 开头；结尾不要落到优化方案、完善手册或推进目标上
-- 禁止只写“获得灵感/状态变化/顺利推进”，灵感必须来自一个看得见的物件、一句误会的话或一次临场事故，并写出后续影响
-- 生活轨迹会写进角色聊天上下文，所以必须像角色亲身经历的真实事实，之后用户问起时角色能自然承认和复述
-- 写完最后一行立刻停止
-示例：
-${timeSeeds[0]?.time || "10:00-11:00"}||起床洗漱||${sanitizeJourneyWeekTextField(currentPlace)}||把今天前半段安排先顺一遍
-短期目标||整理当天节奏||更新||35||根据上午行程把今天能收尾的一段推进清楚
-${journeyCanWriteEventLine ? `生活轨迹
-事件||咖啡纸袋里的暗号祝福||进行中||小有运气||2
-10:22||纸袋暗号闹乌龙||他刚出门就被楼下咖啡店的新招牌晃了一下，本来只是想买杯热饮提神，结果店员把别人预订的杯套递错。他一边解释一边被后面排队的人催，手忙脚乱地把纸袋夹在胳膊下，热饮差点洒到刚整理好的资料上。最后店员赔了一个小饼干，他反而记住了杯套上的图案，路上的困意也被这一阵乱劲冲散了||小乌龙
-14:35||错拿纸袋生新线索||午后他再翻纸袋时，才发现里面夹着一张写错名字的会员小票，背面还被店员顺手画了个夸张笑脸。他本来想直接扔掉，却被旁边人误会是在收集店铺印章，尴尬解释半天反而被提醒有隐藏赠品。这个乌龙让他临时绕回店里，也把下午原本死板的安排拐出一点新鲜后续||反转
-20:10||赠品牵出晚间邀约||晚上他带着那份隐藏赠品回到原计划地点，没想到熟人一眼认出纸袋上的限定图案，顺口提起附近今晚还有小摊快闪。他原本只想把资料放好就走，却被这句话拽进一个临时小局，既耽误了半小时，也换来一段能讲很久的笑话||余波` : ""}`,
+    systemPrompt: journeySystemPrompt,
     payload: {
       task: `生成 ${targetDateLabel} 的当天时间轴文本`,
       targetDate: normalizedTargetDate,
       userInput: normalizedJourneyPrompt || `按今天的节奏自然安排 ${targetDateLabel} 的当天行程`,
       slimContext: journeySlimContext,
-      roleContext: {
-        ...journeyRoleContext,
-        goals: [],
-      },
-      journeyContext,
-      plainTextContext: journeyPlainTextContext,
+      roleContext: useA3SlimContext
+        ? null
+        : {
+            ...journeyRoleContext,
+            goals: [],
+          },
+      journeyContext: useA3SlimContext ? null : journeyContext,
+      plainTextContext: useA3SlimContext ? journeyA3PlainTextContext : journeyPlainTextContext,
       timeSeeds: timeSeeds.map((item) => item.time),
       outputRules: {
         format: `行程: HH:MM-HH:MM||标题||地点||详情; 目标: 短期目标/长期目标||标题||动作||进度||说明; 生活轨迹: ${journeyCanWriteEventLine ? "事件" : "主题"}||标题||状态||等级||天数 + HH:MM||小标题||故事||标签`,
@@ -53827,6 +53904,7 @@ ${journeyCanWriteEventLine ? `生活轨迹
         suggestedLineCount: preferredEntryCount,
         maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
+        forceMaxOutputTokens: useA3SlimContext,
       },
     },
     includeMeta: true,
