@@ -52477,6 +52477,84 @@ const buildPureTextGenerationContext = ({
     .join("\n");
 };
 
+const buildLifeMonitorA3PlainTextContext = ({
+  role,
+  roleName = "",
+  currentPlace = "",
+  referenceCity = "",
+  normalizedTargetDate = formatDateKey(),
+  cutoffClock = "",
+  journeyAnchorText = "",
+  goalTitles = [],
+  npcNames = [],
+  sameDayMonitorTimeline = [],
+  existingEvent = null,
+  lifeFateSettings = null,
+  fortuneRoll = null,
+  forceRegenerate = false,
+} = {}) => {
+  const profile = role?.profile || {};
+  const enabledPlaces = getRoleUsableMapPlaceNames(role, 8);
+  const worldbook = getActiveWorldbookSummary(role)
+    .slice(0, 4)
+    .map((item) =>
+      [item?.title, truncateContextText(item?.content || item?.keywords || "", 90)].filter(Boolean).join("："),
+    )
+    .filter(Boolean);
+  const memories = buildRoleMemoryContextItems(role, { limit: 5, textLimit: 90 });
+  const summaryArchive = String(role?.chats?.summaryArchive || "")
+    .split("────────────────────────────────")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(-2)
+    .map((item) => truncateContextText(item, 120));
+  const recentMessages = getRecentMessagesSummary(role, 6)
+    .map((item) => truncateContextText(item, 90))
+    .filter(Boolean);
+  const sameDayNodes = (Array.isArray(sameDayMonitorTimeline) ? sameDayMonitorTimeline : [])
+    .slice(-3)
+    .map((item) =>
+      [item?.time, item?.title || item?.tag, truncateContextText(item?.text || item?.summary || "", 90)]
+        .filter(Boolean)
+        .join(" "),
+    )
+    .filter(Boolean);
+  const eventText = existingEvent
+    ? [
+        existingEvent?.title ? `标题:${existingEvent.title}` : "",
+        existingEvent?.status ? `状态:${existingEvent.status}` : "",
+        existingEvent?.summary ? `摘要:${truncateContextText(existingEvent.summary, 120)}` : "",
+      ]
+        .filter(Boolean)
+        .join("；")
+    : "";
+  const lines = [
+    `任务：生成 ${normalizedTargetDate} ${cutoffClock} 的生活轨迹纯文本`,
+    `角色：${roleName || profile.note || profile.name || "角色"}`,
+    profile?.bio ? `人设：${truncateContextText(profile.bio, 180)}` : "",
+    profile?.onlineStyle ? `说话风格：${truncateContextText(profile.onlineStyle, 120)}` : "",
+    `地点：${currentPlace || getRoleCurrentPlace(role) || "当前地点"}`,
+    referenceCity ? `参考城市：${referenceCity}` : "",
+    profile?.weatherLiveHint || profile?.weather ? `天气：${profile.weatherLiveHint || profile.weather}` : "",
+    enabledPlaces.length ? `地图地点：${enabledPlaces.join(" / ")}` : "",
+    npcNames.length ? `NPC：${npcNames.join(" / ")}` : "",
+    goalTitles.length ? `生活轨迹短期目标：${goalTitles.join(" / ")}` : "",
+    journeyAnchorText ? `当天行程锚点：${truncateContextText(journeyAnchorText, 360)}` : "",
+    sameDayNodes.length ? `当天已有生活轨迹：${sameDayNodes.join("；")}` : "",
+    eventText ? `已有同一事件：${eventText}` : "",
+    worldbook.length ? `世界书：${worldbook.join("；")}` : "",
+    memories.length ? `重要记忆：${memories.join("；")}` : "",
+    summaryArchive.length ? `自动总结：${summaryArchive.join("；")}` : "",
+    recentMessages.length ? `最近聊天：${recentMessages.join("；")}` : "",
+    `概率：每日${Number(lifeFateSettings?.eventTriggerChance || 0)}%，本次有效${Number(fortuneRoll?.effectiveTriggerChance || 0)}%，运势${fortuneRoll?.tierLabel || "平稳"}`,
+    Array.isArray(fortuneRoll?.storyHooks) && fortuneRoll.storyHooks.length
+      ? `题材钩子：${fortuneRoll.storyHooks.slice(0, 4).join(" / ")}`
+      : "",
+    forceRegenerate ? "本次是手动重生成：必须换一个全新的非工作生活事件。" : "",
+  ];
+  return lines.filter(Boolean).join("\n");
+};
+
 const requestJourneyPreviewTimelineOnlyTextData = async (
   role,
   {
@@ -57235,6 +57313,7 @@ const requestLifeMonitorPlainTextData = async ({
 }) => {
   const plannerConfig = getPlannerApiConfig();
   const preferredVariantMode = shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
+  const useA3SlimContext = shouldOmitMaxTokensForConfig(plannerConfig);
   const roleName = liveRole?.profile?.note || liveRole?.profile?.name || "角色";
   const currentPlace = getRoleCurrentPlace(liveRole, cutoffDate) || liveRole?.profile?.location || "当前地点";
   const referenceCity = liveRole?.profile?.realCityReference || liveRole?.profile?.location || "";
@@ -57346,8 +57425,42 @@ const requestLifeMonitorPlainTextData = async ({
     fortuneSettings: lifeFateSettings,
     fortuneRoll,
   });
+  const lifeMonitorA3PlainTextContext = buildLifeMonitorA3PlainTextContext({
+    role: liveRole,
+    roleName,
+    currentPlace,
+    referenceCity,
+    normalizedTargetDate,
+    cutoffClock,
+    journeyAnchorText,
+    goalTitles,
+    npcNames,
+    sameDayMonitorTimeline,
+    existingEvent,
+    lifeFateSettings,
+    fortuneRoll,
+    forceRegenerate,
+  });
   const response = await requestPlannerModelText({
-    systemPrompt: `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. The first visible line must start exactly with 事件||, not 事||. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
+    systemPrompt: useA3SlimContext
+      ? `纯文本格式任务：只输出双竖线分隔纯文本。不要 JSON，不要 Markdown，不要代码块，不要解释，不要开场白。
+你现在只负责生成 ${targetDateLabel} ${cutoffClock} 的生活轨迹事件节点。
+必须简体中文。
+第一行必须严格是：事件||总标题||进行中或收尾||运势等级||影响天数1到7
+后续每个节点必须严格是：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
+规则：
+- 第一个可见字符必须是“事”，也就是第一行从事件||开头
+- 如果已有同一事件，只生成 1 个新节点，时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM
+- 如果这是今天第一次命中生活轨迹，生成同一事件主题下 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${Math.min(LIFE_MONITOR_DAILY_NODE_MAX, Math.max(LIFE_MONITOR_DAILY_NODE_MIN, remainingNodeCount || LIFE_MONITOR_DAILY_NODE_MAX))} 个节点
+- 每个节点都必须围绕同一个事件总标题推进，写起因、转折、余波，不要散成多个无关小故事
+- 正文必须现实向、抓马、有现场细节，必须用第三人称写角色，不能用“我”
+- 主事件优先来自手机没电、付款卡住、叫号乌龙、错拿物品、店员误会、路人搭话、天气反转、钥匙门禁、排队插曲、小额好运、临时邀约、外卖咖啡奶茶出错
+- 不要把工作、方案、视觉、设计、项目、灵感、Demo、宣发写成主线；工作最多只能当背景
+- 行程只是锚点，不能照搬行程标题和详情
+- 禁止输出英文段落、日文、韩文、JSON、Markdown、序号、项目符号、表格
+- 如果想写无聊状态词，比如生活推进、状态稳定、工作推进、归档、放松，必须改成具体发生的小事
+直接输出纯文本。`
+      : `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. The first visible line must start exactly with 事件||, not 事||. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
 你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹事件节点。
 必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
 输出格式：
@@ -57411,11 +57524,11 @@ HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事
       slimContext: lifeMonitorSlimContext,
       roleContext,
       journeyContext,
-      plainTextContext: lifeMonitorPlainTextContext,
+      plainTextContext: useA3SlimContext ? lifeMonitorA3PlainTextContext : lifeMonitorPlainTextContext,
       outputRules: {
         format: "life-monitor-node-text",
         contextFormat: "plain-text",
-        maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
+        maxOutputTokens: useA3SlimContext ? 2400 : JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
       },
     },
     includeMeta: true,
