@@ -26,6 +26,7 @@
   --shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
   --radius: 28px;
   --font: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --app-visible-height: 100vh;
   --chat-keyboard-offset: 0px;
   --chat-composer-rest-gap: 22px;
   --chat-composer-focus-gap: 30px;
@@ -74,7 +75,7 @@ select {
 
 .app-shell {
   width: 100vw;
-  height: 100vh;
+  height: var(--app-visible-height);
 }
 
 .ambient {
@@ -942,7 +943,7 @@ select {
 .form-modal {
   width: 100%;
   max-width: 100%;
-  height: 100vh;
+  height: var(--app-visible-height);
   min-height: 0;
 }
 
@@ -16658,7 +16659,7 @@ body {
   --ios-screen-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.14));
   position: relative;
   width: min(430px, 100%);
-  height: min(920px, calc(100vh - 18px));
+  height: min(920px, calc(var(--app-visible-height) - 18px));
   min-height: 680px;
 }
 
@@ -19201,8 +19202,8 @@ body {
 
   .ios-device-scene {
     width: 100%;
-    height: 100vh;
-    min-height: 100vh;
+    height: var(--app-visible-height);
+    min-height: var(--app-visible-height);
   }
 
   .ios-device-scene.hide-phone-frame .ios-device-screen,
@@ -35425,6 +35426,21 @@ const consumeNotificationLaunchParams = () => {
     return false;
   }
 };
+
+const consumeRefreshLatestVersionParam = () => {
+  try {
+    const url = new URL(globalThis?.location?.href || "./", globalThis?.location?.href || "./");
+    if (!url.searchParams.has("lifetalk_refresh")) return false;
+    url.searchParams.delete("lifetalk_refresh");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    globalThis.history?.replaceState?.({}, "", nextUrl);
+    return true;
+  } catch (error) {
+    void error;
+    return false;
+  }
+};
+
 const handleServiceWorkerMessage = (event) => {
   const payload = event?.data;
   if (!payload || typeof payload !== "object") return;
@@ -35989,6 +36005,7 @@ const ASYNC_SCROLL_PAINT_GRACE_MS = 4000;
 const composerRuntime = {
   draftSyncTimer: 0,
   keyboardSyncFrame: 0,
+  viewportSyncFrame: 0,
   isComposing: false,
   pendingPaint: false,
   suppressNextFocusRestore: false,
@@ -36199,6 +36216,30 @@ const getVisualViewportKeyboardOffset = () => {
   const visibleBottom = Number(viewport.height || 0) + Number(viewport.offsetTop || 0);
   const overlap = Math.max(0, Math.round(layoutHeight - visibleBottom));
   return overlap >= MOBILE_KEYBOARD_MIN_OVERLAY_PX ? overlap : 0;
+};
+
+const getVisibleViewportHeight = () => {
+  const innerHeight = Number(window.innerHeight || 0);
+  const clientHeight = Number(document.documentElement?.clientHeight || 0);
+  const viewportHeight = Number(window.visualViewport?.height || 0);
+  const height = [innerHeight, clientHeight, viewportHeight].find((value) => Number.isFinite(value) && value > 0) || 0;
+  return height ? Math.max(320, Math.round(height)) : 0;
+};
+
+const syncVisibleViewportHeight = () => {
+  const docEl = document.documentElement;
+  if (!docEl) return;
+  const height = getVisibleViewportHeight();
+  if (!height) return;
+  docEl.style.setProperty("--app-visible-height", `${height}px`);
+};
+
+const queueVisibleViewportHeightSync = () => {
+  if (composerRuntime.viewportSyncFrame) return;
+  composerRuntime.viewportSyncFrame = window.requestAnimationFrame(() => {
+    composerRuntime.viewportSyncFrame = 0;
+    syncVisibleViewportHeight();
+  });
 };
 
 const syncChatKeyboardViewportState = () => {
@@ -67093,7 +67134,11 @@ window.addEventListener("focus", handleAppForeground);
 window.addEventListener("pageshow", handleAppForeground);
 window.addEventListener("online", handleAppForeground);
 window.addEventListener("offline", handleSystemChromeConnectionChange);
-window.addEventListener("resize", maybeResumeRuntimeTick);
+window.addEventListener("resize", () => {
+  queueVisibleViewportHeightSync();
+  maybeResumeRuntimeTick();
+});
+window.addEventListener("orientationchange", queueVisibleViewportHeightSync);
 window.addEventListener("pagehide", handleAppBackground);
 window.addEventListener("beforeunload", () => {
   queueRoleProfileSync({ flush: true });
@@ -67113,18 +67158,27 @@ document.addEventListener("visibilitychange", () => {
   handleAppBackground();
 });
 if (window.visualViewport?.addEventListener) {
-  window.visualViewport.addEventListener("resize", queueChatKeyboardViewportStateSync);
-  window.visualViewport.addEventListener("scroll", queueChatKeyboardViewportStateSync);
+  window.visualViewport.addEventListener("resize", () => {
+    queueVisibleViewportHeightSync();
+    queueChatKeyboardViewportStateSync();
+  });
+  window.visualViewport.addEventListener("scroll", () => {
+    queueVisibleViewportHeightSync();
+    queueChatKeyboardViewportStateSync();
+  });
 }
 
+syncVisibleViewportHeight();
 markAppForegrounded({ sync: false });
 refreshGlobalFeatureStatus({ paintNow: false });
 primeSystemChromeStatus({ paintNow: true });
 void syncBackgroundKeepAliveMode({ silent: true });
 void runRuntimeTick();
 paint();
+queueVisibleViewportHeightSync();
 queueChatKeyboardViewportStateSync();
 queueAppBadgeSync(0);
+consumeRefreshLatestVersionParam();
 consumeNotificationLaunchParams();
 void requestPersistentSiteStorage();
 void restorePersistedAssets();
