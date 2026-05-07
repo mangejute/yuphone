@@ -24233,7 +24233,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.07-video-context-draft-02";
+const APP_BUILD_VERSION_LABEL = "v2026.05.07-video-stability-speed-03";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -31572,8 +31572,7 @@ const renderVideoSessionSheet = (state, role) => {
   const lastUserText = String(transcriptPreview || "").trim();
   const draftEditing = Boolean(session.draftEditing);
   const draftManualSendRequired = Boolean(session.draftManualSendRequired);
-  const userCaptionLimit = minimalMode ? 56 : 76;
-  const userCaption = lastUserText.length > userCaptionLimit ? `${lastUserText.slice(0, userCaptionLimit)}...` : lastUserText;
+  const userBubbleText = lastUserText;
   const replyMessages = Array.isArray(session.lastReplyMessages) ? session.lastReplyMessages.filter((item) => String(item?.text || "").trim()) : [];
   const previewCaption = session.cameraReady
     ? String(session.cameraFacing || "user").trim() === "environment"
@@ -31636,7 +31635,7 @@ const renderVideoSessionSheet = (state, role) => {
     !replyMessages.length && !busy && session.error
       ? `<div class="video-session-error-status" role="status">${escapeHtml(session.error).replaceAll("\n", "<br />")}</div>`
       : "";
-  const userBubble = userCaption
+  const userBubble = userBubbleText
     ? renderVideoDialogBubble({
         side: "user",
         title: "我",
@@ -31652,7 +31651,7 @@ const renderVideoSessionSheet = (state, role) => {
           ${
             draftEditing
               ? `<textarea id="video-session-manual-input" class="video-session-bubble-editor" data-video-field="manualText" placeholder="你可以先改字，再决定发不发">${escapeHtml(lastUserText)}</textarea>`
-              : `<p>${escapeHtml(userCaption).replaceAll("\n", "<br />")}</p>`
+              : `<p>${escapeHtml(userBubbleText).replaceAll("\n", "<br />")}</p>`
           }
         `,
       })
@@ -31719,7 +31718,7 @@ const renderVideoSessionSheet = (state, role) => {
       8000,
       Math.round(
         (Math.max(3000, Math.min(12000, Number(session.speechAutoSubmitDelayMs || 3000))) +
-          Math.max(20000, Math.min(180000, Number(session.roleAutoReplyDelayMs || 20000)))) / 3,
+          Math.max(15000, Math.min(180000, Number(session.roleAutoReplyDelayMs || 15000)))) / 3,
       ),
     ),
   );
@@ -31871,10 +31870,10 @@ const renderVideoSessionSheet = (state, role) => {
           <input
             class="video-session-setting-slider voice-chance-slider"
             type="range"
-            min="20000"
+            min="15000"
             max="180000"
             step="1000"
-            value="${escapeHtml(String(Math.max(20000, Math.min(180000, Number(session.roleAutoReplyDelayMs || 20000)))))}"
+            value="${escapeHtml(String(Math.max(15000, Math.min(180000, Number(session.roleAutoReplyDelayMs || 15000)))))}"
             data-video-setting="roleAutoReplyDelayMs"
             aria-label="设置你一直没说话时角色多久主动接话"
           />
@@ -33052,16 +33051,19 @@ const VIDEO_SESSION_LOCAL_ASR_TRAILING_MOOD_WORD_PATTERN =
   /\s+(?:开心|高兴|伤心|难过|悲伤|委屈|生气|平静|紧张|害怕|惊讶|疑惑|无语|兴奋)$/g;
 const VIDEO_SESSION_FRAME_CAPTURE_MIN_INTERVAL_MS = 8000;
 const VIDEO_SESSION_FRAME_BUFFER_LIMIT = 3;
+const VIDEO_SESSION_MODEL_FRAME_LIMIT = 1;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
-const VIDEO_SESSION_MAX_OUTPUT_TOKENS = 1200;
-const VIDEO_SESSION_REPLY_TIMEOUT_MS = 120_000;
+const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
+const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
+const VIDEO_SESSION_MAX_OUTPUT_TOKENS = 420;
+const VIDEO_SESSION_REPLY_TIMEOUT_MS = 22_000;
 const VIDEO_CALL_SUMMARY_TIMEOUT_MS = 190_000;
 const VIDEO_SESSION_RESTART_DELAY_MS = 160;
 const VIDEO_SESSION_AUTO_SUBMIT_DELAY_MS = 3000;
 const VIDEO_SESSION_AUTO_SUBMIT_MIN_MS = 3000;
 const VIDEO_SESSION_AUTO_SUBMIT_MAX_MS = 12000;
 const VIDEO_SESSION_VISUAL_AUTO_REPLY_DELAY_MS = 20000;
-const VIDEO_SESSION_ROLE_AUTO_REPLY_MIN_MS = 20000;
+const VIDEO_SESSION_ROLE_AUTO_REPLY_MIN_MS = 15000;
 const VIDEO_SESSION_ROLE_AUTO_REPLY_MAX_MS = 180000;
 const VIDEO_SESSION_VISUAL_AUTO_REPLY_COOLDOWN_MS = 14000;
 const VIDEO_SESSION_BACKGROUND_STREAM_GRACE_MS = 45 * 1000;
@@ -33336,11 +33338,20 @@ const RESTORABLE_ACTIVE_TABS = new Set(["messages", "moments", "settings"]);
 const NAVIGATION_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const NON_RESTORABLE_PANELS = new Set(["video-session"]);
 
-const normalizeNavigationPanelStack = (panelStack = []) =>
+const normalizeNavigationPanelStack = (panelStack = [], { keepVideoSession = false } = {}) =>
   (Array.isArray(panelStack) ? panelStack : [])
     .map((name) => String(name || "").trim())
-    .filter((name) => name && !NON_RESTORABLE_PANELS.has(name))
+    .filter((name) => name && (keepVideoSession || !NON_RESTORABLE_PANELS.has(name)))
     .slice(-6);
+
+const ensureActiveVideoSessionPanel = (targetState = state) => {
+  if (!targetState?.videoSession?.active) return targetState;
+  const stack = Array.isArray(targetState.panelStack) ? targetState.panelStack : [];
+  if (stack[stack.length - 1] === "video-session") return targetState;
+  targetState.activeTab = "messages";
+  targetState.panelStack = [...stack.filter((name) => name !== "video-session"), "video-session"];
+  return targetState;
+};
 
 const hasRoleForNavigation = (roles = [], roleId = "") =>
   Boolean(String(roleId || "").trim() && (Array.isArray(roles) ? roles : []).some((role) => role?.id === roleId));
@@ -33356,7 +33367,9 @@ const createPersistableNavigationSnapshot = (sourceState = state) => {
     activeTab: RESTORABLE_ACTIVE_TABS.has(sourceState.activeTab) ? sourceState.activeTab : "messages",
     selectedRoleId: String(sourceState.selectedRoleId || "").trim(),
     activeChatRoleId: canRestoreChat ? activeChatRoleId : "",
-    panelStack: normalizeNavigationPanelStack(sourceState.panelStack),
+    panelStack: normalizeNavigationPanelStack(sourceState.panelStack, {
+      keepVideoSession: Boolean(sourceState.videoSession?.active),
+    }),
   };
 };
 
@@ -33368,7 +33381,10 @@ const restoreNavigationSnapshot = (nextState, snapshot) => {
   const roles = Array.isArray(nextState.roles) ? nextState.roles : [];
   const selectedRoleId = String(snapshot.selectedRoleId || "").trim();
   const activeChatRoleId = String(snapshot.activeChatRoleId || "").trim();
-  const panelStack = normalizeNavigationPanelStack(snapshot.panelStack);
+  const restoredVideoActive = Boolean(nextState?.videoSession?.active);
+  const panelStack = normalizeNavigationPanelStack(snapshot.panelStack, {
+    keepVideoSession: restoredVideoActive,
+  });
   if (hasRoleForNavigation(roles, selectedRoleId)) {
     nextState.selectedRoleId = selectedRoleId;
   }
@@ -33376,18 +33392,18 @@ const restoreNavigationSnapshot = (nextState, snapshot) => {
     nextState.activeTab = "messages";
     nextState.activeChatRoleId = activeChatRoleId;
     nextState.panelStack = panelStack;
-    return nextState;
+    return ensureActiveVideoSessionPanel(nextState);
   }
   if (panelStack.length) {
     nextState.activeTab = "messages";
     nextState.panelStack = panelStack;
-    return nextState;
+    return ensureActiveVideoSessionPanel(nextState);
   }
   const activeTab = RESTORABLE_ACTIVE_TABS.has(snapshot.activeTab) ? snapshot.activeTab : "";
   if (activeTab) {
     nextState.activeTab = activeTab;
   }
-  return nextState;
+  return ensureActiveVideoSessionPanel(nextState);
 };
 
 const preserveCurrentNavigationState = (nextState, currentState = state) => {
@@ -33405,7 +33421,10 @@ const preserveCurrentNavigationState = (nextState, currentState = state) => {
     nextState.activeChatRoleId = activeChatRoleId;
     nextState.activeTab = "messages";
   }
-  nextState.panelStack = normalizeNavigationPanelStack(currentState.panelStack);
+  nextState.panelStack = normalizeNavigationPanelStack(currentState.panelStack, {
+    keepVideoSession: Boolean(currentState.videoSession?.active || nextState.videoSession?.active),
+  });
+  ensureActiveVideoSessionPanel(nextState);
   nextState.scrollPositions = {
     ...(nextState.scrollPositions || {}),
     ...(currentState.scrollPositions || {}),
@@ -33427,7 +33446,7 @@ const buildStateFromPersistent = (persistedState = {}) => {
   if (restoredVideo.session.active && restoredVideo.panelOpen) {
     nextState.panelStack = ["video-session"];
   }
-  return nextState;
+  return ensureActiveVideoSessionPanel(nextState);
 };
 
 let state = buildStateFromPersistent(loadState());
@@ -36862,6 +36881,7 @@ let videoSessionStateSyncTimer = 0;
 const queueVideoSessionStateSync = ({ flush = false } = {}) => {
   const runSync = () => {
     videoSessionStateSyncTimer = 0;
+    ensureActiveVideoSessionPanel(state);
     syncPersistentState();
   };
 
@@ -54204,7 +54224,7 @@ const requestPrimaryVideoReplyFallback = async (
   const apiResponse = await requestModelTextWithConfigFallback({
     primaryConfig: stableVideoConfig,
     primaryMissingMessage: "请先在设置里填好主 API 地址 模型和 API Key",
-    fallbackConfig: STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? null : originalVideoConfig,
+    fallbackConfig: null,
     fallbackMissingMessage: "请先在设置里填好主 API 地址 模型和 API Key",
     fallbackLane: "video-primary-fallback",
     systemPrompt: `你现在只负责补一条视频通话回复协议文本。
@@ -54428,11 +54448,11 @@ ${roundPromptBlock}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.16,
-    preferredVariantMode,
-    singleVariant: true,
-    requestTrace,
-    signal,
-  });
+      preferredVariantMode,
+      singleVariant: true,
+      requestTrace,
+      signal,
+    });
   const repaired = buildChatLikePayloadFromProtocolText(role, response?.text || "", {
     referenceCatalog,
     requiredWorldbookTitles,
@@ -63452,7 +63472,7 @@ const captureVideoSessionFrame = () => {
   if (!videoSessionRuntime.captureCanvas) {
     videoSessionRuntime.captureCanvas = document.createElement("canvas");
   }
-  const maxSide = 720;
+  const maxSide = VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE;
   const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
   const width = Math.max(1, Math.round(video.videoWidth * scale));
   const height = Math.max(1, Math.round(video.videoHeight * scale));
@@ -63462,7 +63482,7 @@ const captureVideoSessionFrame = () => {
   const context = canvas.getContext("2d", { alpha: false });
   if (!context) return "";
   context.drawImage(video, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", 0.74);
+  return canvas.toDataURL("image/jpeg", VIDEO_SESSION_FRAME_CAPTURE_QUALITY);
 };
 
 const buildVideoSessionFrameAttachment = (dataUrl, index = 0, timestamp = new Date().toISOString()) => ({
@@ -63513,7 +63533,7 @@ const refreshVideoSessionFrameCapturePlan = () => {
 
 const getVideoSessionRoundFrameAttachments = () =>
   videoSessionRuntime.frameBuffer
-    .slice(-VIDEO_SESSION_FRAME_BUFFER_LIMIT)
+    .slice(-VIDEO_SESSION_MODEL_FRAME_LIMIT)
     .map((frame, index) => buildVideoSessionFrameAttachment(frame.dataUrl, index, frame.timestamp));
 
 const pushVideoSessionFrame = () => {
