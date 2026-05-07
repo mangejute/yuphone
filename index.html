@@ -12471,9 +12471,9 @@ html.chat-composer-focused .ref-chat-composer {
 
 .chat-screen.bubble-theme-qq .chat-toolbar.rich-toolbar {
   order: 2;
-  padding: 10px 24px calc(15px + env(safe-area-inset-bottom, 0px)) !important;
+  padding: 7px 22px calc(11px + env(safe-area-inset-bottom, 0px)) !important;
   grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-  gap: 2px !important;
+  gap: 4px !important;
 }
 
 .chat-screen.bubble-theme-qq .ref-chat-composer {
@@ -12494,8 +12494,14 @@ html.chat-composer-focused .ref-chat-composer {
 }
 
 .chat-screen.bubble-theme-qq .toolbar-chip.toolbar-icon-btn {
-  min-height: 32px !important;
+  min-height: 38px !important;
   width: 100%;
+}
+
+.chat-screen.bubble-theme-qq .toolbar-chip.toolbar-icon-btn svg {
+  width: 31px !important;
+  height: 31px !important;
+  stroke-width: 1.85 !important;
 }
 
 .chat-screen.bubble-theme-qq .composer-plain {
@@ -13016,15 +13022,15 @@ html.chat-composer-focused .ref-chat-composer {
 
 .qq-send-btn {
   flex: 0 0 auto;
-  min-width: 48px;
-  height: 36px;
-  padding: 0 10px;
-  border-radius: 18px;
-  background: transparent;
+  min-width: 52px;
+  height: 38px;
+  padding: 0 11px;
+  border-radius: 3px;
+  background: #d8f0ff;
   font-size: 14px;
   font-weight: 700;
-  color: #12a8e7;
-  box-shadow: none !important;
+  color: #28a8e5;
+  box-shadow: inset 0 0 0 1px rgba(68, 178, 229, 0.1) !important;
 }
 
 .qq-composer-row {
@@ -24233,7 +24239,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.07-video-stability-speed-03";
+const APP_BUILD_VERSION_LABEL = "v2026.05.07-video-prompt-frames-04";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -24247,7 +24253,8 @@ const normalizeTokenConsoleErrorMessage = (value = "") =>
     .replace(/AI 精简第\s*\d+\s*段超时/g, "AI 精简超时")
     .replace(/AI精简第\s*\d+\s*段超时/g, "AI 精简超时")
     .replace(/\s*\|\s*原始片段:\s*[\s\S]*$/g, " | 已保留原始响应诊断")
-    .replace(/^模型没有返回可用文本\s*\|\s*已保留原始响应诊断$/g, "模型这次返回了响应外壳，但正文是空的 | 已保留原始响应诊断")
+    .replace(/^模型没有返回可用文本\s*(?:\|\s*已保留原始响应诊断)?$/g, "模型请求成功，但没有返回正文，未写入内容")
+    .replace(/^模型这次返回了响应外壳，但正文是空的/g, "模型请求成功，但没有返回正文，未写入内容")
     .trim();
 
 const nlToBr = (value = "") => escapeHtml(value).replaceAll("\n", "<br />");
@@ -33051,12 +33058,15 @@ const VIDEO_SESSION_LOCAL_ASR_TRAILING_MOOD_WORD_PATTERN =
   /\s+(?:开心|高兴|伤心|难过|悲伤|委屈|生气|平静|紧张|害怕|惊讶|疑惑|无语|兴奋)$/g;
 const VIDEO_SESSION_FRAME_CAPTURE_MIN_INTERVAL_MS = 8000;
 const VIDEO_SESSION_FRAME_BUFFER_LIMIT = 3;
-const VIDEO_SESSION_MODEL_FRAME_LIMIT = 1;
+const VIDEO_SESSION_MODEL_FRAME_LIMIT = 3;
+const VIDEO_SESSION_RECENT_CHAT_CONTEXT_LIMIT = 50;
+const VIDEO_SESSION_RECENT_CHAT_DETAIL_LIMIT = 12;
+const VIDEO_SESSION_WORLDBOOK_DETAIL_LIMIT = 8;
+const VIDEO_SESSION_NPC_DETAIL_LIMIT = 6;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
 const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
 const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
-const VIDEO_SESSION_MAX_OUTPUT_TOKENS = 420;
-const VIDEO_SESSION_REPLY_TIMEOUT_MS = 22_000;
+const VIDEO_SESSION_REPLY_TIMEOUT_MS = 90_000;
 const VIDEO_CALL_SUMMARY_TIMEOUT_MS = 190_000;
 const VIDEO_SESSION_RESTART_DELAY_MS = 160;
 const VIDEO_SESSION_AUTO_SUBMIT_DELAY_MS = 3000;
@@ -33520,9 +33530,9 @@ const primeSystemChromeStatus = ({ paintNow = true } = {}) => {
 
 const PRIMARY_API_DEFAULTS = Object.freeze({
   type: "openai",
-  url: "https://api521.pro/v1",
+  url: "https://api520.pro/v1",
   model: "\u718a\u732b-A-3-gemini-3-flash-preview",
-  key: "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv",
+  key: "",
   preset: "\u718a\u732b",
 });
 
@@ -33531,9 +33541,9 @@ const SECONDARY_API_DEFAULTS = Object.freeze({
   name: "\u526f API",
   purpose: "\u7528\u4e8e\u5730\u56fe \u884c\u7a0b \u670b\u53cb\u5708 \u603b\u7ed3\u7b49\u751f\u6210\u4efb\u52a1",
   type: "openai",
-  url: "https://api521.pro/v1",
+  url: "https://api520.pro/v1",
   model: "\u718a\u732b-A-3-gemini-3-flash-preview",
-  key: "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv",
+  key: "",
   preset: "\u718a\u732b",
 });
 
@@ -33542,9 +33552,9 @@ const PLANNER_API_DEFAULTS = Object.freeze({
   name: "\u884c\u7a0b / \u751f\u6d3b\u8f68\u8ff9 API",
   purpose: "\u7528\u4e8e\u884c\u7a0b\u548c\u751f\u6d3b\u8f68\u8ff9\u4e13\u7528\u751f\u6210\u4efb\u52a1",
   type: "openai",
-  url: "https://api521.pro/v1",
+  url: "https://api520.pro/v1",
   model: "\u718a\u732b-A-3-gemini-3-flash-preview",
-  key: "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv",
+  key: "",
   followSecondaryModel: true,
   preset: "\u718a\u732b",
 });
@@ -33562,11 +33572,10 @@ const DZZI_SECONDARY_MODEL = "[\u6309\u6b21]gemini-3-flash-preview";
 const DZZI_VIDEO_STABLE_MODEL = "[\u6309\u6b21]gemini-3-flash-preview-nothinking";
 const DZZI_PRIMARY_KEY = "sk-CNnSJAcdFAxWqVSEM5BfCNiw2HqqyNglOvtY8pMxlDADpXHA";
 const DZZI_SECONDARY_KEY = "sk-dfcD77w7U8Uaaqrulq5bzy3we5387dgQUjYbH5divkSQPPWa";
-const PANDA_API_URL = "https://api521.pro/v1";
+const PANDA_API_URL = "https://api520.pro/v1";
 const PANDA_MODEL = "\u718a\u732b-A-3-gemini-3-flash-preview";
-const PANDA_KEY = "sk-5tFKjS1i3sLxIOPUJnkYPOXU5bfeebuGFeWEXNAhNM66gsiv";
 const PANDA_PRESET_NAME = "\u718a\u732b";
-const PANDA_LEGACY_URLS = new Set(["https://api520.pro/v1", "https://www.api521.pro/v1"]);
+const PANDA_LEGACY_URLS = new Set(["https://api521.pro/v1", "https://www.api521.pro/v1"]);
 const PANDA_GEMINI3_MODELS = new Set(["\u718a\u732b-A-3-gemini-3-flash-preview", "gemini-3-flash-preview"]);
 const PANDA_LEGACY_KEYS = new Set([
   "sk-DxW6CjXOGoKuRZgZ1Cf2J7OZXvWo9rq8Ey721ijMwDRZ3oNJ",
@@ -34635,7 +34644,7 @@ const migrateDzziApiLaneConfig = (config = {}, { lane = "primary" } = {}) => {
 const shouldPreferPandaApiConfig = (config = {}) => {
   const normalizedUrl = normalizeApiConfigUrl(config?.url);
   const normalizedKey = normalizeApiConfigKey(config?.key);
-  if (normalizedUrl === PANDA_API_URL && normalizedKey === PANDA_KEY) return true;
+  if (normalizedUrl === PANDA_API_URL && normalizeApiConfigModel(config?.model) === normalizeApiConfigModel(PANDA_MODEL)) return true;
   if (PANDA_LEGACY_URLS.has(normalizedUrl)) return true;
   if (PANDA_LEGACY_KEYS.has(normalizedKey)) return true;
   return false;
@@ -37885,7 +37894,7 @@ const attemptJsonRepairWithConfig = async ({
     body: JSON.stringify({
       model: config.model,
       temperature: 0.1,
-            max_tokens: clampValue(Number(maxOutputTokens || 0) || MODEL_OUTPUT_TOKEN_BUDGET, 240, MODEL_OUTPUT_TOKEN_BUDGET),
+      ...getOpenAiCompatibleExtraRequestOptions(config),
       ...(allowStrictJsonResponseFormat ? { response_format: { type: "json_object" } } : {}),
       messages: [
         {
@@ -38172,7 +38181,7 @@ const measureWorldbookContextEntry = (entry = {}) =>
 
 const buildWorldbookContextEntries = (
   entries = [],
-  { userInput = "", structuredTask = true, generationMode = "chat" } = {},
+  { userInput = "", structuredTask = true, generationMode = "chat", preserveAllEntries = false } = {},
 ) => {
   const normalizedMode = String(generationMode || "chat").trim().toLowerCase();
   const isVideoMode = normalizedMode === "video";
@@ -38220,16 +38229,19 @@ const buildWorldbookContextEntries = (
   }
 
   const alwaysIncludeCount = prioritized.filter((item) => item.alwaysInclude).length;
-  const baseMaxTotalChars = isVideoMode ? 900 : isJourneyMode ? 420 : structuredTask ? 4200 : 7200;
-  const maxTotalChars =
-    baseMaxTotalChars +
-    alwaysIncludeCount * (isVideoMode ? 120 : isJourneyMode ? 96 : structuredTask ? 240 : 320);
+  const baseMaxTotalChars = preserveAllEntries ? Number.POSITIVE_INFINITY : isVideoMode ? 1200 : isJourneyMode ? 420 : structuredTask ? 4200 : 7200;
+  const maxTotalChars = preserveAllEntries
+    ? Number.POSITIVE_INFINITY
+    : baseMaxTotalChars +
+      alwaysIncludeCount * (isVideoMode ? 120 : isJourneyMode ? 96 : structuredTask ? 240 : 320);
   const perEntryLimit = isVideoMode ? 160 : isJourneyMode ? 92 : structuredTask ? 520 : 900;
-  const maxEntries = isVideoMode
-    ? Math.max(3, alwaysIncludeCount)
-    : isJourneyMode
-      ? Math.max(2, alwaysIncludeCount)
-      : Number.POSITIVE_INFINITY;
+  const maxEntries = preserveAllEntries
+    ? Number.POSITIVE_INFINITY
+    : isVideoMode
+      ? Math.max(VIDEO_SESSION_WORLDBOOK_DETAIL_LIMIT, alwaysIncludeCount)
+      : isJourneyMode
+        ? Math.max(2, alwaysIncludeCount)
+        : Number.POSITIVE_INFINITY;
   const result = [];
   let usedChars = 0;
 
@@ -38507,7 +38519,7 @@ const buildUserProfileContext = (profile = state.userProfile || {}, { structured
 
 const GENERATION_CONTEXT_MESSAGE_LIMITS = Object.freeze({
   chat: 150,
-  video: null,
+  video: VIDEO_SESSION_RECENT_CHAT_CONTEXT_LIMIT,
   autonomous: 72,
   map: 56,
   journey: 48,
@@ -38613,7 +38625,15 @@ const buildRoleMemoryContextItems = (role, { limit = 12, textLimit = 300 } = {})
 
 const buildRoleGenerationContext = (
   role,
-  { userInput = "", worldbookMode = "all", structuredTask = true, now = new Date(), generationMode = "chat" } = {},
+  {
+    userInput = "",
+    worldbookMode = "all",
+    structuredTask = true,
+    now = new Date(),
+    generationMode = "chat",
+    preserveAllWorldbookEntries = false,
+    preserveAllNpcEntries = false,
+  } = {},
 ) => {
   const normalizedMode = String(generationMode || "chat").trim().toLowerCase();
   const isVideoMode = normalizedMode === "video";
@@ -38626,8 +38646,8 @@ const buildRoleGenerationContext = (
     .split("────────────────────────────────")
     .map((item) => item.trim())
     .filter(Boolean)
-    .slice(isVideoMode ? -1 : isSummaryMode ? -5 : -3)
-    .map((item) => truncateContextText(item, isVideoMode ? 180 : isSummaryMode ? 1100 : structuredTask ? 700 : 1200));
+    .slice(isVideoMode ? -3 : isSummaryMode ? -5 : -3)
+    .map((item) => truncateContextText(item, isVideoMode ? 260 : isSummaryMode ? 1100 : structuredTask ? 700 : 1200));
 
   const enabledWorldbookEntries = worldbookMode === "triggered" ? getTriggeredWorldbookEntries(role, userInput) : getActiveWorldbookSummary(role);
   const roleTimeContext = buildRoleTimeContext(role, now);
@@ -38666,7 +38686,32 @@ const buildRoleGenerationContext = (
         detail: truncateContextText(item?.detail || "", 56),
       }))
     : todayTimelineItems;
-  const compactNpcs = (role.npcs || []).slice(0, isVideoMode ? 5 : 16).map((item) =>
+  const npcSourceEntries = (role.npcs || []).filter((item) => item?.enabled !== false);
+  const npcMatchedText = String(userInput || "").trim().toLowerCase();
+  const prioritizedNpcEntries = npcSourceEntries
+    .map((item, index) => {
+      const matchText = [
+        item?.name,
+        item?.relationship,
+        item?.relation,
+        item?.corePersona,
+        item?.persona,
+        item?.summary,
+      ]
+        .map((value) => String(value || "").trim().toLowerCase())
+        .filter(Boolean);
+      return {
+        item,
+        index,
+        hit: Boolean(npcMatchedText && matchText.some((value) => npcMatchedText.includes(value) || value.includes(npcMatchedText))),
+      };
+    })
+    .sort((left, right) => {
+      if (left.hit !== right.hit) return left.hit ? -1 : 1;
+      return left.index - right.index;
+    })
+    .map(({ item }) => item);
+  const compactNpcs = (preserveAllNpcEntries ? npcSourceEntries : prioritizedNpcEntries.slice(0, isVideoMode ? VIDEO_SESSION_NPC_DETAIL_LIMIT : 16)).map((item) =>
     isVideoMode
       ? {
           name: String(item?.name || "").trim(),
@@ -38714,7 +38759,7 @@ const buildRoleGenerationContext = (
       bio: truncateContextText(role.profile.bio, isVideoMode ? 120 : structuredTask ? 400 : 700),
       publicCard: truncateContextText(role.profile.publicCard, isVideoMode ? 80 : structuredTask ? 220 : 420),
       onlineStyle: truncateContextText(role.profile.onlineStyle, isVideoMode ? 80 : structuredTask ? 220 : 420),
-      memorySummary: truncateContextText(role.profile.memorySummary, isVideoMode ? 110 : structuredTask ? 280 : 520),
+      memorySummary: truncateContextText(role.profile.memorySummary, isVideoMode ? 220 : structuredTask ? 280 : 520),
       worldbookDraft: truncateContextText(role.profile.worldbookDraft, isVideoMode ? 80 : structuredTask ? 220 : 420),
       currentPlace: getRoleCurrentPlace(role),
       location: role.profile.location,
@@ -38743,17 +38788,18 @@ const buildRoleGenerationContext = (
       userInput,
       structuredTask,
       generationMode: normalizedMode,
+      preserveAllEntries: preserveAllWorldbookEntries,
     }),
     recentMessages: getRecentMessagesSummary(role, contextLimit, {
       now,
       compactOlder: normalizedMode === "chat",
-      detailedRecentCount: normalizedMode === "chat" ? 18 : 16,
+      detailedRecentCount: isVideoMode ? VIDEO_SESSION_RECENT_CHAT_DETAIL_LIMIT : normalizedMode === "chat" ? 18 : 16,
     }),
     videoCallSummaries: getRecentVideoCallSummaryContext(role, isVideoMode ? 1 : 3, isVideoMode ? 110 : 180),
     summaryArchive: summaryBlocks,
     memory: buildRoleMemoryContextItems(role, {
       limit: isVideoMode ? 6 : 12,
-      textLimit: isVideoMode ? 72 : structuredTask ? 180 : 300,
+      textLimit: isVideoMode ? 140 : structuredTask ? 180 : 300,
     }),
     currentTime: roleTimeContext.nowText,
     currentTimePlainText: roleTimeContext.pureNowText,
@@ -38761,6 +38807,51 @@ const buildRoleGenerationContext = (
     timeContext: roleTimeContext,
   };
 };
+
+const buildVideoWorldbookIndexContext = (role) =>
+  getActiveWorldbookSummary(role)
+    .map((entry) => ({
+      title: truncateContextText(entry?.title, 54),
+      keywords: truncateContextText(entry?.keywords, 72),
+      importance: normalizeWorldbookImportance(entry?.importance, 50),
+    }))
+    .filter((entry) => entry.title || entry.keywords);
+
+const buildVideoNpcIndexContext = (role) =>
+  (Array.isArray(role?.npcs) ? role.npcs : [])
+    .filter((item) => item?.enabled !== false)
+    .map((item) => ({
+      name: truncateContextText(item?.name, 36),
+      relation: truncateContextText(item?.relationship || item?.relation || "", 42),
+    }))
+    .filter((item) => item.name || item.relation);
+
+const buildVideoReplySlimContext = (role, roleContext, { currentPlace = "", timelineAnchor = null, videoDialogLog = [] } = {}) => ({
+  roleName: role?.profile?.note || role?.profile?.name || "",
+  profile: roleContext?.profile,
+  currentPlace,
+  timelineAnchor,
+  referenceCity: role?.profile?.realCityReference || role?.profile?.location || "",
+  status: roleContext?.status,
+  currentStatus: role?.status?.headerText || role?.status?.mood || "",
+  goals: roleContext?.goals || [],
+  recentMessages: roleContext?.recentMessages || [],
+  videoCallSummaries: roleContext?.videoCallSummaries || [],
+  summaryArchive: roleContext?.summaryArchive || [],
+  memory: roleContext?.memory || [],
+  worldbookIndex: buildVideoWorldbookIndexContext(role),
+  worldbookDetails: roleContext?.worldbook || [],
+  npcIndex: buildVideoNpcIndexContext(role),
+  npcDetails: roleContext?.npcs || [],
+  recentVideoDialogHistory: (Array.isArray(videoDialogLog) ? videoDialogLog : [])
+    .filter((item) => String(item?.text || "").trim())
+    .slice(-4)
+    .map((item) => ({
+      role: item.role === "ai" ? "ai" : "user",
+      mode: item.mode === "voice" ? "voice" : "text",
+      text: sanitizeChatLine(String(item.text || "").trim()),
+    })),
+});
 
 const getChatLifeMemorySortValue = (item = {}, targetDateKey = formatJourneyDayKey()) => {
   const parsed = parseValidTimestamp(item?.createdAt || item?.date || "");
@@ -39222,6 +39313,14 @@ const getCurrentTurnImageAttachments = (role, limit = 2) => {
 const isRoleQuotableCurrentTurnUserMessage = (message) =>
   message?.role === "user" && ["text", "photo", "image", "sticker"].includes(String(message?.type || "").trim());
 
+const summarizeMessageForQuoteCandidate = (message) => {
+  if (message?.type === "photo" || message?.type === "image") {
+    const name = sanitizeChatLine(String(message?.content?.name || "").trim());
+    return `[图片] ${name || "用户上传图片"}`.trim();
+  }
+  return summarizeMessageForArchive(message);
+};
+
 const getCurrentTurnUserQuoteCandidates = (role, limit = 6) => {
   const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
   const lastAiIndex = (() => {
@@ -39239,7 +39338,7 @@ const getCurrentTurnUserQuoteCandidates = (role, limit = 6) => {
       key: `q${index + 1}`,
       id: message.id,
       type: message.type,
-      preview: summarizeMessageForArchive(message),
+      preview: summarizeMessageForQuoteCandidate(message),
       timestamp: message.timestamp,
     }))
     .filter((item) => item.id && item.preview);
@@ -39248,10 +39347,13 @@ const getCurrentTurnUserQuoteCandidates = (role, limit = 6) => {
 const getRoleQuoteCandidateInstruction = (quoteCandidates = []) => {
   const list = Array.isArray(quoteCandidates) ? quoteCandidates.filter((item) => item?.key && item?.id) : [];
   if (!list.length) return "";
+  const needsQuote = list.some((item) => isStrongRoleQuoteCandidate(item));
   return [
     "本轮可引用内容：",
     ...list.map((item) => `${item.key} ${item.preview}`),
-    "引用规则：只有当这轮回复确实在针对某条本轮用户内容时，才可以在某一条消息最前面加 [引用:q1] 这种标记；整体频率约三成，但遇到图片、表情包、长句、反驳、吐槽、强调时可以更自然地使用；不要为了引用而引用；只能引用上面列出的 q 编号；不要引用旧消息；标记后面直接接正文或 [语音]/[图片]/[表情包] 标签",
+    needsQuote
+      ? "引用规则：这轮存在图片、表情包、长句、反驳、追问或明显情绪，约一半概率引用；不要因为看到可引用列表就自动引用，更不要每轮都引用；如果引用，在最贴着回应的一条消息最前面加 [引用:q编号] 标记；只能引用上面列出的 q 编号，不要引用旧消息；一轮最多引用一条；标记后面直接接正文或 [语音]/[图片]/[表情包] 标签"
+      : "引用规则：普通短句按自然度决定，整体约三成；没触发但你觉得贴着用户的话接会更自然时也可以引用一下，但不要每轮都引用；如果引用，必须在最贴着回应的一条消息最前面加 [引用:q编号] 标记，不要只复述原文；只能引用上面列出的 q 编号；不要引用旧消息；一轮最多引用一条；标记后面直接接正文或 [语音]/[图片]/[表情包] 标签",
   ].join("\n");
 };
 
@@ -39263,6 +39365,67 @@ const resolveRoleQuoteCandidateId = (quoteCandidates = [], key = "") => {
       (item) => String(item?.key || "").trim().toLowerCase() === normalized,
     )?.id || ""
   );
+};
+
+const isStrongRoleQuoteCandidate = (candidate = {}) => {
+  const type = String(candidate?.type || "").trim();
+  if (["photo", "image", "sticker"].includes(type)) return true;
+  const preview = sanitizeChatLine(String(candidate?.preview || "").trim());
+  const compact = preview.replace(/\s+/g, "");
+  if (Array.from(compact).length >= 24) return true;
+  return /[？?！!]|不是|别|怎么|为啥|为什么|又|算了|生气|难受|烦|急|委屈|想你|喜欢|讨厌/u.test(compact);
+};
+
+const getFallbackRoleQuoteCandidateId = (quoteCandidates = []) => {
+  const list = Array.isArray(quoteCandidates) ? quoteCandidates.filter((item) => item?.id) : [];
+  return (list.find((item) => isStrongRoleQuoteCandidate(item)) || list[0])?.id || "";
+};
+
+const getRoleQuoteFallbackChance = (quoteCandidates = []) => {
+  const list = Array.isArray(quoteCandidates) ? quoteCandidates.filter((item) => item?.id) : [];
+  if (!list.length) return 0;
+  return list.some((item) => isStrongRoleQuoteCandidate(item)) ? 0.55 : 0.3;
+};
+
+const shouldEnsureRoleQuoteForReply = (quoteCandidates = []) => {
+  const chance = getRoleQuoteFallbackChance(quoteCandidates);
+  return chance > 0 && Math.random() < chance;
+};
+
+const ensureRoleQuoteOnFirstReplyMessage = (messages = [], quoteCandidates = []) => {
+  const list = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  if (!list.length) return list;
+  const quoteCandidateIds = new Set(
+    (Array.isArray(quoteCandidates) ? quoteCandidates : [])
+      .map((item) => String(item?.id || "").trim())
+      .filter(Boolean),
+  );
+  if (!quoteCandidateIds.size) return list;
+  const shouldShowQuote = shouldEnsureRoleQuoteForReply(quoteCandidates);
+  const hasCurrentTurnQuote = list.some((item) => quoteCandidateIds.has(String(item?.quotedMessageId || "").trim()));
+  if (hasCurrentTurnQuote) {
+    if (shouldShowQuote) return list;
+    return list.map((item) =>
+      quoteCandidateIds.has(String(item?.quotedMessageId || "").trim())
+        ? {
+            ...item,
+            quotedMessageId: null,
+          }
+        : item,
+    );
+  }
+  if (!shouldShowQuote) return list;
+  const quotedMessageId = getFallbackRoleQuoteCandidateId(quoteCandidates);
+  if (!quotedMessageId) return list;
+  let attached = false;
+  return list.map((item) => {
+    if (attached || item?.role !== "ai") return item;
+    attached = true;
+    return {
+      ...item,
+      quotedMessageId,
+    };
+  });
 };
 
 const clampValue = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -40509,7 +40672,6 @@ const requestModelJsonWithConfig = async ({
   const allowStrictJsonResponseFormat = !shouldDisableJsonResponseFormat(config);
   const finalSystemPrompt =
     payload?.roleContext ? `${String(systemPrompt || "").trim()}\n${GROUNDING_RULE}` : systemPrompt;
-  const omitMaxTokens = shouldOmitMaxTokensForConfig(config) && !payload?.outputRules?.forceMaxOutputTokens;
   const requestedMaxOutputTokens = clampValue(
     Number(payload?.outputRules?.maxOutputTokens ?? MODEL_OUTPUT_TOKEN_BUDGET) || MODEL_OUTPUT_TOKEN_BUDGET,
     120,
@@ -40695,11 +40857,9 @@ const requestModelJsonWithConfig = async ({
             Authorization: `Bearer ${config.key}`,
           },
           signal,
-        body: JSON.stringify({
+          body: JSON.stringify({
           model: config.model,
           temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
-          ...(omitMaxTokens ? {} : { max_tokens: maxOutputTokens || undefined }),
-          ...(geminiMode && !omitMaxTokens ? { max_completion_tokens: maxOutputTokens || undefined } : {}),
           ...(allowStrictJsonResponseFormat ? { response_format: { type: "json_object" } } : {}),
           ...getOpenAiCompatibleExtraRequestOptions(config),
           messages: variant.messages,
@@ -40896,7 +41056,6 @@ const requestModelTextWithConfig = async ({
   const geminiMode = shouldUseGeminiCompatibleMode(config);
   const finalSystemPrompt =
     payload?.roleContext ? `${String(systemPrompt || "").trim()}\n${GROUNDING_RULE}` : systemPrompt;
-  const omitMaxTokens = shouldOmitMaxTokensForConfig(config) && !payload?.outputRules?.forceMaxOutputTokens;
   const requestedMaxOutputTokens = clampValue(
     Number(payload?.outputRules?.maxOutputTokens ?? MODEL_OUTPUT_TOKEN_BUDGET) || MODEL_OUTPUT_TOKEN_BUDGET,
     120,
@@ -41115,8 +41274,6 @@ const requestModelTextWithConfig = async ({
         body: JSON.stringify({
           model: config.model,
           temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
-          ...(omitMaxTokens ? {} : { max_tokens: maxOutputTokens || undefined }),
-          ...(geminiMode && !omitMaxTokens ? { max_completion_tokens: maxOutputTokens || undefined } : {}),
           ...getOpenAiCompatibleExtraRequestOptions(config),
           messages: variant.messages,
         }),
@@ -43054,6 +43211,13 @@ const rebalanceNaturalChatReplyItems = (items = []) => {
   if (list.length >= 3) return list.slice(0, 6);
 
   const joinedText = list.map((item) => String(item.content || "").trim()).filter(Boolean).join("\n");
+  const firstQuoteSource = list.find((item) => item?.quotedMessageId || item?.quoteKey) || null;
+  const firstQuoteMeta = firstQuoteSource
+    ? {
+        ...(firstQuoteSource.quotedMessageId ? { quotedMessageId: firstQuoteSource.quotedMessageId } : {}),
+        ...(firstQuoteSource.quoteKey ? { quoteKey: firstQuoteSource.quoteKey } : {}),
+      }
+    : {};
   const preferredMinParts = totalTextLength >= 42 ? 3 : 2;
   const preferredMaxParts = totalTextLength >= 210 ? 6 : totalTextLength >= 150 ? 5 : totalTextLength >= 96 ? 4 : 3;
   const splitCandidates = [
@@ -43068,7 +43232,11 @@ const rebalanceNaturalChatReplyItems = (items = []) => {
 
   for (const candidate of splitCandidates) {
     const nextItems = candidate
-      .map((content) => ({ type: "text", content }))
+      .map((content, index) => ({
+        type: "text",
+        content,
+        ...(index === 0 ? firstQuoteMeta : {}),
+      }))
       .filter((item) => item.content && Array.from(item.content).length >= 6);
     if (nextItems.length >= preferredMinParts) {
       return nextItems.slice(0, 6);
@@ -43416,18 +43584,20 @@ const normalizeChatReplyItems = (result = {}) => {
   const normalized = list
     .flatMap((item) => {
       if (typeof item === "string") {
-        const trimmed = item.trim();
+        const quotePrefix = extractChatProtocolQuotePrefix(item.trim());
+        const trimmed = quotePrefix.text.trim();
+        const quoteMeta = quotePrefix.quoteKey ? { quoteKey: quotePrefix.quoteKey } : {};
         const leadingBracketColonItems = parseLeadingBracketColonChatProtocolItems(trimmed, {
           allowedTypes: ["text", "voice", "image", "sticker"],
         });
         if (leadingBracketColonItems.length) {
-          return leadingBracketColonItems;
+          return leadingBracketColonItems.map((parsedItem, index) => (index === 0 ? { ...parsedItem, ...quoteMeta } : parsedItem));
         }
         const trailingStickerItems = parseTrailingStickerProtocolItems(trimmed, {
           allowedTypes: ["text", "voice", "image", "sticker"],
         });
         if (trailingStickerItems.length) {
-          return trailingStickerItems;
+          return trailingStickerItems.map((parsedItem, index) => (index === 0 ? { ...parsedItem, ...quoteMeta } : parsedItem));
         }
         const mediaMatch = trimmed.match(/^\[(图片|语音|表情包)\]\s*(.*)$/);
         if (mediaMatch) {
@@ -43436,16 +43606,26 @@ const normalizeChatReplyItems = (result = {}) => {
             {
               type: typeMap[mediaMatch[1]],
               content: sanitizeChatLine(mediaMatch[2]),
+              ...quoteMeta,
             },
           ];
         }
-        return splitChatLine(trimmed).map((content) => ({ type: "text", content }));
+        return splitChatLine(trimmed).map((content, index) => ({
+          type: "text",
+          content,
+          ...(index === 0 ? quoteMeta : {}),
+        }));
       }
 
       if (!item || typeof item !== "object") return [];
 
       const type = String(item.type || "text").trim().toLowerCase();
       const quoteKey = String(item.quoteKey || item.quote || item.quoteRef || item.replyTo || "").trim();
+      const quotedMessageId = String(item.quotedMessageId || "").trim();
+      const quoteMeta = {
+        ...(quoteKey ? { quoteKey } : {}),
+        ...(quotedMessageId ? { quotedMessageId } : {}),
+      };
       if (type === "image") {
         const rawContent = item.content;
         const description = sanitizeChatLine(
@@ -43466,7 +43646,7 @@ const normalizeChatReplyItems = (result = {}) => {
               description,
               place,
             },
-            ...(quoteKey ? { quoteKey } : {}),
+            ...quoteMeta,
           },
         ];
       }
@@ -43477,10 +43657,18 @@ const normalizeChatReplyItems = (result = {}) => {
           allowedTypes: ["text", "voice", "image", "sticker"],
           leadingType: type,
         });
-        if (trailingStickerItems.length) return trailingStickerItems;
+        if (trailingStickerItems.length) {
+          return trailingStickerItems.map((parsedItem, index) => (index === 0 ? { ...parsedItem, ...quoteMeta } : parsedItem));
+        }
       }
-      if (type === "text") return splitChatLine(content).map((line) => ({ type: "text", content: line, ...(quoteKey ? { quoteKey } : {}) }));
-      return [{ type, content, ...(quoteKey ? { quoteKey } : {}) }];
+      if (type === "text") {
+        return splitChatLine(content).map((line, index) => ({
+          type: "text",
+          content: line,
+          ...(index === 0 ? quoteMeta : {}),
+        }));
+      }
+      return [{ type, content, ...quoteMeta }];
     })
     .filter((item) => item?.type);
 
@@ -44386,6 +44574,68 @@ const buildChatLikePayloadFromProtocolText = (
         mapPlaceNames: [getRoleCurrentPlace(role) || role?.profile?.location || ""],
         goalTitles: anchors.goalTitles,
       }),
+    },
+    {
+      referenceCatalog,
+      requiredWorldbookTitles,
+    },
+  );
+};
+
+const buildVideoSessionPayloadFromModelText = (
+  role,
+  rawText,
+  {
+    responseMode = "text",
+    referenceCatalog = null,
+    requiredWorldbookTitles = [],
+  } = {},
+) => {
+  const cleaned = unwrapPlainTextProtocolModelOutput(rawText).trim();
+  if (!cleaned) return null;
+  const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
+  const lines = normalizeApiText(cleaned)
+    .split(/\n+/)
+    .map((line) => String(line || "").trim())
+    .filter(Boolean);
+  let status = "";
+  let explicitVoice = false;
+  const messageLines = [];
+  lines.forEach((line) => {
+    const statusMatch = line.match(CHAT_PROTOCOL_STATUS_PATTERN);
+    if (statusMatch && !status) {
+      status = sanitizeChatLine(statusMatch[1] || "").slice(0, 10);
+      return;
+    }
+    const messageMatch = line.match(/^(?:消息|回复|内容|message|reply)[：:]\s*([\s\S]*)$/iu);
+    let text = String(messageMatch?.[1] ?? line).trim();
+    if (/^\[\s*(?:语音|voice|audio)\s*\]/iu.test(text)) {
+      explicitVoice = true;
+      text = text.replace(/^\[\s*(?:语音|voice|audio)\s*\]\s*/iu, "").trim();
+    } else {
+      text = text.replace(/^\[\s*(?:文字|文本|text)\s*\]\s*/iu, "").trim();
+    }
+    if (text) messageLines.push(text);
+  });
+  const content = (messageLines.join("\n").trim() || cleaned).trim();
+  if (!content) return null;
+  const anchors = buildRoleAnchors(role);
+  return repairChatLikePayload(
+    role,
+    {
+      messages: [
+        {
+          type: normalizedResponseMode === "voice" || explicitVoice ? "voice" : "text",
+          content,
+        },
+      ],
+      status: status || deriveCurrentStatus(role, content).slice(0, 10),
+      anchors,
+      references: {
+        worldbookTitles: requiredWorldbookTitles,
+        mapPlaceNames: [getRoleCurrentPlace(role) || role?.profile?.location || ""],
+        goalTitles: anchors.goalTitles,
+      },
     },
     {
       referenceCatalog,
@@ -45450,16 +45700,9 @@ const isChatReplyMonitorRefreshBusy = (roleId = "") => {
 };
 
 const shouldRefreshLiveMonitorBeforeChatReply = (role, now = new Date()) => {
-  if (!role || !hasPlannerApiConfig()) return false;
-  if (!getChatReplyLiveMonitorEvent(role, now)) return false;
-  const targetDateKey = formatJourneyDayKey(now);
-  const fortuneRoll = buildLifeFateRoll(role, targetDateKey);
-  if (Number(fortuneRoll?.triggerChance || 0) <= 0 || Number(fortuneRoll?.effectiveTriggerChance || 0) <= 0) return false;
-  if (hasReachedLifeMonitorDailyNodeLimit(role, targetDateKey)) return false;
-  if (isChatReplyMonitorRefreshBusy(role.id)) return false;
-  if (getMinutesSince(role?.runtime?.lastLifeMonitorAt, now) < CHAT_REPLY_MONITOR_PREFLIGHT_MINUTES) return false;
-  if (getMinutesSince(role?.runtime?.lastLifeMonitorAttemptAt, now) < CHAT_REPLY_MONITOR_PREFLIGHT_MINUTES) return false;
-  return true;
+  void role;
+  void now;
+  return false;
 };
 
 const markChatReplyMonitorRefreshAttempt = (roleId = "", now = new Date()) => {
@@ -45478,30 +45721,9 @@ const markChatReplyMonitorRefreshAttempt = (roleId = "", now = new Date()) => {
 };
 
 const maybeRefreshLiveMonitorBeforeChatReply = async (roleId = "", now = new Date()) => {
-  const role = getRoleById(state, roleId);
-  if (!shouldRefreshLiveMonitorBeforeChatReply(role, now)) return false;
-
-  markChatReplyMonitorRefreshAttempt(roleId, now);
-  const targetDateKey = formatJourneyDayKey(now);
-
-  try {
-    if (getJourneyTimelineForRole(role, targetDateKey).length) {
-      return await generateLifeMonitorFromApi({
-        roleId,
-        targetDateKey,
-        silent: true,
-        source: "chat-preflight",
-      });
-    }
-    return await generateLifeMonitorFromApi({
-      roleId,
-      targetDateKey,
-      silent: true,
-      source: "chat-preflight",
-    });
-  } catch {
-    return false;
-  }
+  void roleId;
+  void now;
+  return false;
 };
 
 const isAppCurrentlyVisible = () => (typeof document === "undefined" ? true : document.visibilityState === "visible");
@@ -46041,6 +46263,7 @@ const rebalanceRenderedAiMessages = (messages = [], { minCount = 3 } = {}) => {
       .map((item) => ({
         type: "text",
         content: sanitizeChatLine(item.content || ""),
+        ...(item.quotedMessageId ? { quotedMessageId: item.quotedMessageId } : {}),
       }))
       .filter((item) => item.content),
   );
@@ -54204,7 +54427,6 @@ const requestPrimaryVideoReplyFallback = async (
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
   if (signal?.aborted) throw createAbortRequestError();
   const stableVideoConfig = getStableVideoPrimaryApiConfig();
-  const originalVideoConfig = getPrimaryApiConfig();
   const preferredVariantMode = shouldUseGeminiCompatibleMode(stableVideoConfig) ? "openai-fallback" : "openai-standard";
   const roleName = role?.profile?.note || role?.profile?.name || "角色";
   const timelineAnchor = getVideoSessionTimelineAnchor(role);
@@ -54215,7 +54437,7 @@ const requestPrimaryVideoReplyFallback = async (
   const goalTitles = (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean);
   const roleContext = buildRoleGenerationContext(role, {
     userInput,
-    worldbookMode: "triggered",
+    worldbookMode: "all",
     structuredTask: true,
     generationMode: "video",
   });
@@ -54227,62 +54449,27 @@ const requestPrimaryVideoReplyFallback = async (
     fallbackConfig: null,
     fallbackMissingMessage: "请先在设置里填好主 API 地址 模型和 API Key",
     fallbackLane: "video-primary-fallback",
-    systemPrompt: `你现在只负责补一条视频通话回复协议文本。
-不要输出 JSON 不要解释 不要 Markdown
-输出协议:
+    systemPrompt: `你只补一条现代手机视频通话回复。
+不要 JSON、Markdown、解释或旁白。
+格式只要两行：
 状态：10字内状态
-然后只写 1 行消息
-如果这轮要求语音回复，这一行写成 [语音] 要说的话
-如果这轮要求文字回复，这一行直接写正文，不要加标签
-规则:
-- 当前角色固定是「${roleName}」
-- 当前地点固定是「${currentPlace}」
-- 当前行程硬锚点：${timelineAnchorText}
-- 如果当前行程硬锚点显示已经收工、回家、在公寓、休息、洗澡或准备睡觉，就绝不能说自己还在工作室、创意园、办公室、公司、片场或继续盯工作方案；只能写成已经离开/已经到家/一边收尾一边听用户说
-- 参考真实城市（只作现实参照）固定是「${referenceCity}」
-- 当前状态可参考「${currentStatus}」
-- 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
-- 角色核心提示可参考：${truncateContextText(roleContext?.profile?.bio || "", 110) || "无"}
-- 角色线上说话风格可参考：${truncateContextText(roleContext?.profile?.onlineStyle || "", 110) || "自然口语"}
-- 必须读取 payload.slimContext.recentMessages 里的最近聊天事实和时间线；如果最近聊天已经说到回家、洗澡、吹头发、准备睡觉，就不能在视频里倒退成刚到家
-- 如果 payload.slimContext.videoCallSummaries 有内容，优先当作之前视频真实聊过的事实；source=transcript 表示总结失败时的原始转写兜底，也要读取
-- 这是现代手机视频通话场景，不允许改成玄幻、古风、战斗、宫廷、异世界、冒险游戏或其他无关题材
-- 如果 payload.imageAttachments 里带了视频截图，你必须先看最新一张截图里能确认的画面，再结合用户这轮话接话，不能无视截图
-- 不要输出日文、韩文或英文整段内容，也不要提 AI、Gemini、Google、模型、助手
-- ${REFERENCE_CITY_USAGE_RULE}
-- 消息里只能写角色真正会说出口的话，不要旁白，不要括号动作，不要分析
-- 只写 1 条完整消息，不要拆成多句分开发
-- 长度控制在 90 到 200 个汉字
-- 当前这轮前端要求${normalizedResponseMode === "voice" ? "语音回复，所以消息必须适合直接念出来" : "文字回复，所以消息按自然口语来写"}
+消息：1条完整回复
+语音回复时消息写成 [语音] 正文；文字回复时直接写正文。
+要求：读 payload.slimContext 的最近聊天 50 条、重要记忆、自动总结、视频总结、视频对话史、worldbookIndex/worldbookDetails、npcIndex/npcDetails 和 imageAttachments；worldbookIndex/npcIndex 是全量索引，details 是少量相关正文；截图能确认画面时要结合截图；行程已到家/洗澡/睡前就别倒退到工作中；只写角色会说出口的自然口语；不要提 AI、Gemini、Google、模型、助手；不要整段外语；${REFERENCE_CITY_USAGE_RULE}；长度 40 到 140 个汉字；本轮要求${normalizedResponseMode === "voice" ? "语音回复，适合直接念出来" : "文字回复，自然口语"}。
+当前角色「${roleName}」地点「${currentPlace}」行程「${timelineAnchorText}」真实城市参照「${referenceCity}」状态「${currentStatus}」目标「${goalTitles.join(" / ") || "暂无目标"}」。
 ${roundPromptBlock}
 直接输出协议文本`,
     payload: {
       task: "在复杂视频结构化回复失败后，补一条可直接显示的简洁回复",
       userInput: getVideoSessionRoundUserInput(userInput, roundContext),
-      slimContext: {
-        roleName: role?.profile?.note || role?.profile?.name || "",
+      slimContext: buildVideoReplySlimContext(role, roleContext, {
         currentPlace,
         timelineAnchor,
-        referenceCity: role?.profile?.realCityReference || role?.profile?.location || "",
-        currentStatus: role?.status?.headerText || role?.status?.mood || "",
-        goals: (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean),
-        recentMessages: roleContext?.recentMessages || [],
-        videoCallSummaries: roleContext?.videoCallSummaries || [],
-        summaryArchive: (roleContext?.summaryArchive || []).slice(-2),
-        recentVideoDialogHistory: (Array.isArray(videoDialogLog) ? videoDialogLog : [])
-          .filter((item) => String(item?.text || "").trim())
-          .slice(-3)
-          .map((item) => ({
-            role: item.role === "ai" ? "ai" : "user",
-            text: sanitizeChatLine(String(item.text || "").trim()),
-          })),
-        worldbook: (roleContext?.worldbook || []).slice(0, 4),
-        npcs: (roleContext?.npcs || []).slice(0, 4),
-      },
+        videoDialogLog,
+      }),
       roundContext: roundContextPayload,
       imageAttachments,
       outputRules: {
-        maxOutputTokens: VIDEO_SESSION_MAX_OUTPUT_TOKENS,
         singleMessage: true,
         requireVoiceReply: normalizedResponseMode === "voice",
       },
@@ -54295,47 +54482,13 @@ ${roundPromptBlock}
     requestTrace,
     signal,
   });
-  const repaired = buildChatLikePayloadFromProtocolText(role, apiResponse?.text || "", {
+  const repaired = buildVideoSessionPayloadFromModelText(role, apiResponse?.text || "", {
+    responseMode: normalizedResponseMode,
     referenceCatalog,
     requiredWorldbookTitles,
-    allowedTypes: normalizedResponseMode === "voice" ? ["text", "voice"] : ["text"],
-    singleMessage: true,
   });
   if (!repaired) {
     throw attachModelMetaToError(new Error("视频回复协议文本无效"), apiResponse?.meta || null, {
-      rawResponseText: apiResponse?.text || "",
-    });
-  }
-  const normalizedItems = normalizeChatReplyItems(repaired).filter((item) => ["text", "voice"].includes(item?.type));
-  const replyText = normalizedItems
-    .map((item) => sanitizeChatLine(typeof item?.content === "string" ? item.content : ""))
-    .filter(Boolean)
-    .join(" ");
-  const validationMessage =
-    normalizedItems.length !== 1
-      ? "视频回复必须只有1条"
-      : !replyText
-        ? "缺少reply"
-        : replyText.length < 80
-          ? "视频回复过短"
-          : replyText.length > 240
-            ? "视频回复过长"
-            : isAbruptVideoReplyCutoffText(replyText)
-              ? "视频回复像半截话"
-              : (() => {
-                  const safeStatusText = rewriteVideoReferenceCityLeak(role, repaired?.status || "");
-                  const referenceCityLeakError = getVideoReferenceCityLeakError(role, `${replyText} ${safeStatusText}`.trim(), userInput);
-                  if (referenceCityLeakError) return referenceCityLeakError;
-                  const timelineConflictError = getVideoTimelineAnchorConflictError(role, `${replyText} ${safeStatusText}`.trim());
-                  if (timelineConflictError) return timelineConflictError;
-                  const driftError = getTextSemanticDriftMessage(replyText, "视频回复", {
-                    disallowAiDisclosure: true,
-                  });
-                  if (driftError) return driftError;
-                  return validateBlockedTermsInChatResult(role, repaired, "视频回复");
-                })();
-  if (validationMessage) {
-    throw attachModelMetaToError(new Error(validationMessage), apiResponse?.meta || null, {
       rawResponseText: apiResponse?.text || "",
     });
   }
@@ -54369,7 +54522,7 @@ const requestPrimaryVideoReplyTextRescue = async (
   const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryVideoConfig) ? "openai-fallback" : "openai-standard";
   const roleContext = buildRoleGenerationContext(role, {
     userInput,
-    worldbookMode: "triggered",
+    worldbookMode: "all",
     structuredTask: true,
     generationMode: "video",
   });
@@ -54383,64 +54536,27 @@ const requestPrimaryVideoReplyTextRescue = async (
   const roundPromptBlock = buildVideoSessionRoundPromptBlock(roundContext);
   const roundContextPayload = buildVideoSessionRoundContextPayload(roundContext);
   const response = await requestPrimaryModelText({
-    systemPrompt: `你现在只负责补回一条稳定的视频通话协议文本。
-不要输出 JSON 不要解释 不要 Markdown
-输出协议:
+    systemPrompt: `你只补一条现代手机视频通话回复。
+不要 JSON、Markdown、解释或旁白。
+格式只要两行：
 状态：10字内状态
-然后只写 1 行消息
-如果这轮要求语音回复，这一行写成 [语音] 要说的话
-如果这轮要求文字回复，这一行直接写正文，不要加标签
-规则:
-- 当前角色固定是「${roleName}」
-- 当前地点固定是「${currentPlace}」
-- 当前行程硬锚点：${timelineAnchorText}
-- 如果当前行程硬锚点显示已经收工、回家、在公寓、休息、洗澡或准备睡觉，就绝不能说自己还在工作室、创意园、办公室、公司、片场或继续盯工作方案；只能写成已经离开/已经到家/一边收尾一边听用户说
-- 参考真实城市（只作现实参照）固定是「${referenceCity}」
-- 当前状态可参考「${currentStatus}」
-- 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
-- 角色核心提示可参考：${truncateContextText(roleContext?.profile?.bio || "", 120) || "无"}
-- 角色线上聊天风格可参考：${truncateContextText(roleContext?.profile?.onlineStyle || "", 120) || "自然口语"}
-- 必须读取 payload.slimContext.recentMessages 里的最近聊天事实和时间线；如果最近聊天已经说到回家、洗澡、吹头发、准备睡觉，就不能在视频里倒退成刚到家
-- 如果 payload.slimContext.videoCallSummaries 有内容，优先当作之前视频真实聊过的事实；source=transcript 表示总结失败时的原始转写兜底，也要读取
-- 必须把 recentVideoDialogHistory 当作已经连续聊过的上下文，直接接着说，不要重新自我介绍
-- 如果 payload.imageAttachments 里带了视频截图，你必须先看最新一张截图里能确认的画面，再结合用户这轮话回复，不能假装没看到
-- 场景是现代手机视频通话，不允许玄幻、古风、冒险、宫廷、旅游攻略、系统播报
-- 不要提 AI、Gemini、Google、模型、助手，不要旁白，不要动作括号，不要分析解释
-- ${REFERENCE_CITY_USAGE_RULE}
-- 不要输出日文、韩文或英文整段内容
-- 消息只能写角色真正会说出口的话
-- 只返回 1 条完整消息，不要拆句，不要只回半截
-- 长度控制在 90 到 200 个汉字
-- 当前这轮前端要求${normalizedResponseMode === "voice" ? "语音回复，因此消息必须适合直接念出来" : "文字回复，因此消息用自然口语即可"}
+消息：1条完整回复
+语音回复时消息写成 [语音] 正文；文字回复时直接写正文。
+要求：读 payload.slimContext 的最近聊天 50 条、重要记忆、自动总结、视频总结、视频对话史、worldbookIndex/worldbookDetails、npcIndex/npcDetails 和 imageAttachments；worldbookIndex/npcIndex 是全量索引，details 是少量相关正文；截图能确认画面时要结合截图；行程已到家/洗澡/睡前就别倒退到工作中；只写角色会说出口的自然口语；不要提 AI、Gemini、Google、模型、助手；不要整段外语；${REFERENCE_CITY_USAGE_RULE}；长度 40 到 140 个汉字；本轮要求${normalizedResponseMode === "voice" ? "语音回复，适合直接念出来" : "文字回复，自然口语"}。
+当前角色「${roleName}」地点「${currentPlace}」行程「${timelineAnchorText}」真实城市参照「${referenceCity}」状态「${currentStatus}」目标「${goalTitles.join(" / ") || "暂无目标"}」。
 ${roundPromptBlock}
 直接输出协议文本`,
     payload: {
       task: "补回这轮视频通话的稳定回复",
       userInput: getVideoSessionRoundUserInput(userInput, roundContext),
-      slimContext: {
-        profile: roleContext?.profile,
+      slimContext: buildVideoReplySlimContext(role, roleContext, {
         currentPlace,
         timelineAnchor,
-        status: roleContext?.status,
-        goals: roleContext?.goals,
-        recentMessages: roleContext?.recentMessages || [],
-        videoCallSummaries: roleContext?.videoCallSummaries || [],
-        summaryArchive: (roleContext?.summaryArchive || []).slice(-2),
-        worldbook: (roleContext?.worldbook || []).slice(0, 4),
-        npcs: (roleContext?.npcs || []).slice(0, 4),
-        recentVideoDialogHistory: (Array.isArray(videoDialogLog) ? videoDialogLog : [])
-          .filter((item) => String(item?.text || "").trim())
-          .slice(-4)
-          .map((item) => ({
-            role: item.role === "ai" ? "ai" : "user",
-            mode: item.mode === "voice" ? "voice" : "text",
-            text: sanitizeChatLine(String(item.text || "").trim()),
-          })),
-      },
+        videoDialogLog,
+      }),
       roundContext: roundContextPayload,
       imageAttachments,
       outputRules: {
-        maxOutputTokens: VIDEO_SESSION_MAX_OUTPUT_TOKENS,
         singleMessage: true,
         requireVoiceReply: normalizedResponseMode === "voice",
       },
@@ -54453,47 +54569,13 @@ ${roundPromptBlock}
       requestTrace,
       signal,
     });
-  const repaired = buildChatLikePayloadFromProtocolText(role, response?.text || "", {
+  const repaired = buildVideoSessionPayloadFromModelText(role, response?.text || "", {
+    responseMode: normalizedResponseMode,
     referenceCatalog,
     requiredWorldbookTitles,
-    allowedTypes: normalizedResponseMode === "voice" ? ["text", "voice"] : ["text"],
-    singleMessage: true,
   });
   if (!repaired) {
     throw attachModelMetaToError(new Error("视频回复协议文本无效"), response?.meta || null, {
-      rawResponseText: response?.text || "",
-    });
-  }
-  const normalizedItems = normalizeChatReplyItems(repaired).filter((item) => ["text", "voice"].includes(item?.type));
-  const replyText = normalizedItems
-    .map((item) => sanitizeChatLine(typeof item?.content === "string" ? item.content : ""))
-    .filter(Boolean)
-    .join(" ");
-  const validationMessage =
-    normalizedItems.length !== 1
-      ? "视频回复必须只有1条"
-      : !replyText
-        ? "缺少reply"
-        : replyText.length < 80
-          ? "视频回复过短"
-          : replyText.length > 240
-            ? "视频回复过长"
-            : isAbruptVideoReplyCutoffText(replyText)
-              ? "视频回复像半截话"
-              : (() => {
-                  const safeStatusText = rewriteVideoReferenceCityLeak(role, repaired?.status || "");
-                  const referenceCityLeakError = getVideoReferenceCityLeakError(role, `${replyText} ${safeStatusText}`.trim(), userInput);
-                  if (referenceCityLeakError) return referenceCityLeakError;
-                  const timelineConflictError = getVideoTimelineAnchorConflictError(role, `${replyText} ${safeStatusText}`.trim());
-                  if (timelineConflictError) return timelineConflictError;
-                  const driftError = getTextSemanticDriftMessage(replyText, "视频回复", {
-                    disallowAiDisclosure: true,
-                  });
-                  if (driftError) return driftError;
-                  return validateBlockedTermsInChatResult(role, repaired, "视频回复");
-                })();
-  if (validationMessage) {
-    throw attachModelMetaToError(new Error(validationMessage), response?.meta || null, {
       rawResponseText: response?.text || "",
     });
   }
@@ -59457,8 +59539,8 @@ const generateLifeMonitorFromApi = async ({
     const rawResponseText = String(error?.rawResponseText || error?.modelMeta?.rawResponseText || "").trim();
     const baseMessage = String(error?.message || "行程 / 生活轨迹 API 调用失败").trim();
     const normalizedBaseMessage =
-      baseMessage === "模型没有返回可用文本" && rawResponseText
-        ? "模型这次返回了响应外壳，但正文是空的"
+      baseMessage === "模型没有返回可用文本"
+        ? "模型请求成功，但没有返回正文，未写入生活轨迹"
         : baseMessage;
     const modelName = String(error?.modelMeta?.model || "").trim();
     const latencyText = Number(error?.modelMeta?.latencyMs || 0) > 0 ? `${Math.round(Number(error.modelMeta.latencyMs || 0))}ms` : "";
@@ -60769,7 +60851,7 @@ const requestAndAppendAiReply = async (
     const explicitVoiceDirective = resolveExplicitVoiceDirective(liveRole, normalizedInput);
     const explicitImageRequested = isExplicitImageRequest(normalizedInput);
     const explicitStickerRequested = isExplicitStickerRequest(normalizedInput);
-    const messages = applyAiStickerPolicyToMessages(
+    const messages = ensureRoleQuoteOnFirstReplyMessage(applyAiStickerPolicyToMessages(
       liveRole,
       applyAiImagePolicyToMessages(
         liveRole,
@@ -60787,7 +60869,7 @@ const requestAndAppendAiReply = async (
         seedText: normalizedInput,
         forceSticker: explicitStickerRequested,
       },
-    );
+    ), quoteCandidates);
     replyBatch = messages.length
       ? {
           messages,
@@ -61038,20 +61120,8 @@ const isLikelyCutoffVideoCallSummary = (value = "", meta = null) => {
 };
 
 const isRecoveredVideoResultUnsafe = (result, error) => {
-  const finishReason = String(error?.modelMeta?.finishReason || "").trim().toLowerCase();
   const items = normalizeChatReplyItems(result).filter((item) => ["text", "voice"].includes(item?.type));
   if (!items.length) return true;
-  if (items.length > VIDEO_SESSION_MAX_MESSAGES) return true;
-  const mergedVideoText = items
-    .map((item) => sanitizeChatLine(typeof item?.content === "string" ? item.content : ""))
-    .filter(Boolean)
-    .join(" ");
-  if (isVideoReplyTooShort(mergedVideoText, MIN_VIDEO_RESCUE_REPLY_CHARS)) return true;
-  if (containsUnsupportedLanguageDrift(mergedVideoText)) return true;
-  if (analyzeChatPromptLeakTexts([mergedVideoText]).leaked) return true;
-  if (isAbruptVideoReplyCutoffText(mergedVideoText)) return true;
-  if (getVideoReplyExpositoryScore(mergedVideoText) >= 2) return true;
-  if (finishReason && !["stop", "length"].includes(finishReason)) return true;
   return false;
 };
 
@@ -61403,7 +61473,7 @@ const getFriendlyVideoSessionErrorMessage = (error) => {
     return rawMessage;
   }
   if (rawMessage.includes("被截断") || rawMessage.includes("视频回复过短") || rawMessage.includes("视频回复像半截话")) {
-    return "这轮视频回复不完整，前端已拦截，请再试一次";
+    return "这轮视频回复不完整，请再试一次";
   }
   if (
     rawMessage.includes("JSON") ||
@@ -64556,70 +64626,10 @@ const requestPrimaryVideoReply = async (
   const normalizedInput = sanitizeChatLine(String(userInput || "").trim());
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
   if (signal?.aborted) throw createAbortRequestError();
-  const forceVoiceReply = normalizedResponseMode === "voice" && hasReadyVoiceConfig(role);
   const triggeredWorldbookEntries = getTriggeredWorldbookEntries(role, normalizedInput);
   const referenceCatalog = buildRoleReferenceCatalog(role, {
     worldbookEntries: triggeredWorldbookEntries.length ? triggeredWorldbookEntries : undefined,
   });
-
-  const validateVideoResult = (result) => {
-    const anchorError = validateAnchorsForRole(role, result?.anchors, {
-      requireLocation: false,
-      requireReferenceCity: false,
-      requireGoals: false,
-      goalMatchMode: "subset",
-    });
-    if (anchorError) return anchorError;
-
-    const items = normalizeChatReplyItems(result).filter((item) => ["text", "voice"].includes(item?.type));
-    if (!items.length) return "没有生成有效视频回复";
-    if (items.length !== VIDEO_SESSION_MAX_MESSAGES) return "视频回复必须只有1条";
-    if (items.some((item) => item.type === "text" && !item.content)) return "存在空白文本消息";
-    const promptLeakAnalysis = analyzeChatPromptLeakTexts([
-      sanitizeChatLine(result?.status || ""),
-      ...items.map((item) => (typeof item?.content === "string" ? item.content : "")),
-    ]);
-    if (promptLeakAnalysis.leaked) return "视频回复混入了提示词";
-    if (forceVoiceReply && !hasEligibleVoiceReplyItem(items, { allowShort: true })) return "视频语音回复缺少可转语音内容";
-    const mergedVideoText = items
-      .map((item) => sanitizeChatLine(typeof item?.content === "string" ? item.content : ""))
-      .filter(Boolean)
-      .join(" ");
-    if (isVideoReplyTooShort(mergedVideoText)) return "视频回复过短";
-    if (mergedVideoText.length > 240) return "视频回复过长";
-    if (isAbruptVideoReplyCutoffText(mergedVideoText)) return "视频回复像半截话";
-    if (getVideoReplyExpositoryScore(mergedVideoText) >= 2) return "视频回复像说明文";
-    const nextStatus = sanitizeChatLine(result?.status || "");
-    const safeStatusText = rewriteVideoReferenceCityLeak(role, nextStatus);
-    const referenceCityLeakError = getVideoReferenceCityLeakError(
-      role,
-      `${mergedVideoText} ${safeStatusText}`.trim(),
-      normalizedInput,
-    );
-    if (referenceCityLeakError) return referenceCityLeakError;
-    const timelineConflictError = getVideoTimelineAnchorConflictError(
-      role,
-      `${mergedVideoText} ${safeStatusText}`.trim(),
-    );
-    if (timelineConflictError) return timelineConflictError;
-    const driftError = getTextSemanticDriftMessage(mergedVideoText, "视频回复", {
-      disallowAiDisclosure: true,
-    });
-    if (driftError) return driftError;
-    if (nextStatus.length > 10) return "当前状态超过 10 个字";
-
-    const referencesError = validateReferencesForRole(role, result?.references, {
-      catalog: referenceCatalog,
-      requireAny: false,
-      requiredCategories: triggeredWorldbookEntries.length ? ["worldbookTitles"] : [],
-      fallbackReferences: {
-        goalTitles: result?.anchors?.goalTitles,
-      },
-    });
-    if (referencesError) return referencesError;
-
-    return validateBlockedTermsInChatResult(role, result, "视频回复");
-  };
 
   const repairVideoResult = (payload) =>
     repairChatLikePayload(role, payload, {
@@ -64631,10 +64641,6 @@ const requestPrimaryVideoReply = async (
       return null;
     }
     const repairedRecoveredResult = repairVideoResult(candidate.result);
-    const recoveredError = validateVideoResult(repairedRecoveredResult);
-    if (recoveredError) {
-      return null;
-    }
     return {
       result: repairedRecoveredResult,
       meta: {
@@ -64656,10 +64662,6 @@ const requestPrimaryVideoReply = async (
       requestTrace,
       signal,
     });
-    const validationMessage = validateVideoResult(textResponse?.result);
-    if (validationMessage) {
-      throw attachModelMetaToError(new Error(validationMessage), textResponse?.meta || null);
-    }
     return {
       ...textResponse,
       meta: {
@@ -64684,10 +64686,6 @@ const requestPrimaryVideoReply = async (
           requestTrace,
           signal,
         });
-      const rescueMessage = validateVideoResult(rescueResponse?.result);
-      if (rescueMessage) {
-        throw attachModelMetaToError(new Error(rescueMessage), rescueResponse?.meta || null);
-      }
       return {
         ...rescueResponse,
         meta: {
@@ -66052,7 +66050,6 @@ const applyRuntime = async () => {
   const linkedJourneyJobs = [];
   const autonomousJobs = [];
   const autoMomentJobs = [];
-  const lifeMonitorJobs = [];
   const shouldClearOfflineSession = isAppCurrentlyVisible() && Boolean(parseValidTimestamp(state.appPresence?.offlineSessionStartedAt));
   let shouldKeepOfflineSession = false;
 
@@ -66065,13 +66062,7 @@ const applyRuntime = async () => {
     if (syncLifeMonitorGoalsWithTime(next, now)) {
       changed = true;
     }
-    const lifeMonitorDecision = buildLifeMonitorLocalDecision(next, now);
-    const hasLifeMonitorJobDue =
-      lifeMonitorDecision.shouldCheck &&
-      lifeMonitorDecision.shouldCallModel &&
-      !shouldSkipLifeMonitorAttempt(next, now) &&
-      !toBusyList(state.apiGenerationBusy).includes(`monitor-auto:${next.id}`);
-    if (!hasLifeMonitorJobDue && syncRoleLiveEventsWithTime(next, now)) {
+    if (syncRoleLiveEventsWithTime(next, now)) {
       changed = true;
     }
     if (syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now)) {
@@ -66097,17 +66088,6 @@ const applyRuntime = async () => {
       markLinkedJourneySyncAttempt(next, now);
       linkedJourneyJobs.push({ roleId: next.id, targetDateKey: formatJourneyDayKey(now) });
       changed = true;
-    } else if (lifeMonitorDecision.shouldCheck) {
-      applyLifeMonitorLocalCheck(next, lifeMonitorDecision, now);
-      if (hasLifeMonitorJobDue) {
-        markLifeMonitorAttempt(next, now);
-        lifeMonitorJobs.push({
-          roleId: next.id,
-          targetDateKey: lifeMonitorDecision.targetDateKey || formatJourneyDayKey(now),
-          reason: lifeMonitorDecision.reason || "hourly-story-hit",
-        });
-      }
-      changed = true;
     }
 
     return next;
@@ -66122,15 +66102,6 @@ const applyRuntime = async () => {
       roleId: job.roleId,
       targetDateKey: job.targetDateKey,
       source: "day-rollover",
-      silent: true,
-    });
-  }
-
-  for (const job of lifeMonitorJobs) {
-    await generateLifeMonitorFromApi({
-      roleId: job.roleId,
-      targetDateKey: job.targetDateKey || formatJourneyDayKey(now),
-      source: "monitor-auto",
       silent: true,
     });
   }
@@ -66165,7 +66136,7 @@ const applyRuntime = async () => {
     changed = true;
   }
 
-  return changed || linkedJourneyJobs.length > 0 || autonomousJobs.length > 0 || autoMomentJobs.length > 0 || lifeMonitorJobs.length > 0;
+  return changed || linkedJourneyJobs.length > 0 || autonomousJobs.length > 0 || autoMomentJobs.length > 0;
 };
 
 const shouldDeferInputCommit = (target) => {
