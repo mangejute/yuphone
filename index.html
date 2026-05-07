@@ -14611,11 +14611,11 @@ html.chat-composer-focused .ref-chat-composer {
 }
 
 .video-session-bubble-wrap .bubble-tail-left {
-  left: -2px;
+  left: -5px;
 }
 
 .video-session-bubble-wrap .bubble-tail-right {
-  right: -2px;
+  right: -5px;
 }
 
 .video-session-dialog-bubble {
@@ -14626,29 +14626,28 @@ html.chat-composer-focused .ref-chat-composer {
   gap: 8px;
   width: 100%;
   max-width: 100%;
-  padding: 12px 14px 11px;
+  padding: 12px 14px;
+  border: 1px solid rgba(17, 17, 17, 0.045);
   border-radius: 18px;
-  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.1);
+  box-shadow: 0 6px 16px rgba(17, 17, 17, 0.055);
 }
 
 .video-session-dialog-bubble.ai {
-  border: 0;
-  background: #f5f5f8;
-  color: #171717;
+  background: #ffffff;
+  color: #17191f;
 }
 
 .video-session-dialog-bubble.ai.is-hint {
-  background: rgba(245, 245, 248, 0.96);
+  background: rgba(255, 255, 255, 0.96);
   color: #4a4a4a;
 }
 
 .video-session-dialog-bubble.user {
   margin-left: auto;
   max-width: 100%;
-  border: 0;
-  background: #fee16a;
-  color: #171717;
-  box-shadow: 0 10px 24px rgba(123, 95, 0, 0.16);
+  background: #ffe16d;
+  color: #17191f;
+  box-shadow: 0 6px 16px rgba(17, 17, 17, 0.055);
 }
 
 .video-session-dialog-bubble-head {
@@ -14684,6 +14683,33 @@ html.chat-composer-focused .ref-chat-composer {
   color: #323232;
 }
 
+.video-session-bubble-wrap .bubble-tail {
+  top: 6px !important;
+  bottom: auto !important;
+  width: 9px !important;
+  height: 11px !important;
+  opacity: 1;
+  z-index: 2;
+  background-image: none !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+}
+
+.video-session-bubble-wrap .bubble-tail-left {
+  background-color: #ffffff !important;
+  -webkit-mask: url("data:image/png;base64,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") center/100% 100% no-repeat !important;
+  mask: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKwAAADPCAYAAABoUTosAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAqQSURBVHhe7d19rP/lHMfxbigq1UoNi4o00mZaJeQ2uV+MkjQlwzSaIkRqk+UusWpuVibzR1bWiERzkxAxQrRGtFqRouleN3q+7arrp9Orc37n+z3nc3Ndn+v1+PP8zvl+ruv9fv/O+Xw+190665iZmVmDImJ94GT9ullxgEcB5wG36L+ZFSUitgMujYgA/qn/blYM4PnADalYc8Fert9jVgTgncDda4o1F+yP9PvMRgVsCHxpYaEucJZ+v9loIuIJwK+0StcATtKfMRsFsNfC+9XFAEfqz5kNKiLWA44B/qsFqoB99efNBgNsBZyvhbkU4Bn6GWaDyK+srtWiXAr321g/x6xXEfEw4PhZbgEWAq7SzzLrFbAD8EstxlmkoVn9PLPeRMSb01wALcRZAZ/UzzTrXERsDpypBTgvYH/9bLNO5XerV2vxrQSwo36+WSfydMAvpsd6LbyVyLcS6+l1zFYNeEl6oteiWw3gB3ods1WJiM2A07r6rboQ8BG9ntmKAS8DrtFC6wrwcr2m2dyArYGvaoF1Cbg3/fbWa5vNLCLWBd4C3KgF1jXgt3p9s5kBOwMXamH1BfiUtsFsWRGxCXAicI8WVZ98/2pzyX/+DwD+rsXUN+Auz9CymQF7AL/QQhoK8BNtk9lD5LVVZ/TxTnVOR2nbzP4PeCRwHHCHVs5InqJtNFszqfqQriaqdAH4i7bTGpcfqF4LXKYFMzYv6bYHAV4IXKyFUgpgb22zNQjYZZ6VqmNIm76l2xRtuzUkLZEGvlHAk/+ygFO1/dYIYFfgnBoKdYEXaz9s4oBnAudqJZQub1fk24FWAM8DvquFUIu0tEb7ZBOT96fad6Vr/kuS/sNp/2wiImIj4FDgCk18jdJgQXo3rP20yuVN1I4Frtek1yztYqh9tYqlJ/6I+Apwpya7dnkpzHbaZ6tMRGwAvHHMaX5D8PkFlQMel5Y3A9dpcqcIOEhjYIXLp/29CvjmvNtR1iwtZkxTGzUeVihg2zwPdeYNfqcE+LTGxAoTEY+IiP2A7+UHjialvqd9YzU+VoA8/zSNRJ0aETdp8lqU/sNqnGxkaavI/Cf/Sk1Y64B9NF42gnxf+t4pDJf2JS/JWV9jZwMBtgGOAH5e2XS+UfiguBEA2wOHAz9r+eFpXsC/024yGk/rQV5mkl7q/04TYbPxnlk9Sq+g8s7Sp5S0FLpWeQuix2qcbRXSRAzgHXnU6TYNuq0ccLrG2+aU55a+FPgMcLkG2bqRj+DcSeNvy8i7nTwb+DBwQfozpcG17gHf1lzYInKB7ga8B/gWcLMG0/qXcqC5sQc2NkvDoMekjSOAWzV4Nqy0OFLz1Kw8spQ23v1s2oJnirPyawc8R/PWhIh4TD5q54N5N5MmJjnXrIlJLnn5cpo48nrg4+lPiouzPvnNwO6a36oBG+YRpLcCnwMu8n3nNKSHXM13NYBN89P6wRHxibzv0xUtLQlpSZ6g/XStg6IAW+bd8tJuJB8CvpwOWAD+oR2yaUsnJWp9DCovlHt8ROwJHJgffL4AfCft5OxhTFsjvalJs9m0hjqVd717Zd7zPo0CpQkfZ+d7yquGPljM6pVeMWp9dU4varYSab5rujXU+uqcXthsJdLyIK2tXuiFzeYF/DW9ptTa6oVe3GwFXqN11Ru9stk80kQjraleaQPMZpXnFA973KY2wmxWab6H1lPvtBFms8gb2Q2/bFsbYjaLNBdZa2kQ2hCz5Yy6e7Y2xmxt8h4DT9M6Gow2yGxt0g44WkOD0gaZLSXPzhtmRGsp2iizxeSJ2c/S+hmcNsxsMcDJWjuj0IaZqTQvepR3rovRxpmptMRe62Y02jizhUZfo6W0gWZrpOFXYAutmVFpI82SvBnG3lovo9OGmiXASVorRdCGmuUBgjLPgtXGWtvyXIFdtE6KoQ22tqWde7RGiqINtnals8eKP6lQG21tylvqP1HrozjacGsT8AatjSJpw609wOe1Loqljbe2AJekkx+1LoqlHbB2pPtWYAetiaJpJ6wd6SwJrYfiaSesDelcCa2FKmhHbPqA34y+NmultDM2eTcBT9I6qIb2xqYrndyTjgfQGqiKdsqmCzha818d7ZRN1lkRsa7mvzraK5se4PcRsZHmvkraOZsW4Ibez84aknbQpiM/ZL1Ic1417aRNB/BuzXf1tJM2DcDpmutJ0I5a/YAfRsQGmutJ0M5a3YA/R8RmmufJ0A5bvfIbgbqmC85LO211Am5PJ7NrfidHO271ya+v9tHcTpJ23uoDHKZ5nSztvNWlqgWEXdAAWD2Ac4rf+KJrGgSrA3DxZCa0zEMDYeUDLgW20lw2QYNhZQOuAbbRPDZDA2LlygMDO2oOm6JBsTLlTS+mPzCwHA2MlSeNYkXECzR3TdLgWFnyjtiv0Lw1SwNk5chDrvtqzpqmQbIy5GOHDtZ8NU8DZeNLlRoRb9dcmQu2OPk367s0T5ZpwGxcwOGaI1tAA2bjAd6n+TGhQbPRHKW5sUVo1Gx4wJGaF1uCBs+Gkx+wjtCc2FpoEG0YfhuwQhpI618u1kM1FzYDDab1Kw+3HqR5sBlpQK0/aSJLROynObA5aFCtH8B/qj9foAQaWOsecNvk9mkdiwbXugXc6JUCHdIAW3eAa4GdNOa2Chpk6wbwJ2BbjbetkgbaOvFrYGuNtXVAI22rk3a/BjbVOFtHNOC2csAZk92qvRQadFsZ4IRJnDRYOg28zQe4d5LHC5VKE2CzA+70UOvANAk2G+BfEbGnxtN6pomw5aWjhYAnayxtAJoMWzvgpxHxaI2jDUQTYksDvgZsqDG0AWlS7KHyCoHj/NqqAJoce7A8j/UAjZuNRBNkDwCu89TAwmiS7H7AJU2fJVAqTZTdV6xnAxtrrKwAmqyW5YerY/1wVTBNWquAW4BXa3ysMJq4FuXVAU/V2FiBNHmtAc6LiM01LlYoTWAr8v3q8c0dLlw7TWQjbvL9aqU0k1MH/MEzrSqmCZ2yvOZqE42BVUSTOkXA3V7GMhGa3KkBrgb20H5bpTTBUwKcC2ypfbaKaZKnALgH+ICHWCdIk127vAHbc7WfNhGa8JoB5wNbaR9tQjTpNcpvAd7vW4AGaPJrA1zpVQEN0QKoCXBmRGymfbIJ0yKoAXA78DbtizVAi6F0ea2V5662SguiVHmXwBO8kUXjtDBKBFwD7KVttwZpcZQG+DqwhbbbGqUFUgrgZuAQba81TgulED8Gtte2mhVVsHkfqyMjYj1tp9l9tGjGkl9X+dRAWzstnKHlqYAfjYiHa9vMHkILaEjAZcDu2iazJWkRDSH/Vv2YBwFsblpMfQP+COym7TCbiRZUX/Jv1eP9W9VWRQurD8ClwK56bbO5aXF1Cbgr77fqA4OtG1pkXQEu8jRA65wW2moBtwKHebTKeqEFtxppr1VgW72GWWe06FYCuB44UD/brHNafPPImwKf5vmqNhgtwlmlYVUfv26D00JcDnAHcLRfVdkotCDXBvg+sIN+htlgtCgXA/wN2F9/1mxwWpwL5fH/E73NuhVDi3QN4EJgZ/1+s1EtUqjpyPU3eSdAK9KCQk1//k/2qYBWtFysF3gBoFUBeJ1+zczMzFrxP2+TwGzqgW6aAAAAAElFTkSuQmCC") center/100% 100% no-repeat !important;
+  transform: scaleX(-1) !important;
+}
+
+.video-session-bubble-wrap .bubble-tail-right {
+  background-color: #ffe16d !important;
+  -webkit-mask: url("data:image/png;base64,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") center/100% 100% no-repeat !important;
+  mask: url("data:image/png;base64,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") center/100% 100% no-repeat !important;
+  transform: none !important;
+}
+
 .video-session-dialog-bubble p {
   margin: 0;
   font-size: var(--video-session-subtitle-size);
@@ -14695,6 +14721,42 @@ html.chat-composer-focused .ref-chat-composer {
 
 .video-session-dialog-bubble.is-typing {
   box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
+}
+
+.video-session-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.video-session-draft-action-btn {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.08);
+  color: #323232;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.video-session-bubble-editor {
+  display: block;
+  width: 100%;
+  min-height: 74px;
+  max-height: 180px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #17191f;
+  font-size: var(--video-session-subtitle-size);
+  font-weight: 600;
+  line-height: 1.58;
+  resize: none;
+}
+
+.video-session-bubble-editor:focus {
+  outline: none;
 }
 
 .video-session-typing-inline {
@@ -24171,7 +24233,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.07-tencent-asr-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.07-video-context-draft-02";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -24189,6 +24251,26 @@ const normalizeTokenConsoleErrorMessage = (value = "") =>
     .trim();
 
 const nlToBr = (value = "") => escapeHtml(value).replaceAll("\n", "<br />");
+
+const mergeVideoSessionDraftPartsForRender = (...parts) => {
+  const merged = [];
+  parts
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .forEach((part) => {
+      const existingIndex = merged.findIndex(
+        (current) => current === part || current.includes(part) || part.includes(current),
+      );
+      if (existingIndex >= 0) {
+        if (part.length > merged[existingIndex].length) {
+          merged[existingIndex] = part;
+        }
+        return;
+      }
+      merged.push(part);
+    });
+  return merged.join(" ").replace(/\s+/g, " ").trim();
+};
 
 const buildInlineSvgDataUrl = (svg = "") => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(String(svg || "").trim())}`;
 
@@ -31475,8 +31557,7 @@ const renderVideoSessionSheet = (state, role) => {
     }[String(session.status || "idle")] || "准备中";
 
   const transcriptPreview =
-    String(session.interimTranscript || "").trim() ||
-    String(session.transcript || "").trim() ||
+    mergeVideoSessionDraftPartsForRender(session.manualText, session.transcript, session.interimTranscript) ||
     String(session.lastSubmittedText || "").trim();
   const captionSize = normalizeVideoSessionCaptionSizeForRender(session.captionSize);
   const roleVisual = String(role?.profile?.avatarImage || role?.chats?.backgroundImage || "").trim();
@@ -31489,6 +31570,8 @@ const renderVideoSessionSheet = (state, role) => {
   const fullscreenStyleAttr = fullscreenStyle ? ` style="${fullscreenStyle}"` : "";
   const replyModeLabel = String(session.lastReplyMode || session.responseMode || "text").trim() === "voice" ? "语音回复" : "文字回复";
   const lastUserText = String(transcriptPreview || "").trim();
+  const draftEditing = Boolean(session.draftEditing);
+  const draftManualSendRequired = Boolean(session.draftManualSendRequired);
   const userCaptionLimit = minimalMode ? 56 : 76;
   const userCaption = lastUserText.length > userCaptionLimit ? `${lastUserText.slice(0, userCaptionLimit)}...` : lastUserText;
   const replyMessages = Array.isArray(session.lastReplyMessages) ? session.lastReplyMessages.filter((item) => String(item?.text || "").trim()) : [];
@@ -31507,7 +31590,7 @@ const renderVideoSessionSheet = (state, role) => {
         <span>${active ? (String(session.inputMode || "voice").trim() === "text" ? "这轮可以先按文字继续" : "稍等片刻，会自动恢复预览") : "这里会显示你的摄像头预览"}</span>
       </div>
     `;
-  const manualSendDisabled = !active || busy || !String(session.manualText || "").trim();
+  const manualSendDisabled = !active || busy || !String(lastUserText || "").trim();
   const renderVideoDialogBubble = ({ side = "ai", title = "", mode = "", content = "", extraClass = "" }) => `
     <div class="video-session-message-row ${side === "user" ? "user-row" : "ai-row"}">
       <div class="video-session-bubble-wrap ${side === "user" ? "user-wrap" : "ai-wrap"}">
@@ -31557,8 +31640,21 @@ const renderVideoSessionSheet = (state, role) => {
     ? renderVideoDialogBubble({
         side: "user",
         title: "我",
-        mode: inputMode === "voice" ? "语音识别" : "文字输入",
-        content: `<p>${escapeHtml(userCaption).replaceAll("\n", "<br />")}</p>`,
+        mode: draftEditing ? "正在编辑" : draftManualSendRequired ? "待发送" : inputMode === "voice" ? "语音识别" : "文字输入",
+        content: `
+          <div class="video-session-draft-actions">
+            <button
+              class="video-session-draft-action-btn"
+              type="button"
+              data-action="${draftEditing ? "finish-video-draft-edit" : "begin-video-draft-edit"}"
+            >${draftEditing ? "完成" : "编辑"}</button>
+          </div>
+          ${
+            draftEditing
+              ? `<textarea id="video-session-manual-input" class="video-session-bubble-editor" data-video-field="manualText" placeholder="你可以先改字，再决定发不发">${escapeHtml(lastUserText)}</textarea>`
+              : `<p>${escapeHtml(userCaption).replaceAll("\n", "<br />")}</p>`
+          }
+        `,
       })
     : "";
   const readyCueText = String(state?.videoSessionReadyCue || "").trim();
@@ -31814,7 +31910,7 @@ const renderVideoSessionSheet = (state, role) => {
     </div>
   `;
   const textComposer =
-    inputMode === "text"
+    inputMode === "text" && !draftEditing
       ? `
         <div class="video-session-text-composer">
           <textarea id="video-session-manual-input" class="video-session-textarea" data-video-field="manualText" placeholder="点击这里直接打字，这一轮会按你输入的内容发送">${escapeHtml(session.manualText || "")}</textarea>
@@ -32998,6 +33094,8 @@ const createVideoSessionState = () => ({
   transcript: "",
   interimTranscript: "",
   manualText: "",
+  draftEditing: false,
+  draftManualSendRequired: false,
   lastSubmittedText: "",
   lastReplyText: "",
   lastReplyMode: "text",
@@ -33207,6 +33305,8 @@ const restoreBootVideoSession = (snapshot) => {
   next.speechAutoSubmitDelayMs = normalizeBootVideoSpeechAutoSubmitDelayMs(snapshot.speechAutoSubmitDelayMs);
   next.roleAutoReplyDelayMs = normalizeBootVideoRoleAutoReplyDelayMs(snapshot.roleAutoReplyDelayMs);
   next.manualText = sanitizeBootVideoText(snapshot.manualText || "");
+  next.draftEditing = Boolean(snapshot.draftEditing);
+  next.draftManualSendRequired = Boolean(snapshot.draftManualSendRequired);
   next.lastSubmittedText = sanitizeBootVideoText(snapshot.lastSubmittedText || "");
   next.lastReplyText = sanitizeBootVideoText(snapshot.lastReplyText || "");
   next.lastReplyMode = String(snapshot.lastReplyMode || "").trim() === "voice" ? "voice" : "text";
@@ -34359,6 +34459,8 @@ const createPersistableVideoSessionSnapshot = (session = state.videoSession || {
     speechAutoSubmitDelayMs: normalizeVideoSessionSpeechAutoSubmitDelayMs(session?.speechAutoSubmitDelayMs),
     roleAutoReplyDelayMs: normalizeVideoSessionRoleAutoReplyDelayMs(session?.roleAutoReplyDelayMs),
     manualText,
+    draftEditing: Boolean(session?.draftEditing),
+    draftManualSendRequired: Boolean(session?.draftManualSendRequired),
     lastSubmittedText,
     lastReplyText,
     lastReplyMode: String(session?.lastReplyMode || "").trim() === "voice" ? "voice" : "text",
@@ -37850,6 +37952,20 @@ const isSameLocalCalendarDay = (left, right = new Date()) => {
   );
 };
 
+const buildVideoCallTranscriptFallbackText = (message, textLimit = 180) => {
+  const content = message?.content && typeof message.content === "object" ? message.content : null;
+  const items = Array.isArray(content?.transcriptItems) ? content.transcriptItems : [];
+  const lines = items
+    .map((item) => {
+      const text = sanitizeChatLine(String(item?.text || "").trim());
+      if (!text) return "";
+      return `${item?.role === "ai" ? "角色" : "用户"}：${text}`;
+    })
+    .filter(Boolean);
+  if (!lines.length) return "";
+  return truncateContextText(lines.join("；"), textLimit);
+};
+
 const getRecentMessagesSummary = (role, limit = 16, { now = new Date(), compactOlder = false, detailedRecentCount = 16 } = {}) => {
   const messages = (role.chats.messages || []).slice(-limit);
   const detailStartIndex = compactOlder
@@ -37878,7 +37994,9 @@ const getRecentMessagesSummary = (role, limit = 16, { now = new Date(), compactO
             : message.type === "videoCall"
               ? String(message.content?.summary || "").trim()
                 ? `[视频通话总结] ${sanitizeChatLine(String(message.content.summary || "").trim())}`
-                : `[视频通话] ${message.content?.durationLabel || formatVideoCallDurationLabel(message.content?.durationMs || 0)}`
+                : buildVideoCallTranscriptFallbackText(message, isDetailed ? 120 : 72)
+                  ? `[视频通话转写] ${buildVideoCallTranscriptFallbackText(message, isDetailed ? 120 : 72)}`
+                  : `[视频通话] ${message.content?.durationLabel || formatVideoCallDurationLabel(message.content?.durationMs || 0)}`
             : typeof message.content === "string"
               ? message.content
               : JSON.stringify(message.content || "");
@@ -37903,9 +38021,12 @@ const getRecentVideoCallSummaryContext = (role, limit = 3, itemLimit = 180) =>
     .reverse()
     .map((message) => {
       const summary = sanitizeChatLine(String(message?.content?.summary || "").trim());
-      if (!summary) return null;
+      const transcriptFallback = summary ? "" : buildVideoCallTranscriptFallbackText(message, itemLimit);
+      const text = summary || transcriptFallback;
+      if (!text) return null;
       return {
-        summary: truncateContextText(summary, itemLimit),
+        summary: truncateContextText(text, itemLimit),
+        source: summary ? "summary" : "transcript",
         occurredAt: String(message?.timestamp || message?.content?.endedAt || "").trim(),
         duration: String(message?.content?.durationLabel || "").trim(),
       };
@@ -38366,7 +38487,7 @@ const buildUserProfileContext = (profile = state.userProfile || {}, { structured
 
 const GENERATION_CONTEXT_MESSAGE_LIMITS = Object.freeze({
   chat: 150,
-  video: 10,
+  video: null,
   autonomous: 72,
   map: 56,
   journey: 48,
@@ -39824,8 +39945,9 @@ const summarizeMessageForArchive = (message) => {
   if (message.type === "voice") return `[语音] ${sanitizeAiContextMessageContent(message, message.content || "")}`.trim();
   if (message.type === "videoCall") {
     const summary = sanitizeAiContextMessageContent(message, String(message.content?.summary || "").trim());
+    const transcriptFallback = buildVideoCallTranscriptFallbackText(message, 160);
     const duration = message.content?.durationLabel || formatVideoCallDurationLabel(message.content?.durationMs || 0);
-    return summary ? `[视频通话总结] ${summary}` : `[视频通话] ${duration}`;
+    return summary ? `[视频通话总结] ${summary}` : transcriptFallback ? `[视频通话转写] ${transcriptFallback}` : `[视频通话] ${duration}`;
   }
   if (message.type === "share") return `[分享] ${sanitizeAiContextMessageContent(message, message.content?.text || "")}`.trim();
   return typeof message.content === "string" ? sanitizeAiContextMessageContent(message, message.content) : "";
@@ -39846,8 +39968,11 @@ const getReadableMessageSpeechText = (message) => {
   if (message.type === "voice") return sanitizeAiContextMessageContent(message, message.content || "");
   if (message.type === "videoCall") {
     const summary = sanitizeAiContextMessageContent(message, String(message.content?.summary || "").trim());
+    const transcriptFallback = buildVideoCallTranscriptFallbackText(message, 160);
     return summary
       ? sanitizeChatLine(`视频通话总结 ${summary}`)
+      : transcriptFallback
+        ? sanitizeChatLine(`视频通话转写 ${transcriptFallback}`)
       : sanitizeChatLine(`视频通话 ${message.content?.durationLabel || formatVideoCallDurationLabel(message.content?.durationMs || 0)}`);
   }
   if (message.type === "share") return sanitizeAiContextMessageContent(message, message.content?.text || "");
@@ -40709,7 +40834,9 @@ const canUseVideoSessionSpeechAutoSubmit = (session = state.videoSession) =>
   Boolean(
     session?.active &&
       String(session?.inputMode || "voice").trim() === "voice" &&
-      !isVideoSessionHoldToTalkMode(session),
+      !isVideoSessionHoldToTalkMode(session) &&
+      !session?.draftEditing &&
+      !session?.draftManualSendRequired,
   );
 
 const requestModelTextWithConfig = async ({
@@ -54097,6 +54224,8 @@ const requestPrimaryVideoReplyFallback = async (
 - 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
 - 角色核心提示可参考：${truncateContextText(roleContext?.profile?.bio || "", 110) || "无"}
 - 角色线上说话风格可参考：${truncateContextText(roleContext?.profile?.onlineStyle || "", 110) || "自然口语"}
+- 必须读取 payload.slimContext.recentMessages 里的最近聊天事实和时间线；如果最近聊天已经说到回家、洗澡、吹头发、准备睡觉，就不能在视频里倒退成刚到家
+- 如果 payload.slimContext.videoCallSummaries 有内容，优先当作之前视频真实聊过的事实；source=transcript 表示总结失败时的原始转写兜底，也要读取
 - 这是现代手机视频通话场景，不允许改成玄幻、古风、战斗、宫廷、异世界、冒险游戏或其他无关题材
 - 如果 payload.imageAttachments 里带了视频截图，你必须先看最新一张截图里能确认的画面，再结合用户这轮话接话，不能无视截图
 - 不要输出日文、韩文或英文整段内容，也不要提 AI、Gemini、Google、模型、助手
@@ -54117,6 +54246,9 @@ ${roundPromptBlock}
         referenceCity: role?.profile?.realCityReference || role?.profile?.location || "",
         currentStatus: role?.status?.headerText || role?.status?.mood || "",
         goals: (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean),
+        recentMessages: roleContext?.recentMessages || [],
+        videoCallSummaries: roleContext?.videoCallSummaries || [],
+        summaryArchive: (roleContext?.summaryArchive || []).slice(-2),
         recentVideoDialogHistory: (Array.isArray(videoDialogLog) ? videoDialogLog : [])
           .filter((item) => String(item?.text || "").trim())
           .slice(-3)
@@ -54248,6 +54380,8 @@ const requestPrimaryVideoReplyTextRescue = async (
 - 当前目标优先参考：${goalTitles.join(" / ") || "暂无目标"}
 - 角色核心提示可参考：${truncateContextText(roleContext?.profile?.bio || "", 120) || "无"}
 - 角色线上聊天风格可参考：${truncateContextText(roleContext?.profile?.onlineStyle || "", 120) || "自然口语"}
+- 必须读取 payload.slimContext.recentMessages 里的最近聊天事实和时间线；如果最近聊天已经说到回家、洗澡、吹头发、准备睡觉，就不能在视频里倒退成刚到家
+- 如果 payload.slimContext.videoCallSummaries 有内容，优先当作之前视频真实聊过的事实；source=transcript 表示总结失败时的原始转写兜底，也要读取
 - 必须把 recentVideoDialogHistory 当作已经连续聊过的上下文，直接接着说，不要重新自我介绍
 - 如果 payload.imageAttachments 里带了视频截图，你必须先看最新一张截图里能确认的画面，再结合用户这轮话回复，不能假装没看到
 - 场景是现代手机视频通话，不允许玄幻、古风、冒险、宫廷、旅游攻略、系统播报
@@ -54269,6 +54403,9 @@ ${roundPromptBlock}
         timelineAnchor,
         status: roleContext?.status,
         goals: roleContext?.goals,
+        recentMessages: roleContext?.recentMessages || [],
+        videoCallSummaries: roleContext?.videoCallSummaries || [],
+        summaryArchive: (roleContext?.summaryArchive || []).slice(-2),
         worldbook: (roleContext?.worldbook || []).slice(0, 4),
         npcs: (roleContext?.npcs || []).slice(0, 4),
         recentVideoDialogHistory: (Array.isArray(videoDialogLog) ? videoDialogLog : [])
@@ -61534,7 +61671,7 @@ const isVideoSessionTapToRecordMode = (session = state.videoSession) =>
 
 const shouldAutoStartVideoSessionRecognition = (session = state.videoSession) => {
   const inputMode = String(session?.inputMode || "voice").trim() === "text" ? "text" : "voice";
-  return inputMode === "voice" && !isVideoSessionTapToRecordMode(session);
+  return inputMode === "voice" && !isVideoSessionTapToRecordMode(session) && !session?.draftEditing && !session?.draftManualSendRequired;
 };
 
 const resetVideoSessionTapToRecordRuntime = () => {
@@ -63505,6 +63642,47 @@ const getVideoSessionPendingInputText = (
   return mergeVideoSessionTextParts(session?.transcript, session?.interimTranscript, session?.manualText);
 };
 
+const getVideoSessionVoiceDraftText = (session = state.videoSession) =>
+  mergeVideoSessionTextParts(session?.manualText, session?.transcript, session?.interimTranscript);
+
+const applyVideoSessionManualDraftText = (value = "") => {
+  if (!state.videoSession) return "";
+  const normalizedText = sanitizeVideoSessionLocalTranscript(value);
+  state.videoSession.manualText = normalizedText;
+  state.videoSession.transcript = "";
+  state.videoSession.interimTranscript = "";
+  return normalizedText;
+};
+
+const beginVideoSessionDraftEdit = () => {
+  if (!state.videoSession?.active) return false;
+  const inputMode = String(state.videoSession?.inputMode || "voice").trim() === "text" ? "text" : "voice";
+  const draftText =
+    inputMode === "voice" ? getVideoSessionVoiceDraftText(state.videoSession) : mergeVideoSessionTextParts(state.videoSession?.manualText);
+  if (!draftText) return false;
+  clearVideoSessionAutoSubmitTimer();
+  clearVideoSessionVisualAutoReplyTimer();
+  if (inputMode === "voice") {
+    applyVideoSessionManualDraftText(draftText);
+  }
+  state.videoSession.draftEditing = true;
+  state.videoSession.draftManualSendRequired = true;
+  paint();
+  queueVideoSessionStateSync();
+  focusVideoSessionTextInput();
+  return true;
+};
+
+const finishVideoSessionDraftEdit = () => {
+  if (!state.videoSession) return false;
+  state.videoSession.draftEditing = false;
+  state.videoSession.draftManualSendRequired = Boolean(getVideoSessionPendingInputText(state.videoSession));
+  blurVideoSessionTextInput();
+  paint();
+  queueVideoSessionStateSync();
+  return true;
+};
+
 const setVideoSessionInputMode = async (mode = "voice") => {
   const nextMode = String(mode || "voice").trim() === "text" ? "text" : "voice";
   state.videoSession = {
@@ -63729,14 +63907,15 @@ const queueVideoSessionSpeechAutoSubmit = () => {
   if (!state.videoSession?.active || !isVideoSessionPanelOpen() || isDocumentHidden()) return;
   if (!canUseVideoSessionSpeechAutoSubmit(state.videoSession)) return;
   if (state.videoSession.status === "processing" || state.videoSession.status === "replying") return;
-  const mergedText = mergeVideoSessionTextParts(state.videoSession.transcript, state.videoSession.interimTranscript);
+  const mergedText = getVideoSessionPendingInputText(state.videoSession, { mode: "voice" });
   if (!mergedText || state.videoSession.interimTranscript) return;
   const submitDelayMs = normalizeVideoSessionSpeechAutoSubmitDelayMs(state.videoSession?.speechAutoSubmitDelayMs);
   videoSessionRuntime.autoSubmitTimer = window.setTimeout(() => {
     videoSessionRuntime.autoSubmitTimer = 0;
     if (!state.videoSession?.active || !isVideoSessionPanelOpen() || isDocumentHidden()) return;
     if (String(state.videoSession?.inputMode || "voice").trim() !== "voice") return;
-    const nextMergedText = mergeVideoSessionTextParts(state.videoSession.transcript, state.videoSession.interimTranscript);
+    if (!canUseVideoSessionSpeechAutoSubmit(state.videoSession)) return;
+    const nextMergedText = getVideoSessionPendingInputText(state.videoSession, { mode: "voice" });
     if (!nextMergedText || state.videoSession.interimTranscript) return;
     void submitVideoSessionRound();
   }, submitDelayMs);
@@ -63951,7 +64130,11 @@ const applyTencentAsrTranscript = ({ finalText = "", interimText = "", queueSubm
   if (!state.videoSession || String(state.videoSession.inputMode || "voice").trim() !== "voice") return;
   const normalizedFinal = sanitizeVideoSessionLocalTranscript(finalText);
   const normalizedInterim = sanitizeVideoSessionLocalTranscript(interimText);
-  state.videoSession.transcript = normalizedFinal;
+  const existingManual = sanitizeVideoSessionLocalTranscript(state.videoSession.manualText || "");
+  const useManualBase = Boolean(existingManual);
+  const nextBaseText = useManualBase ? existingManual : normalizedFinal;
+  state.videoSession.manualText = useManualBase ? existingManual : "";
+  state.videoSession.transcript = nextBaseText;
   state.videoSession.interimTranscript = normalizedInterim;
   state.videoSession.error = "";
   state.videoSession.speechSupported = true;
@@ -63960,7 +64143,7 @@ const applyTencentAsrTranscript = ({ finalText = "", interimText = "", queueSubm
   if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
     state.videoSession.status = getVideoSessionIdleStatus();
   }
-  if (normalizedFinal && !normalizedInterim && queueSubmit && !isVideoSessionHoldToTalkMode(state.videoSession)) {
+  if (nextBaseText && !normalizedInterim && queueSubmit && canUseVideoSessionSpeechAutoSubmit(state.videoSession)) {
     queueVideoSessionSpeechAutoSubmit();
   } else {
     clearVideoSessionAutoSubmitTimer();
@@ -64726,6 +64909,8 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     if (inputMode === "voice") {
       promptText = await finalizeVideoSessionLocalVoiceTranscript({ silent: true });
     }
+    state.videoSession.draftEditing = false;
+    state.videoSession.draftManualSendRequired = false;
 
     let frameAttachments = getVideoSessionRoundFrameAttachments();
     if (!frameAttachments.length && state.videoSession.cameraReady) {
@@ -64800,6 +64985,8 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     state.videoSession.transcript = "";
     state.videoSession.interimTranscript = "";
     state.videoSession.manualText = "";
+    state.videoSession.draftEditing = false;
+    state.videoSession.draftManualSendRequired = false;
     state.videoSession.micListening = false;
     state.videoSession.micRecording = false;
     state.videoSession.error = "";
@@ -66160,20 +66347,27 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.videoField === "manualText") {
+    const normalizedInputMode = String(state.videoSession?.inputMode || "voice").trim() === "text" ? "text" : "voice";
+    const normalizedValue =
+      normalizedInputMode === "voice" ? sanitizeVideoSessionLocalTranscript(target.value) : String(target.value || "");
     state.videoSession = {
       ...(state.videoSession || createVideoSessionState()),
-      manualText: target.value,
+      manualText: normalizedValue,
+      transcript: normalizedInputMode === "voice" ? "" : state.videoSession?.transcript || "",
+      interimTranscript: normalizedInputMode === "voice" ? "" : state.videoSession?.interimTranscript || "",
+      draftManualSendRequired: normalizedInputMode === "voice" ? Boolean(String(normalizedValue || "").trim()) : Boolean(String(normalizedValue || "").trim()),
     };
     const sendButton = root.querySelector('.video-session-send-btn[data-action="submit-video-round"]');
     if (sendButton instanceof HTMLButtonElement) {
       sendButton.disabled =
         !state.videoSession?.active ||
         ["processing", "replying"].includes(String(state.videoSession?.status || "").trim()) ||
-        !String(target.value || "").trim();
+        !String(normalizedValue || "").trim();
     }
     if (state.videoSession?.active) {
-      if (String(target.value || "").trim()) {
+      if (String(normalizedValue || "").trim()) {
         clearVideoSessionVisualAutoReplyTimer();
+        clearVideoSessionAutoSubmitTimer();
       } else {
         queueVideoSessionVisualAutoReply();
       }
@@ -68046,6 +68240,16 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "toggle-video-session-caption-drawer") {
     toggleVideoSessionCaptionDrawer();
+    return;
+  }
+
+  if (action === "begin-video-draft-edit") {
+    beginVideoSessionDraftEdit();
+    return;
+  }
+
+  if (action === "finish-video-draft-edit") {
+    finishVideoSessionDraftEdit();
     return;
   }
 
