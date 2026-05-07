@@ -14965,6 +14965,15 @@ html.chat-composer-focused .ref-chat-composer {
   line-height: 1;
 }
 
+.video-session-debug-toggle {
+  min-height: 30px;
+}
+
+.video-session-debug-toggle .switch {
+  transform: scale(0.9);
+  transform-origin: right center;
+}
+
 .video-session-debug-section p {
   margin: 0;
   color: #4f545d;
@@ -15602,6 +15611,13 @@ body.video-session-history-dragging {
 .video-session-round-btn:disabled {
   opacity: 0.48;
   cursor: default;
+}
+
+.video-session-circle-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  box-shadow: none;
+  filter: saturate(0.7);
 }
 
 .video-session-control-row {
@@ -31544,6 +31560,7 @@ const renderVideoSessionSheet = (state, role) => {
   const session = state?.videoSession || {};
   const active = Boolean(session.active);
   const minimalMode = Boolean(session.minimalMode);
+  const cameraEnabled = Boolean(session.cameraEnabled);
   const busy = ["preparing", "processing", "replying"].includes(String(session.status || ""));
   const inputMode = String(session.inputMode || "voice").trim() === "text" ? "text" : "voice";
   const micTriggerMode = getVideoSessionMicTriggerMode(session);
@@ -31554,7 +31571,7 @@ const renderVideoSessionSheet = (state, role) => {
   const statusText =
     {
       idle: "还没有开始",
-      preparing: "正在连接摄像头",
+      preparing: cameraEnabled ? "正在连接摄像头" : "正在进入通话",
       listening: holdMode ? (session.micListening ? "录音中" : "点麦克风录音") : "正在听你说话",
       typing: "等待你输入文字",
       manual: "当前浏览器不支持直接转文字",
@@ -31581,14 +31598,23 @@ const renderVideoSessionSheet = (state, role) => {
   const draftManualSendRequired = Boolean(session.draftManualSendRequired);
   const userBubbleText = lastUserText;
   const replyMessages = Array.isArray(session.lastReplyMessages) ? session.lastReplyMessages.filter((item) => String(item?.text || "").trim()) : [];
-  const previewCaption = session.cameraReady
+  const previewCaption = !cameraEnabled
+    ? "摄像头已关闭"
+    : session.cameraReady
     ? String(session.cameraFacing || "user").trim() === "environment"
       ? "后置摄像头"
       : "前置摄像头"
     : active
       ? "恢复中"
       : "未连接";
-  const previewOverlay = session.cameraReady
+  const previewOverlay = !cameraEnabled
+    ? `
+      <div class="video-session-preview-state">
+        <strong>摄像头已关闭</strong>
+        <span>将只根据文字和语音继续</span>
+      </div>
+    `
+    : session.cameraReady
     ? ""
     : `
       <div class="video-session-preview-state">
@@ -31741,7 +31767,7 @@ const renderVideoSessionSheet = (state, role) => {
     }[String(session.micEngine || "").trim().toLowerCase()] ||
     (inputMode === "text" ? "文字输入" : "麦克风待命");
   const activeStatusMeta = [
-    session.cameraReady ? "摄像头已连接" : "等待摄像头",
+    cameraEnabled ? (session.cameraReady ? "摄像头已连接" : "等待摄像头") : "摄像头已关闭",
     inputMode === "voice"
       ? session.micListening
         ? holdMode
@@ -31755,7 +31781,7 @@ const renderVideoSessionSheet = (state, role) => {
       : "文字输入中",
     inputMode === "voice" ? (holdMode ? "点按录音" : "自动识别") : "文字输入",
     micEngineLabel,
-    `最近一轮 ${Math.max(0, Number(session.lastFrameCount || 0))} 帧`,
+    cameraEnabled ? `最近一轮 ${Math.max(0, Number(session.lastFrameCount || 0))} 帧` : "不发送截图",
     `已完成 ${Math.max(0, Number(session.rounds || 0))} 轮`,
     ];
   const micStatusChips = [
@@ -31818,6 +31844,16 @@ const renderVideoSessionSheet = (state, role) => {
           <div class="video-session-debug-tags">
             ${activeStatusMeta.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
           </div>
+        </div>
+        <div class="video-session-debug-section">
+          <div class="video-session-debug-row video-session-debug-toggle">
+            <span>开启摄像头</span>
+            <label class="switch mini">
+              <input type="checkbox" data-action="toggle-video-camera-enabled" ${cameraEnabled ? "checked" : ""} />
+              <span></span>
+            </label>
+          </div>
+          <p>${escapeHtml(cameraEnabled ? "开启后会按通话节奏截图，并把少量画面发给模型。" : "关闭时不会截图，也不会向模型发送图片，只走文字和语音。")}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -31884,7 +31920,15 @@ const renderVideoSessionSheet = (state, role) => {
             data-video-setting="roleAutoReplyDelayMs"
             aria-label="设置你一直没说话时角色多久主动接话"
           />
-          <p>${escapeHtml(inputMode === "text" ? "文字输入只看这个静默时长：你这边一直没继续发，角色才会主动接话。" : holdMode ? "点按录音不会按停顿自动发送，只看这个静默时长：你没再点麦克风继续说，角色才会主动接话。" : `自动识别先按停顿时长发送；如果这之后双方继续静默，才会按这里让角色主动接话。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。`)}</p>
+          <p>${escapeHtml(
+            !cameraEnabled
+              ? "摄像头关闭时不会截图，也不会向模型发送图片；角色只按文字和语音上下文接话。"
+              : inputMode === "text"
+                ? "文字输入只看这个静默时长：你这边一直没继续发，角色才会主动接话。"
+                : holdMode
+                  ? "点按录音不会按停顿自动发送，只看这个静默时长：你没再点麦克风继续说，角色才会主动接话。"
+                  : `自动识别先按停顿时长发送；如果这之后双方继续静默，才会按这里让角色主动接话。保存后会按约 ${frameCaptureDelayLabel} 截一张，单轮最多 3 张。`,
+          )}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -31964,7 +32008,7 @@ const renderVideoSessionSheet = (state, role) => {
             </div>
           </header>
 
-          <div class="video-session-stage-chip">${session.cameraReady ? "摄像头已连接" : active ? "摄像头恢复中" : "等待摄像头"}</div>
+          <div class="video-session-stage-chip">${cameraEnabled ? (session.cameraReady ? "摄像头已连接" : active ? "摄像头恢复中" : "等待摄像头") : "摄像头已关闭"}</div>
           ${
             voiceAccessWarning
               ? `<div class="video-session-voice-warning">${escapeHtml(voiceAccessWarning)}</div>`
@@ -31978,7 +32022,7 @@ const renderVideoSessionSheet = (state, role) => {
           </div>
 
           <div class="video-session-preview-dock ${active ? "is-live" : ""}">
-            <div class="video-session-preview-frame ${session.cameraReady ? "" : "is-placeholder"}">
+            <div class="video-session-preview-frame ${cameraEnabled && session.cameraReady ? "" : "is-placeholder"}">
               <video id="video-session-preview" class="video-session-preview" data-facing="${escapeHtml(String(session.cameraFacing || "user").trim() === "environment" ? "environment" : "user")}" autoplay playsinline muted></video>
               ${previewOverlay}
             </div>
@@ -31987,8 +32031,8 @@ const renderVideoSessionSheet = (state, role) => {
 
           <div class="video-session-placeholder ${active ? "is-hidden" : ""}">
             <div class="video-session-placeholder-icon" aria-hidden="true">${icons.video}</div>
-            <strong>正在准备视频通话</strong>
-            <p>会读取镜头和语音，挂断后自动存记录并生成总结</p>
+            <strong>${cameraEnabled ? "正在准备视频通话" : "正在进入通话"}</strong>
+            <p>${cameraEnabled ? "会读取镜头和语音，挂断后自动存记录并生成总结" : "默认不读取镜头，只按文字和语音继续"}</p>
           </div>
 
           <div class="video-session-dialog-layer">
@@ -32040,7 +32084,7 @@ const renderVideoSessionSheet = (state, role) => {
                   ${renderVideoSessionMicMeter()}
                 </button>
               </div>
-              <button class="video-session-circle-btn" type="button" data-action="flip-video-camera" aria-label="翻转摄像头">${icons.cameraSwitch}</button>
+              <button class="video-session-circle-btn" type="button" data-action="flip-video-camera" aria-label="${cameraEnabled ? "翻转摄像头" : "摄像头已关闭"}" ${cameraEnabled ? "" : "disabled"}>${icons.cameraSwitch}</button>
             </div>
 
             <div class="video-session-action-center">
@@ -32794,39 +32838,61 @@ const probeVideoSessionAvailableDevices = async () => {
     };
   }
 };
-const getFriendlyVideoSessionPreflightErrorMessage = (error, { wantsVoiceInput = true } = {}) => {
+const getFriendlyVideoSessionPreflightErrorMessage = (error, { wantsVoiceInput = true, wantsCamera = true } = {}) => {
   const rawMessage = String(error?.message || "").trim();
   const loweredMessage = rawMessage.toLowerCase();
   if (!rawMessage) {
-    return wantsVoiceInput ? "视频通话自检失败，请检查摄像头、麦克风和网络" : "视频通话自检失败，请检查摄像头和网络";
+    if (wantsCamera && wantsVoiceInput) return "视频通话自检失败，请检查摄像头、麦克风和网络";
+    if (wantsCamera) return "视频通话自检失败，请检查摄像头和网络";
+    if (wantsVoiceInput) return "视频通话自检失败，请检查麦克风和网络";
+    return "视频通话自检失败，请检查网络";
   }
   if (rawMessage.includes("安全站点") || rawMessage.includes("受信任站点") || rawMessage.includes("本地 HTML 文件")) {
     return rawMessage;
   }
   if (/not.?allowed|permission|denied/i.test(loweredMessage)) {
-    return wantsVoiceInput ? "自检没通过：摄像头或麦克风权限没有打开" : "自检没通过：摄像头权限没有打开";
+    if (wantsCamera && wantsVoiceInput) return "自检没通过：摄像头或麦克风权限没有打开";
+    if (wantsCamera) return "自检没通过：摄像头权限没有打开";
+    if (wantsVoiceInput) return "自检没通过：麦克风权限没有打开";
+    return "自检没通过：媒体权限没有打开";
   }
   if (/not.?found|device.?not.?found|没有检测到可用麦克风设备/i.test(loweredMessage)) {
-    return wantsVoiceInput ? "自检没通过：没有检测到可用摄像头或麦克风" : "自检没通过：没有检测到可用摄像头";
+    if (wantsCamera && wantsVoiceInput) return "自检没通过：没有检测到可用摄像头或麦克风";
+    if (wantsCamera) return "自检没通过：没有检测到可用摄像头";
+    if (wantsVoiceInput) return "自检没通过：没有检测到可用麦克风";
+    return "自检没通过：没有检测到可用媒体设备";
   }
   if (/not.?readable|track.?start|could.?not.?start|device.?in.?use|abort/i.test(loweredMessage)) {
-    return wantsVoiceInput ? "自检没通过：摄像头或麦克风可能正被别的应用占用" : "自检没通过：摄像头可能正被别的应用占用";
+    if (wantsCamera && wantsVoiceInput) return "自检没通过：摄像头或麦克风可能正被别的应用占用";
+    if (wantsCamera) return "自检没通过：摄像头可能正被别的应用占用";
+    if (wantsVoiceInput) return "自检没通过：麦克风可能正被别的应用占用";
+    return "自检没通过：媒体设备可能正被别的应用占用";
   }
   return rawMessage;
 };
-const runVideoSessionEntryPreflight = async ({ wantsVoiceInput = true } = {}) => {
+const runVideoSessionEntryPreflight = async ({ wantsVoiceInput = true, wantsCamera = true } = {}) => {
   const issues = [];
   const warnings = [];
   const networkIssue = getVideoSessionNetworkIssue();
   if (networkIssue) warnings.push(networkIssue);
-  const cameraAccessIssue = getVideoSessionDeviceAccessIssue("摄像头");
-  if (cameraAccessIssue) issues.push(cameraAccessIssue);
+  if (wantsCamera) {
+    const cameraAccessIssue = getVideoSessionDeviceAccessIssue("摄像头");
+    if (cameraAccessIssue) issues.push(cameraAccessIssue);
+  }
   if (wantsVoiceInput) {
     const micAccessIssue = getVideoSessionDeviceAccessIssue("麦克风");
     if (micAccessIssue) issues.push(micAccessIssue);
   }
-  if (!navigator?.mediaDevices?.getUserMedia) {
-    issues.push(wantsVoiceInput ? "当前浏览器不支持摄像头和麦克风调用" : "当前浏览器不支持摄像头调用");
+  if ((wantsCamera || wantsVoiceInput) && !navigator?.mediaDevices?.getUserMedia) {
+    issues.push(
+      wantsCamera && wantsVoiceInput
+        ? "当前浏览器不支持摄像头和麦克风调用"
+        : wantsCamera
+          ? "当前浏览器不支持摄像头调用"
+          : wantsVoiceInput
+            ? "当前浏览器不支持麦克风调用"
+            : "当前浏览器不支持媒体设备调用",
+    );
   }
   if (issues.length) {
     return {
@@ -32836,20 +32902,28 @@ const runVideoSessionEntryPreflight = async ({ wantsVoiceInput = true } = {}) =>
       warnings,
     };
   }
+  if (!wantsCamera && !wantsVoiceInput) {
+    return {
+      ok: true,
+      message: "网络已就绪",
+      issues: [],
+      warnings,
+    };
+  }
 
   const [cameraPermission, micPermission, devices] = await Promise.all([
-    queryVideoSessionPermissionState("camera"),
+    wantsCamera ? queryVideoSessionPermissionState("camera") : Promise.resolve("unknown"),
     wantsVoiceInput ? queryVideoSessionPermissionState("microphone") : Promise.resolve("unknown"),
     probeVideoSessionAvailableDevices(),
   ]);
 
-  if (cameraPermission === "denied") {
+  if (wantsCamera && cameraPermission === "denied") {
     issues.push("自检没通过：摄像头权限没有打开");
   }
   if (wantsVoiceInput && micPermission === "denied") {
     issues.push("自检没通过：麦克风权限没有打开");
   }
-  if (devices.hasVideoInput === false) {
+  if (wantsCamera && devices.hasVideoInput === false) {
     issues.push("自检没通过：没有检测到可用摄像头");
   }
   if (wantsVoiceInput && devices.hasAudioInput === false) {
@@ -32866,11 +32940,13 @@ const runVideoSessionEntryPreflight = async ({ wantsVoiceInput = true } = {}) =>
   let probeStream = null;
   try {
     probeStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: String(state.videoSession?.cameraFacing || "user").trim() === "environment" ? "environment" : "user",
-        width: { ideal: 720 },
-        height: { ideal: 960 },
-      },
+      video: wantsCamera
+        ? {
+            facingMode: String(state.videoSession?.cameraFacing || "user").trim() === "environment" ? "environment" : "user",
+            width: { ideal: 720 },
+            height: { ideal: 960 },
+          }
+        : false,
       audio: wantsVoiceInput
         ? {
             channelCount: { ideal: 1 },
@@ -32882,12 +32958,18 @@ const runVideoSessionEntryPreflight = async ({ wantsVoiceInput = true } = {}) =>
     });
     return {
       ok: true,
-      message: wantsVoiceInput ? "摄像头、麦克风和网络已就绪" : "摄像头和网络已就绪",
+      message: wantsCamera
+        ? wantsVoiceInput
+          ? "摄像头、麦克风和网络已就绪"
+          : "摄像头和网络已就绪"
+        : wantsVoiceInput
+          ? "麦克风和网络已就绪"
+          : "网络已就绪",
       issues: [],
       warnings,
     };
   } catch (error) {
-    const message = getFriendlyVideoSessionPreflightErrorMessage(error, { wantsVoiceInput });
+    const message = getFriendlyVideoSessionPreflightErrorMessage(error, { wantsVoiceInput, wantsCamera });
     return {
       ok: false,
       message,
@@ -33097,6 +33179,7 @@ const createVideoSessionState = () => ({
   responseMode: "text",
   inputMode: "voice",
   micTriggerMode: "tap",
+  cameraEnabled: false,
   cameraFacing: "user",
   minimalMode: true,
   captionSize: 13,
@@ -33310,6 +33393,7 @@ const restoreBootVideoSession = (snapshot) => {
   next.responseMode = String(snapshot.responseMode || "").trim() === "voice" ? "voice" : "text";
   next.inputMode = String(snapshot.inputMode || "").trim() === "text" ? "text" : "voice";
   next.micTriggerMode = normalizeVideoSessionMicTriggerMode(snapshot.micTriggerMode);
+  next.cameraEnabled = Boolean(snapshot.cameraEnabled);
   next.cameraFacing = String(snapshot.cameraFacing || "").trim() === "environment" ? "environment" : "user";
   next.minimalMode = Boolean(snapshot.minimalMode);
   next.captionSize = normalizeBootVideoCaptionSize(snapshot.captionSize);
@@ -34249,6 +34333,7 @@ const resetVideoSessionUiState = ({ preserveResponseMode = true } = {}) => {
   if (preserveResponseMode) {
     next.responseMode = String(state.videoSession?.responseMode || "text").trim() === "voice" ? "voice" : "text";
     next.inputMode = String(state.videoSession?.inputMode || "voice").trim() === "text" ? "text" : "voice";
+    next.cameraEnabled = Boolean(state.videoSession?.cameraEnabled);
     next.cameraFacing = String(state.videoSession?.cameraFacing || "user").trim() === "environment" ? "environment" : "user";
   }
   state.videoSessionReadyCue = "";
@@ -34459,6 +34544,7 @@ const createPersistableVideoSessionSnapshot = (session = state.videoSession || {
     String(session?.responseMode || "").trim() === "voice" ||
     String(session?.inputMode || "").trim() === "text" ||
     normalizeVideoSessionMicTriggerMode(session?.micTriggerMode) !== "tap" ||
+    Boolean(session?.cameraEnabled) ||
     String(session?.cameraFacing || "").trim() === "environment" ||
     Boolean(session?.captionDrawerOpen) ||
     Boolean(session?.historyOpen) ||
@@ -34480,6 +34566,7 @@ const createPersistableVideoSessionSnapshot = (session = state.videoSession || {
     responseMode: String(session?.responseMode || "").trim() === "voice" ? "voice" : "text",
     inputMode: String(session?.inputMode || "").trim() === "text" ? "text" : "voice",
     micTriggerMode: normalizeVideoSessionMicTriggerMode(session?.micTriggerMode),
+    cameraEnabled: Boolean(session?.cameraEnabled),
     cameraFacing: String(session?.cameraFacing || "").trim() === "environment" ? "environment" : "user",
     minimalMode: Boolean(session?.minimalMode),
     captionSize: normalizeVideoSessionCaptionSize(session?.captionSize),
@@ -62199,6 +62286,23 @@ const resetVideoSessionFrameCaptureState = () => {
   videoSessionRuntime.frameCaptureCount = 0;
 };
 
+const shutdownVideoSessionCameraRuntime = () => {
+  releaseVideoSessionStream();
+  clearVideoSessionFrameTimer();
+  clearVideoSessionCameraRecoveryTimer();
+  resetVideoSessionFrameCaptureState();
+  videoSessionRuntime.captureCanvas = null;
+  videoSessionRuntime.captureVideo = null;
+  videoSessionRuntime.cameraRecoveryInFlight = false;
+  if (state.videoSession) {
+    state.videoSession.cameraReady = false;
+    state.videoSession.lastFrameCount = 0;
+    if (String(state.videoSession.error || "").includes("摄像头")) {
+      state.videoSession.error = "";
+    }
+  }
+};
+
 const clearVideoSessionClockTimer = () => {
   if (!videoSessionRuntime.clockTimer) return;
   window.clearInterval(videoSessionRuntime.clockTimer);
@@ -63212,7 +63316,7 @@ const isVideoSessionStreamUsable = () => {
 };
 
 const scheduleVideoSessionCameraRecovery = (reason = "摄像头连接中断，正在恢复") => {
-  if (!state.videoSession?.active) return;
+  if (!state.videoSession?.active || !state.videoSession?.cameraEnabled) return;
   state.videoSession.cameraReady = false;
   if (!["processing", "replying"].includes(String(state.videoSession.status || "").trim())) {
     state.videoSession.status = "preparing";
@@ -63309,13 +63413,9 @@ const scheduleVideoSessionBackgroundStreamRelease = () => {
   videoSessionRuntime.backgroundReleaseTimer = window.setTimeout(() => {
     videoSessionRuntime.backgroundReleaseTimer = 0;
     if (!state.videoSession?.active || !isDocumentHidden()) return;
-    releaseVideoSessionStream();
+    shutdownVideoSessionCameraRuntime();
     releaseVideoSessionAudioStream();
     void closeVideoSessionLocalAudioContext();
-    videoSessionRuntime.captureCanvas = null;
-    videoSessionRuntime.captureVideo = null;
-    resetVideoSessionFrameCaptureState();
-    state.videoSession.cameraReady = false;
     state.videoSession.micListening = false;
     state.videoSession.micRecording = false;
     if (!["processing", "replying"].includes(String(state.videoSession.status || "").trim())) {
@@ -63379,7 +63479,7 @@ const pauseVideoSessionForBackground = () => {
   clearVideoSessionVisualAutoReplyTimer();
   clearVideoSessionFrameTimer();
   clearVideoSessionClockTimer();
-  state.videoSession.cameraReady = isVideoSessionStreamUsable();
+  state.videoSession.cameraReady = Boolean(state.videoSession?.cameraEnabled) && isVideoSessionStreamUsable();
   state.videoSession.micListening = false;
   state.videoSession.micRecording = false;
   refreshVideoSessionMicHealth({ syncNow: true });
@@ -63393,6 +63493,27 @@ const resumeVideoSessionAfterForeground = async () => {
   const runResume = async () => {
     clearVideoSessionBackgroundReleaseTimer();
     const isBusyStatus = state.videoSession.status === "processing" || state.videoSession.status === "replying";
+    if (!state.videoSession?.cameraEnabled) {
+      shutdownVideoSessionCameraRuntime();
+      state.videoSession.error = "";
+      if (!isBusyStatus) {
+        state.videoSession.status = getVideoSessionIdleStatus();
+      }
+      hydrateVideoSessionPanel();
+      startVideoSessionClockTimer();
+      await syncVideoSessionMicPermissionState();
+      if (!isBusyStatus && shouldAutoStartVideoSessionRecognition(state.videoSession) && !isVideoSessionLocalRecorderActive()) {
+        await startVideoSessionRecognition();
+      } else if (!isBusyStatus && String(state.videoSession?.inputMode || "voice").trim() === "voice") {
+        refreshVideoSessionMicHealth({ syncNow: true });
+      }
+      if (!isBusyStatus) {
+        queueVideoSessionVisualAutoReply();
+      }
+      paint();
+      queueVideoSessionStateSync();
+      return true;
+    }
     if (isVideoSessionStreamUsable() && videoSessionRuntime.captureVideo) {
       state.videoSession.cameraReady = true;
       state.videoSession.error = "";
@@ -63570,7 +63691,7 @@ const getVideoSessionFrameCaptureIntervalMs = (session = state.videoSession) => 
 
 const queueNextVideoSessionFrameCapture = ({ waitMs = null } = {}) => {
   clearVideoSessionFrameTimer();
-  if (!state.videoSession?.active || !state.videoSession?.cameraReady) return;
+  if (!state.videoSession?.active || !state.videoSession?.cameraEnabled || !state.videoSession?.cameraReady) return;
   if (Number(videoSessionRuntime.frameCaptureCount || 0) >= VIDEO_SESSION_FRAME_BUFFER_LIMIT) return;
   const safeWaitMs = Math.max(
     240,
@@ -63578,7 +63699,7 @@ const queueNextVideoSessionFrameCapture = ({ waitMs = null } = {}) => {
   );
   videoSessionRuntime.frameTimer = window.setTimeout(() => {
     videoSessionRuntime.frameTimer = 0;
-    if (!state.videoSession?.active || !state.videoSession?.cameraReady) return;
+    if (!state.videoSession?.active || !state.videoSession?.cameraEnabled || !state.videoSession?.cameraReady) return;
     if (state.videoSession.status === "processing") {
       queueNextVideoSessionFrameCapture({ waitMs: 480 });
       return;
@@ -63602,9 +63723,11 @@ const refreshVideoSessionFrameCapturePlan = () => {
 };
 
 const getVideoSessionRoundFrameAttachments = () =>
-  videoSessionRuntime.frameBuffer
-    .slice(-VIDEO_SESSION_MODEL_FRAME_LIMIT)
-    .map((frame, index) => buildVideoSessionFrameAttachment(frame.dataUrl, index, frame.timestamp));
+  state.videoSession?.cameraEnabled
+    ? videoSessionRuntime.frameBuffer
+        .slice(-VIDEO_SESSION_MODEL_FRAME_LIMIT)
+        .map((frame, index) => buildVideoSessionFrameAttachment(frame.dataUrl, index, frame.timestamp))
+    : [];
 
 const pushVideoSessionFrame = () => {
   const dataUrl = captureVideoSessionFrame();
@@ -63622,11 +63745,15 @@ const pushVideoSessionFrame = () => {
 const startVideoSessionFrameCapture = () => {
   clearVideoSessionFrameTimer();
   resetVideoSessionFrameCaptureState();
-  if (!state.videoSession?.active || !state.videoSession?.cameraReady) return;
+  if (!state.videoSession?.active || !state.videoSession?.cameraEnabled || !state.videoSession?.cameraReady) return;
   queueNextVideoSessionFrameCapture();
 };
 
 const ensureVideoSessionCameraReady = async () => {
+  if (!state.videoSession?.cameraEnabled) {
+    shutdownVideoSessionCameraRuntime();
+    return false;
+  }
   if (videoSessionRuntime.stream && videoSessionRuntime.captureVideo) {
     clearVideoSessionCameraRecoveryTimer();
     videoSessionRuntime.cameraRecoveryInFlight = false;
@@ -63671,6 +63798,16 @@ const ensureVideoSessionCameraReady = async () => {
 
 const refreshVideoSessionCamera = async () => {
   if (!state.videoSession?.active) return false;
+  if (!state.videoSession?.cameraEnabled) {
+    shutdownVideoSessionCameraRuntime();
+    state.videoSession.status = getVideoSessionIdleStatus();
+    refreshVideoSessionMicHealth({ syncNow: true });
+    hydrateVideoSessionPanel();
+    paint();
+    queueVideoSessionStateSync();
+    queueVideoSessionVisualAutoReply();
+    return false;
+  }
   destroyVideoSessionRecognition();
   clearVideoSessionFrameTimer();
   clearVideoSessionCameraRecoveryTimer();
@@ -63706,6 +63843,73 @@ const refreshVideoSessionCamera = async () => {
     paint();
     queueVideoSessionStateSync();
     setToast(error?.message || "切换摄像头失败");
+    return false;
+  }
+};
+
+const setVideoSessionCameraEnabled = async (enabled = false) => {
+  const nextEnabled = Boolean(enabled);
+  state.videoSession = {
+    ...(state.videoSession || createVideoSessionState()),
+    cameraEnabled: nextEnabled,
+  };
+
+  if (!nextEnabled) {
+    shutdownVideoSessionCameraRuntime();
+    if (state.videoSession.active && !["processing", "replying"].includes(String(state.videoSession.status || "").trim())) {
+      state.videoSession.status = getVideoSessionIdleStatus();
+    }
+    hydrateVideoSessionPanel();
+    refreshVideoSessionMicHealth({ syncNow: true });
+    paint();
+    queueVideoSessionStateSync({ flush: true });
+    if (state.videoSession.active) {
+      queueVideoSessionVisualAutoReply();
+    }
+    setToast("摄像头已关闭，通话只走文字和语音");
+    return false;
+  }
+
+  if (!state.videoSession.active) {
+    paint();
+    queueVideoSessionStateSync({ flush: true });
+    setToast("已开启摄像头，下次接通会请求镜头权限");
+    return true;
+  }
+
+  const busy = ["processing", "replying"].includes(String(state.videoSession.status || "").trim());
+  state.videoSession.status = busy ? state.videoSession.status : "preparing";
+  state.videoSession.error = "";
+  paint();
+  queueVideoSessionStateSync();
+  try {
+    await ensureVideoSessionCameraReady();
+    if (!busy) {
+      state.videoSession.status = getVideoSessionIdleStatus();
+    }
+    hydrateVideoSessionPanel();
+    refreshVideoSessionFrameCapturePlan();
+    await syncVideoSessionMicPermissionState();
+    refreshVideoSessionMicHealth({ syncNow: true });
+    paint();
+    queueVideoSessionStateSync({ flush: true });
+    if (!busy && shouldAutoStartVideoSessionRecognition(state.videoSession) && !isVideoSessionLocalRecorderActive()) {
+      await startVideoSessionRecognition();
+    }
+    if (!busy) {
+      queueVideoSessionVisualAutoReply();
+    }
+    setToast("摄像头已开启");
+    return true;
+  } catch (error) {
+    shutdownVideoSessionCameraRuntime();
+    state.videoSession.cameraEnabled = false;
+    state.videoSession.status = getVideoSessionIdleStatus();
+    state.videoSession.error = error?.message || "摄像头暂时不可用";
+    refreshVideoSessionMicHealth({ syncNow: true });
+    paint();
+    queueVideoSessionStateSync({ flush: true });
+    setToast(`${state.videoSession.error}，已保持纯文本通话`);
     return false;
   }
 };
@@ -64798,6 +65002,7 @@ const startVideoSession = async () => {
     responseMode: String(state.videoSession?.responseMode || "text").trim() === "voice" ? "voice" : "text",
     inputMode: String(state.videoSession?.inputMode || "voice").trim() === "text" ? "text" : "voice",
     micTriggerMode: normalizeVideoSessionMicTriggerMode(state.videoSession?.micTriggerMode),
+    cameraEnabled: Boolean(state.videoSession?.cameraEnabled),
     cameraFacing: String(state.videoSession?.cameraFacing || "user").trim() === "environment" ? "environment" : "user",
     minimalMode: Boolean(state.videoSession?.minimalMode),
     captionSize: normalizeVideoSessionCaptionSize(state.videoSession?.captionSize),
@@ -64809,6 +65014,7 @@ const startVideoSession = async () => {
   queueVideoSessionStateSync();
 
   const wantsVoiceInput = String(state.videoSession?.inputMode || "voice").trim() === "voice";
+  const wantsCamera = Boolean(state.videoSession?.cameraEnabled);
   let voiceEntryError = "";
   if (wantsVoiceInput) {
     try {
@@ -64852,7 +65058,11 @@ const startVideoSession = async () => {
   }
 
   try {
-    await ensureVideoSessionCameraReady();
+    if (wantsCamera) {
+      await ensureVideoSessionCameraReady();
+    } else {
+      shutdownVideoSessionCameraRuntime();
+    }
     state.videoSession.active = true;
     state.videoSession.startedAt = state.videoSession.startedAt || new Date().toISOString();
     state.videoSession.status = getVideoSessionIdleStatus();
@@ -64873,7 +65083,7 @@ const startVideoSession = async () => {
           state.videoSession?.error ||
             state.videoSession?.micHealthMessage ||
             voiceEntryError ||
-            "摄像头已启动，这轮先用文字发送",
+            (wantsCamera ? "摄像头已启动，这轮先用文字发送" : "已进入纯文本通话，这轮先用文字发送"),
         );
       }
     } else if (wantsVoiceInput) {
@@ -66916,12 +67126,21 @@ eventRoot.addEventListener("click", async (event) => {
     state.quickPlusMenuOpen = false;
     if (!state.videoSession?.active) {
       const wantsVoiceInput = String(state.videoSession?.inputMode || "voice").trim() !== "text";
-      const preflight = await runVideoSessionEntryPreflight({ wantsVoiceInput });
+      const wantsCamera = Boolean(state.videoSession?.cameraEnabled);
+      const preflight = await runVideoSessionEntryPreflight({ wantsVoiceInput, wantsCamera });
       if (!preflight.ok) {
         setToast(preflight.message || "视频通话自检失败");
         return;
       }
-      setToast(wantsVoiceInput ? "自检通过，正在接通视频和麦克风" : "自检通过，正在接通视频");
+      setToast(
+        wantsCamera && wantsVoiceInput
+          ? "自检通过，正在接通视频和麦克风"
+          : wantsCamera
+            ? "自检通过，正在接通视频"
+            : wantsVoiceInput
+              ? "自检通过，正在接通麦克风"
+              : "自检通过，正在进入通话",
+      );
     }
     openPanel("video-session");
     void startVideoSession();
@@ -68270,7 +68489,17 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "toggle-video-camera-enabled") {
+    const nextEnabled = !Boolean(state.videoSession?.cameraEnabled);
+    void setVideoSessionCameraEnabled(nextEnabled);
+    return;
+  }
+
   if (action === "flip-video-camera") {
+    if (!state.videoSession?.cameraEnabled) {
+      setToast("先在设置里开启摄像头");
+      return;
+    }
     state.videoSession = {
       ...(state.videoSession || createVideoSessionState()),
       cameraFacing: String(state.videoSession?.cameraFacing || "user").trim() === "environment" ? "user" : "environment",
