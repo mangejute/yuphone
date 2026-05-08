@@ -12789,7 +12789,7 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .chat-bubble::after,
 .chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .chat-bubble::after,
 .chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .chat-bubble::after {
-  content: "";
+  content: "" !important;
   position: absolute;
   top: calc(50% + var(--chat-tail-offset-y, 0px));
   width: 8px;
@@ -23064,21 +23064,33 @@ const CHAT_JOURNAL_STORAGE_KEY = "lifetalk-chat-journal-v1";
 const WINDOW_NAME_PREFIX = "__lifetalk_state__\n";
 const MESSAGE_IMAGE_ASSET_PREFIX = "msg-image:";
 const VOICE_CACHE_ASSET_PREFIX = "voice-audio:";
-const CHAT_JOURNAL_ROLE_LIMIT = 320;
+const DEFAULT_CHAT_RENDER_LIMIT = 600;
+const MIN_CHAT_RENDER_LIMIT = 100;
+const MAX_CHAT_RENDER_LIMIT = 3000;
 const auxiliaryMemoryStore = Object.create(null);
 
 const isInlineImageDataUrl = (value) => typeof value === "string" && value.startsWith("data:image/");
 const isInlineAudioDataUrl = (value) => typeof value === "string" && value.startsWith("data:audio/");
 const createMessageImageAssetKey = (roleId, messageId) => `${MESSAGE_IMAGE_ASSET_PREFIX}${roleId}:${messageId}`;
 const createVoiceCacheAssetKey = (roleId, messageId) => `${VOICE_CACHE_ASSET_PREFIX}${roleId}:${messageId}`;
+const resolveRoleChatRenderLimit = (role = {}) => {
+  const rawLimit = Number(role?.settings?.chatRenderLimit || DEFAULT_CHAT_RENDER_LIMIT);
+  const safeLimit = Number.isFinite(rawLimit) ? rawLimit : DEFAULT_CHAT_RENDER_LIMIT;
+  return Math.round(Math.min(MAX_CHAT_RENDER_LIMIT, Math.max(MIN_CHAT_RENDER_LIMIT, safeLimit)));
+};
 const unwrapPersistedAssetDataUrl = (asset) => {
   if (!asset) return "";
   if (typeof asset === "string") return asset;
   return typeof asset.dataUrl === "string" ? asset.dataUrl : "";
 };
-const stripMessageForJournal = (message = {}) => {
+const stripMessageForJournal = (message = {}, { keepImageDataUrl = false } = {}) => {
   const nextMessage = deepClone(message);
-  if (["photo", "image"].includes(nextMessage?.type) && nextMessage?.content && typeof nextMessage.content === "object") {
+  if (
+    !keepImageDataUrl &&
+    ["photo", "image"].includes(nextMessage?.type) &&
+    nextMessage?.content &&
+    typeof nextMessage.content === "object"
+  ) {
     delete nextMessage.content.dataUrl;
   }
   return nextMessage;
@@ -23093,8 +23105,8 @@ const buildChatJournal = (state = {}) => ({
     draft: String(role?.chats?.draft || ""),
     quotedMessageId: role?.chats?.quotedMessageId || null,
     messages: normalizeArray(role?.chats?.messages)
-      .slice(-CHAT_JOURNAL_ROLE_LIMIT)
-      .map((message) => stripMessageForJournal(message)),
+      .slice(-resolveRoleChatRenderLimit(role))
+      .map((message) => stripMessageForJournal(message, { keepImageDataUrl: true })),
   })),
 });
 const mergeChatJournalIntoState = (baseState, journal) => {
@@ -23147,8 +23159,9 @@ const prepareStateForDurableStorage = (state = {}) => {
     const nextRole = { ...role };
     const nextChats = { ...(nextRole.chats || {}) };
     const sourceMessages = Array.isArray(nextChats.messages) ? nextChats.messages : [];
+    const keepInlineImageStartIndex = Math.max(0, sourceMessages.length - resolveRoleChatRenderLimit(role));
 
-    nextChats.messages = sourceMessages.map((message) => {
+    nextChats.messages = sourceMessages.map((message, index) => {
       if (!["photo", "image"].includes(message?.type) || !message?.content || typeof message.content !== "object") {
         return message;
       }
@@ -23169,7 +23182,9 @@ const prepareStateForDurableStorage = (state = {}) => {
         assetKey,
         persistedExternally: true,
       };
-      delete nextContent.dataUrl;
+      if (index < keepInlineImageStartIndex) {
+        delete nextContent.dataUrl;
+      }
       return {
         ...message,
         content: nextContent,
@@ -33146,6 +33161,7 @@ const VIDEO_SESSION_RECENT_CHAT_DETAIL_LIMIT = 12;
 const VIDEO_SESSION_WORLDBOOK_DETAIL_LIMIT = 8;
 const VIDEO_SESSION_NPC_DETAIL_LIMIT = 6;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
+const CHAT_REPLY_TIMEOUT_MS = 120_000;
 const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
 const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
 const VIDEO_SESSION_REPLY_TIMEOUT_MS = 90_000;
@@ -34073,6 +34089,7 @@ const soundEffectRuntime = {
 let longPressTimer = null;
 let pendingAiReply = null;
 const chatReplyAbortControllers = new Map();
+const chatReplySourceMessageIds = new Map();
 let videoSessionRuntime = {
   stream: null,
   captureVideo: null,
@@ -39431,6 +39448,16 @@ const getCurrentTurnUserQuoteCandidates = (role, limit = 6) => {
     .filter((item) => item.id && item.preview);
 };
 
+const getCurrentTurnUserMessageId = (role) => {
+  const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (isRoleQuotableCurrentTurnUserMessage(message)) return message.id || "";
+    if (message?.role === "ai") return "";
+  }
+  return "";
+};
+
 const getRoleQuoteCandidateInstruction = (quoteCandidates = []) => {
   const list = Array.isArray(quoteCandidates) ? quoteCandidates.filter((item) => item?.key && item?.id) : [];
   if (!list.length) return "";
@@ -39491,15 +39518,7 @@ const ensureRoleQuoteOnFirstReplyMessage = (messages = [], quoteCandidates = [])
   const shouldShowQuote = shouldEnsureRoleQuoteForReply(quoteCandidates);
   const hasCurrentTurnQuote = list.some((item) => quoteCandidateIds.has(String(item?.quotedMessageId || "").trim()));
   if (hasCurrentTurnQuote) {
-    if (shouldShowQuote) return list;
-    return list.map((item) =>
-      quoteCandidateIds.has(String(item?.quotedMessageId || "").trim())
-        ? {
-            ...item,
-            quotedMessageId: null,
-          }
-        : item,
-    );
+    return list;
   }
   if (!shouldShowQuote) return list;
   const quotedMessageId = getFallbackRoleQuoteCandidateId(quoteCandidates);
@@ -40226,6 +40245,50 @@ const summarizeMessageForArchive = (message) => {
 const findMessageById = (role, messageId = "") =>
   (role?.chats?.messages || []).find((item) => item?.id === String(messageId || "").trim()) || null;
 
+const getRoleReplyContextMessageId = (roleId = "") => {
+  const normalizedRoleId = String(roleId || "").trim();
+  if (!normalizedRoleId) return "";
+  const pending = pendingAiReply && pendingAiReply.roleId === normalizedRoleId ? pendingAiReply : null;
+  if (pending?.messageId) return String(pending.messageId || "").trim();
+  return String(chatReplySourceMessageIds.get(normalizedRoleId) || "").trim();
+};
+
+const clearChatReplyState = (roleId = "", { abort = false, clearPending = true, clearBusy = true } = {}) => {
+  const normalizedRoleId = String(roleId || state.chatReplyBusyRoleId || pendingAiReply?.roleId || "").trim();
+  if (!normalizedRoleId) return false;
+  if (abort) {
+    const controller = chatReplyAbortControllers.get(normalizedRoleId);
+    if (controller && !controller.signal?.aborted) {
+      controller.abort();
+    }
+  }
+  chatReplySourceMessageIds.delete(normalizedRoleId);
+  if (clearPending && pendingAiReply?.roleId === normalizedRoleId) {
+    pendingAiReply = null;
+  }
+  if (clearBusy && state.chatReplyBusyRoleId === normalizedRoleId) {
+    state.chatReplyBusyRoleId = null;
+  }
+  return true;
+};
+
+const isTrackedChatReplyMessage = (role, messageId = "") =>
+  String(getRoleReplyContextMessageId(role?.id || "")) === String(messageId || "").trim();
+
+const clearChatReplyStateForRemovedMessage = (roleId = "", messageId = "") => {
+  const normalizedMessageId = String(messageId || "").trim();
+  if (!normalizedMessageId) return false;
+  const normalizedRoleId = String(roleId || "").trim();
+  const pendingMatches = pendingAiReply?.roleId === normalizedRoleId && pendingAiReply?.messageId === normalizedMessageId;
+  const busyMatches = chatReplySourceMessageIds.get(normalizedRoleId) === normalizedMessageId;
+  if (!pendingMatches && !busyMatches) return false;
+  return clearChatReplyState(roleId, {
+    abort: true,
+    clearPending: pendingMatches,
+    clearBusy: busyMatches,
+  });
+};
+
 const getQuotedMessageForMessage = (role, message) => {
   const quotedId = String(message?.quotedMessageId || "").trim();
   if (!quotedId) return null;
@@ -40420,6 +40483,7 @@ const buildChatPlainTextContext = ({
   imageAttachments = [],
   stickerCatalog = [],
   quoteCandidates = [],
+  outputIntent = "普通聊天协议文本，第一行状态，后面 3 到 6 行消息",
 } = {}) => {
   const profile = roleContext?.profile || {};
   const timeContext = roleContext?.timeContext || {};
@@ -40444,7 +40508,7 @@ const buildChatPlainTextContext = ({
   const lines = [
     task ? `任务：${task}` : "",
     buildChatSubjectiveAwarenessBlock({ userInput, roleContext }),
-    "输出意图：普通聊天协议文本，第一行状态，后面 3 到 6 行消息",
+    outputIntent ? `输出意图：${outputIntent}` : "",
     roleProfileText ? `角色资料：${roleProfileText}` : "",
     roleContext?.userProfile ? `用户设定：${compactChatContextValue(roleContext.userProfile, { textLimit: 240, itemLimit: 10 })}` : "",
     roleContext?.status ? `当前状态：${compactChatContextValue(roleContext.status, { textLimit: 180, itemLimit: 10 })}` : "",
@@ -43665,8 +43729,9 @@ const buildTopLevelChatFallbackItems = (result = {}) => {
   return [];
 };
 
-const normalizeChatReplyItems = (result = {}) => {
+const normalizeChatReplyItems = (result = {}, { filterPromptLeaks = true } = {}) => {
   const list = Array.isArray(result?.messages) && result.messages.length ? result.messages : buildTopLevelChatFallbackItems(result);
+  const shouldFilterPromptLeaks = filterPromptLeaks && result?.__skipSemanticInterception !== true;
 
   const normalized = list
     .flatMap((item) => {
@@ -43766,17 +43831,16 @@ const normalizeChatReplyItems = (result = {}) => {
     });
   }
 
-  return filterPromptLeakChatItems(
-    normalized
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const itemType = String(item.type || "").trim();
-        if (!["text", "voice"].includes(itemType)) return item;
-        const content = sanitizeAiReplyTextContent(item.content || "", { preserveStandalone: false });
-        return content ? { ...item, content } : null;
-      })
-      .filter(Boolean),
-  ).slice(0, 6);
+  const cleanedItems = normalized
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const itemType = String(item.type || "").trim();
+      if (!["text", "voice"].includes(itemType)) return item;
+      const content = sanitizeAiReplyTextContent(item.content || "", { preserveStandalone: false });
+      return content ? { ...item, content } : null;
+    })
+    .filter(Boolean);
+  return (shouldFilterPromptLeaks ? filterPromptLeakChatItems(cleanedItems) : cleanedItems).slice(0, 6);
 };
 
 const validateStickerVarietyForRole = () => "";
@@ -44377,6 +44441,7 @@ const parseChatProtocolTextResponse = (
     allowedTypes = ["text", "voice", "image", "sticker"],
     maxItems = 6,
     singleMessage = false,
+    filterPromptLeaks = true,
   } = {},
 ) => {
   const cleaned = normalizeApiText(rawText);
@@ -44495,7 +44560,7 @@ const parseChatProtocolTextResponse = (
     }
   }
 
-  let items = filterPromptLeakChatItems(parsedItems).slice(0, maxItems);
+  let items = (filterPromptLeaks ? filterPromptLeakChatItems(parsedItems) : parsedItems.filter(Boolean)).slice(0, maxItems);
   if (singleMessage && items.length > 1) {
     const preferredType = items.some((item) => item?.type === "voice") ? "voice" : "text";
     const mergedText = flattenChatProtocolItemsToText(items);
@@ -44588,15 +44653,17 @@ const buildChatLikePayloadFromProtocolText = (
     allowedTypes = ["text", "voice", "image", "sticker"],
     singleMessage = false,
     quoteCandidates = [],
+    skipSemanticInterception = false,
   } = {},
 ) => {
   const cleaned = unwrapPlainTextProtocolModelOutput(rawText);
   if (!cleaned) return null;
-  if (analyzeChatPromptLeakTexts([cleaned]).leaked) return null;
+  if (!skipSemanticInterception && analyzeChatPromptLeakTexts([cleaned]).leaked) return null;
   const protocolParsed = parseChatProtocolTextResponse(cleaned, {
     allowedTypes,
     maxItems: 6,
     singleMessage,
+    filterPromptLeaks: !skipSemanticInterception,
   });
   let items = [...protocolParsed.items];
 
@@ -44634,6 +44701,7 @@ const buildChatLikePayloadFromProtocolText = (
     });
   }
   if (
+    !skipSemanticInterception &&
     explicitVoiceTargetText &&
     !items.some(
       (item) =>
@@ -44654,6 +44722,7 @@ const buildChatLikePayloadFromProtocolText = (
     role,
     {
       messages: items,
+      __skipSemanticInterception: skipSemanticInterception,
       status: sanitizePrimaryChatStatus(role, protocolParsed.status || recovered?.status || "", itemText),
       anchors,
       references: mergeReferenceBundles(recovered?.references || {}, {
@@ -44739,6 +44808,7 @@ const parsePrimaryChatPlainTextFallback = (
     requiredWorldbookTitles = [],
     explicitVoiceTargetText = "",
     quoteCandidates = [],
+    skipSemanticInterception = false,
   } = {},
 ) =>
   buildChatLikePayloadFromProtocolText(role, rawText, {
@@ -44748,6 +44818,7 @@ const parsePrimaryChatPlainTextFallback = (
     allowedTypes: ["text", "voice", "image", "sticker"],
     singleMessage: false,
     quoteCandidates,
+    skipSemanticInterception,
   });
 
 const buildChatReplyRescueSeedText = (result = null) =>
@@ -44878,6 +44949,7 @@ ${dailyLifeMemoryPrompt}
     requiredWorldbookTitles,
     explicitVoiceTargetText,
     quoteCandidates,
+    skipSemanticInterception: true,
   });
   if (!parsed) {
     throw attachModelMetaToError(new Error("聊天重写补救无效"), response?.meta || null, {
@@ -44999,6 +45071,7 @@ ${dailyLifeMemoryPrompt}
     requiredWorldbookTitles,
     explicitVoiceTargetText,
     quoteCandidates,
+    skipSemanticInterception: true,
   });
   if (!parsed) {
     throw attachModelMetaToError(new Error("纯文本兜底回复无效"), response?.meta || null, {
@@ -45131,91 +45204,20 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
       ...meta,
     };
   };
-  const validateChatResult = (result) => {
-    const anchorError = validateAnchorsForRole(role, result?.anchors, {
-      requireLocation: true,
-      requireReferenceCity: Boolean(role.profile.realCityReference),
-      requireGoals: true,
-      goalMatchMode: "subset",
-    });
-    if (anchorError) return anchorError;
-
+  const getDisplayableChatResultError = (result) => {
     const items = normalizeChatReplyItems(result);
     if (!items.length) return "没有生成有效消息";
     if (items.some((item) => item.type === "text" && !item.content)) return "存在空白文本消息";
-    const modelIdentityLeakMessage = getChatReplyModelIdentityLeakValidationMessage(items, "聊天回复");
-    if (modelIdentityLeakMessage) return modelIdentityLeakMessage;
-    if (
-      forceImageReply &&
-      !items.some((item) => item.type === "image" && item.content && typeof item.content === "object" && item.content.description)
-    ) {
-      return "用户明确要看图 但没有返回文字版图片卡";
-    }
-    const promptLeakAnalysis = analyzeChatPromptLeakTexts([
-      sanitizeChatLine(result?.status || ""),
-      ...items.flatMap((item) => {
-        if (item.type === "image" && item.content && typeof item.content === "object") {
-          return [item.content.description || "", item.content.place || ""];
-        }
-        return [typeof item.content === "string" ? item.content : ""];
-      }),
-    ]);
-    if (promptLeakAnalysis.leaked) return "聊天回复混入了提示词";
-    if (forceVoiceReply && !hasEligibleVoiceReplyItem(items, { allowShort: true })) return "用户明确要求发语音 但没有返回可转语音内容";
-    if (
-      explicitVoiceTargetText &&
-      !items.some((item) => ["text", "voice"].includes(item?.type) && normalizeVoiceDirectiveMatchText(item?.content || "") === explicitVoiceTargetText)
-    ) {
-      return "用户明确要求念指定内容 但返回的语音文本不匹配";
-    }
-    const chatBlockedHits = collectBlockedTermsHits(role, [
-      sanitizeChatLine(result?.status || ""),
-      ...normalizeChatReplyItems(result).flatMap((item) => {
-        if (item.type === "image" && item.content && typeof item.content === "object") {
-          return [item.content.description || "", item.content.place || ""];
-        }
-        return [typeof item.content === "string" ? item.content : ""];
-      }),
-    ]);
-    if (chatBlockedHits.length) {
-      reportBlockedTermsInterception(role.id, "chat", chatBlockedHits);
-      return `聊天回复包含禁词 ${chatBlockedHits.join("、")}`;
-    }
-
     return "";
   };
   const finalizeProtocolCandidate = async (candidate, { errorMeta = null } = {}) => {
     rememberModelMeta(candidate?.meta || null);
-    const validationMessage = validateChatResult(candidate?.result);
-    if (!validationMessage) {
+    const displayError = getDisplayableChatResultError(candidate?.result);
+    if (!displayError) {
       return candidate;
     }
 
-    const rescueSeedText = buildChatReplyRescueSeedText(candidate?.result);
-    if (rescueSeedText && !STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
-      const rescueResponse = await requestPrimaryChatReplyRescueRewrite(role, userInput, {
-        rescueSeedText,
-        previousErrorMessage: validationMessage,
-        referenceCatalog,
-        requiredWorldbookTitles,
-        forceImageReply,
-        explicitStickerRequested,
-        forceVoiceReply,
-        explicitVoiceTargetText,
-        imageAttachments,
-        stickerCatalog: stickers,
-        quoteCandidates,
-        signal,
-      });
-      rememberModelMeta(rescueResponse?.meta || null);
-      const rescueMessage = validateChatResult(rescueResponse.result);
-      if (!rescueMessage) {
-        return rescueResponse;
-      }
-      throw attachModelMetaToError(new Error(rescueMessage), rescueResponse?.meta || errorMeta || lastKnownModelMeta || null);
-    }
-
-    throw attachModelMetaToError(new Error(validationMessage), candidate?.meta || errorMeta || lastKnownModelMeta || null);
+    throw attachModelMetaToError(new Error(displayError), candidate?.meta || errorMeta || lastKnownModelMeta || null);
   };
 
   try {
@@ -49379,7 +49381,8 @@ const repairChatLikePayload = (
 ) => {
   const catalog = referenceCatalog || buildRoleReferenceCatalog(role);
   const safePayload = payload && typeof payload === "object" ? { ...payload } : {};
-  const items = normalizeChatReplyItems(safePayload);
+  const skipSemanticInterception = safePayload.__skipSemanticInterception === true;
+  const items = normalizeChatReplyItems(safePayload, { filterPromptLeaks: !skipSemanticInterception });
   const imagePlaces = items
     .filter((item) => item?.type === "image" && item?.content && typeof item.content === "object")
     .map((item) => item.content?.place);
@@ -54585,6 +54588,130 @@ ${roundPromptBlock}
       ...(apiResponse?.meta || {}),
       usedPlainTextFallback: true,
       outputFormat: "video-text-protocol",
+    },
+  };
+};
+
+const requestPrimaryVideoTextInputPlainReply = async (
+  role,
+  userInput,
+  {
+    responseMode = "text",
+    videoDialogLog = [],
+    imageAttachments = [],
+    requiredWorldbookTitles = [],
+    referenceCatalog = buildRoleReferenceCatalog(role),
+    roundContext = null,
+    requestTrace = null,
+    signal = null,
+  } = {},
+) => {
+  const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
+  if (signal?.aborted) throw createAbortRequestError();
+  const primaryConfig = getPrimaryApiConfig();
+  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
+  const normalizedUserInput = getVideoSessionRoundUserInput(userInput, roundContext);
+  const normalizedImageAttachments = Array.isArray(imageAttachments)
+    ? imageAttachments.filter((item) => item?.dataUrl)
+    : [];
+  const hasImageAttachments = normalizedImageAttachments.length > 0;
+  const roleContext = buildRoleGenerationContext(role, {
+    userInput: normalizedUserInput,
+    worldbookMode: "all",
+    structuredTask: false,
+    generationMode: "video",
+    preserveAllWorldbookEntries: true,
+    preserveAllNpcEntries: true,
+  });
+  const timelineAnchor = getVideoSessionTimelineAnchor(role);
+  const timelineAnchorText = formatVideoSessionTimelineAnchorText(timelineAnchor);
+  const currentPlace = timelineAnchor?.currentPlace || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
+  const currentStatus = getVideoSafeCurrentStatusText(role);
+  const roleName = role?.profile?.note || role?.profile?.name || "角色";
+  const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role);
+  const roundPromptBlock = buildVideoSessionRoundPromptBlock(roundContext);
+  const videoDialogLines = (Array.isArray(videoDialogLog) ? videoDialogLog : [])
+    .filter((item) => String(item?.text || "").trim())
+    .slice(-6)
+    .map((item, index) => {
+      const speaker = item?.role === "ai" ? roleName : String(state.userProfile?.name || "用户").trim();
+      const modeLabel = item?.mode === "voice" ? "语音" : "文字";
+      return `${index + 1}. ${speaker}｜${modeLabel}｜${sanitizeChatLine(String(item.text || "").trim())}`;
+    });
+  const plainTextContext = buildChatPlainTextContext({
+    task: "按普通聊天对齐版纯文本上下文生成这一轮视频通话文字回复",
+    userInput: normalizedUserInput,
+    roleContext,
+    imageAttachments: normalizedImageAttachments,
+    outputIntent: `视频通话协议文本，只输出两行：第一行状态，第二行消息；当前回复模式=${normalizedResponseMode === "voice" ? "语音" : "文字"}`,
+  });
+  const enrichedPlainTextContext = [
+    plainTextContext,
+    `视频轮次补充：角色=${roleName}；当前地点=${currentPlace}；当前状态=${currentStatus || "未填写"}；当前行程锚点=${timelineAnchorText}`,
+    roundPromptBlock ? `视频轮次规则：\n${roundPromptBlock}` : "",
+    videoDialogLines.length ? `最近视频对话：\n${videoDialogLines.join("\n")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const response = await requestPrimaryModelText({
+    systemPrompt: `你现在只负责生成一条现代手机视频通话回复
+不要输出 JSON 不要解释 不要标题 不要编号 不要项目符号 不要 Markdown
+输出协议:
+- 第一行固定写：状态：10字内状态
+- 第二行固定写：消息：回复正文
+- 只能输出这两行 不能多行 不能少行
+- 语音回复时消息写成 [语音] 正文；文字回复时直接写正文
+- 回复要像角色本人在当前视频通话里自然说出口的话 不是总结 不是旁白 不是动作描述
+- 长度控制在 35 到 140 个汉字
+- 不要输出 emoji 颜文字 表情符号 英文寒暄 或模型自我介绍
+- 截图里能确认的主体 场景 关键文字和明显元素可以结合；看不清的部分不要硬编 更不能把没看到的食物 商品 地点或品牌说成看到了
+- 必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、当天行程、时间、生活轨迹、突发事件、地图、NPC、视频对话和图片附件
+- 世界书和 NPC 这轮要按提供的完整条目理解，不要只抓前几条
+- 视频通话里要延续真实时间和当前行程；如果上下文显示已经到家、洗澡、睡前，就不要倒退回工作场景
+- 绝对不要说自己是 AI、模型、程序、助手、文本工具，也不要提 Gemini、Google、OpenAI、payload、JSON、schema
+- ${REFERENCE_CITY_USAGE_RULE}
+${roundPromptBlock ? `- ${roundPromptBlock.replace(/\n+/g, "\n- ")}` : ""}
+${hasImageAttachments ? "- 这轮附带了 3 张内截图时，先看最新一张，再结合前面的画面变化理解当前状态" : ""}
+${normalizedResponseMode === "voice" ? "- 这轮必须返回适合直接念出来的 [语音] 正文" : "- 这轮必须返回自然口语文字回复"}
+${dailyLifeMemoryPrompt}
+直接输出协议文本`,
+    payload: {
+      task: "按普通聊天对齐版纯文本上下文生成这一轮视频通话文字回复",
+      userInput: normalizedUserInput,
+      imageAttachments: normalizedImageAttachments,
+      roleContext,
+      plainTextContext: enrichedPlainTextContext,
+      roundContext: buildVideoSessionRoundContextPayload(roundContext),
+      outputRules: {
+        contextFormat: "plain-text",
+        singleMessage: true,
+        requireVoiceReply: normalizedResponseMode === "voice",
+      },
+    },
+    includeMeta: true,
+    rejectFinishReasonLength: false,
+    temperatureOverride: 0.22,
+    preferredVariantMode,
+    singleVariant: true,
+    requestTrace,
+    signal,
+  });
+  const repaired = buildVideoSessionPayloadFromModelText(role, response?.text || "", {
+    responseMode: normalizedResponseMode,
+    referenceCatalog,
+    requiredWorldbookTitles,
+  });
+  if (!repaired) {
+    throw attachModelMetaToError(new Error("视频文字输入纯文本回复无效"), response?.meta || null, {
+      rawResponseText: response?.text || "",
+    });
+  }
+  return {
+    result: repaired,
+    meta: {
+      ...(response?.meta || {}),
+      usedPlainTextFallback: true,
+      outputFormat: "video-text-input-plain",
     },
   };
 };
@@ -60698,9 +60825,28 @@ const buildLocalAutonomousReplyBatch = (role, mode = "proactive") => {
   };
 };
 
-const waitForReveal = (delay) =>
-  new Promise((resolve) => {
-    window.setTimeout(resolve, delay);
+const waitForReveal = (delay, signal = null) =>
+  new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, delay);
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      signal?.removeEventListener?.("abort", onAbort);
+    };
+    const onAbort = () => {
+      cleanup();
+      reject(createAbortRequestError("已中断生成回复"));
+    };
+    if (signal?.aborted) {
+      cleanup();
+      reject(createAbortRequestError("已中断生成回复"));
+      return;
+    }
+    if (signal) {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
   });
 
 const withRoundWallClockMeta = (meta = null, startedAtMs = Date.now(), completedAtMs = Date.now()) => {
@@ -60728,7 +60874,7 @@ const getSequentialRevealDelay = (message, index) => {
 const appendMessagesSequentially = async (
   roleId,
   messages,
-  { statusText = "", lastApiAt = "", messageTimestamp = "", notificationSource = "reply" } = {},
+  { statusText = "", lastApiAt = "", messageTimestamp = "", notificationSource = "reply", signal = null } = {},
 ) => {
   const normalizedStatus = sanitizeChatLine(statusText || "").slice(0, 10);
   const shouldPaintStep = () =>
@@ -60741,8 +60887,14 @@ const appendMessagesSequentially = async (
 
   for (let index = 0; index < messages.length; index += 1) {
     const source = messages[index];
-    await waitForReveal(getSequentialRevealDelay(source, index));
+    if (signal?.aborted) {
+      throw createAbortRequestError("已中断生成回复");
+    }
+    await waitForReveal(getSequentialRevealDelay(source, index), signal);
     const paintStepNow = shouldPaintStep();
+    if (signal?.aborted) {
+      throw createAbortRequestError("已中断生成回复");
+    }
     if (paintStepNow) {
       markChatFeedForAutoScroll();
     }
@@ -60862,13 +61014,15 @@ const rerollConversationFromMessage = async (roleId, messageId) => {
 
   state.contextMenu = null;
   paint();
-  return requestAndAppendAiReply(roleId, rerollPrompt);
+  return requestAndAppendAiReply(roleId, rerollPrompt, {
+    sourceMessageId: messageId,
+  });
 };
 
 const requestAndAppendAiReply = async (
   roleId,
   userInput,
-  { roundStartedAtMs = Date.now() } = {},
+  { roundStartedAtMs = Date.now(), sourceMessageId = "" } = {},
 ) => {
   const role = getRoleById(state, roleId);
   const normalizedInput = String(userInput || "").trim();
@@ -60885,6 +61039,19 @@ const requestAndAppendAiReply = async (
 
   const abortController = new AbortController();
   chatReplyAbortControllers.set(roleId, abortController);
+  const normalizedSourceMessageId = String(sourceMessageId || getCurrentTurnUserMessageId(role) || "").trim();
+  if (normalizedSourceMessageId) {
+    chatReplySourceMessageIds.set(roleId, normalizedSourceMessageId);
+  } else {
+    chatReplySourceMessageIds.delete(roleId);
+  }
+  let replyTimedOut = false;
+  const replyTimeoutId = window.setTimeout(() => {
+    replyTimedOut = true;
+    if (!abortController.signal.aborted) {
+      abortController.abort();
+    }
+  }, CHAT_REPLY_TIMEOUT_MS);
   const throwIfReplyAborted = () => {
     if (abortController.signal.aborted) {
       throw createAbortRequestError("已中断生成回复");
@@ -60969,10 +61136,16 @@ const requestAndAppendAiReply = async (
       throw attachModelMetaToError(new Error("主 API 没有生成可显示的回复"), apiResponse?.meta || null);
     }
 
+    const latestLiveRole = getRoleById(state, roleId) || liveRole;
+    if (normalizedSourceMessageId && !findMessageById(latestLiveRole, normalizedSourceMessageId)) {
+      throw createAbortRequestError("已中断生成回复");
+    }
+
     await appendMessagesSequentially(roleId, replyBatch.messages, {
       statusText: replyBatch.statusText,
       lastApiAt: replyBatch.lastApiAt,
       notificationSource: "reply",
+      signal: abortController.signal,
     });
     persistPrimaryChatUsageSnapshot(roleId, {
       mode: "reply",
@@ -60983,13 +61156,14 @@ const requestAndAppendAiReply = async (
     return true;
   } catch (error) {
     if (isAbortRequestError(error)) {
+      const abortedMessage = replyTimedOut ? "生成回复超时" : "已中断生成回复";
       persistPrimaryChatUsageSnapshot(roleId, {
         mode: "reply",
         status: "cancelled",
         meta: withRoundWallClockMeta(error?.modelMeta || null, roundStartedAtMs, Date.now()),
-        errorMessage: "已中断生成回复",
+        errorMessage: abortedMessage,
       });
-      setToast("已中断生成回复");
+      setToast(abortedMessage);
       return false;
     }
     persistPrimaryChatUsageSnapshot(roleId, {
@@ -61001,6 +61175,7 @@ const requestAndAppendAiReply = async (
     setToast(error.message || "主 API 调用失败，未生成回复");
     return false;
   } finally {
+    window.clearTimeout(replyTimeoutId);
     if (chatReplyAbortControllers.get(roleId) === abortController) {
       chatReplyAbortControllers.delete(roleId);
       if (state.chatReplyBusyRoleId === roleId) {
@@ -61008,6 +61183,7 @@ const requestAndAppendAiReply = async (
       }
       paint();
     }
+    chatReplySourceMessageIds.delete(roleId);
   }
 };
 
@@ -65251,12 +65427,16 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
     const apiResponse = await runAbortableTaskWithTimeout(
       (timeoutSignal) => {
         const linked = createLinkedAbortController(roundAbortController.signal, timeoutSignal);
-        return requestPrimaryVideoReply(freshRole, promptText, {
-      imageAttachments: frameAttachments,
-      responseMode: wantsVoiceReply ? "voice" : "text",
-      videoDialogLog: state.videoSession?.dialogLog || [],
-      roundContext,
-      requestTrace,
+        const replyRequest =
+          inputMode === "text" && promptText
+            ? requestPrimaryVideoTextInputPlainReply
+            : requestPrimaryVideoReply;
+        return replyRequest(freshRole, promptText, {
+          imageAttachments: frameAttachments,
+          responseMode: wantsVoiceReply ? "voice" : "text",
+          videoDialogLog: state.videoSession?.dialogLog || [],
+          roundContext,
+          requestTrace,
           signal: linked.controller.signal,
         }).finally(() => {
           linked.dispose();
@@ -65847,6 +66027,7 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
       pendingAiReply = null;
       void requestAndAppendAiReply(role.id, resolveFollowUpPrompt(role), {
         roundStartedAtMs,
+        sourceMessageId: getCurrentTurnUserMessageId(role),
       });
       return;
     }
@@ -65897,6 +66078,7 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
   if (triggerAi) {
     void requestAndAppendAiReply(role.id, trimmed, {
       roundStartedAtMs,
+      sourceMessageId: sentMessageId,
     });
   }
 
@@ -65909,6 +66091,15 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
 const triggerPendingAiReply = () => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role || !pendingAiReply || pendingAiReply.roleId !== role.id) return false;
+  const pendingMessageId = String(pendingAiReply.messageId || "").trim();
+  if (pendingMessageId) {
+    const pendingMessage = findMessageById(role, pendingMessageId);
+    if (!pendingMessage || pendingMessage.role !== "user") {
+      pendingAiReply = null;
+      setToast("这条消息已删除，重新发一条再生成");
+      return false;
+    }
+  }
 
   releaseComposerCompositionForCommittedAction();
   const pending = pendingAiReply;
@@ -65916,6 +66107,7 @@ const triggerPendingAiReply = () => {
   markChatFeedForAutoScroll();
   void requestAndAppendAiReply(role.id, pending.content, {
     roundStartedAtMs: pending.at || Date.now(),
+    sourceMessageId: pending.messageId || "",
   });
   return true;
 };
@@ -68614,7 +68806,7 @@ eventRoot.addEventListener("click", async (event) => {
       return;
     }
     const deleteCount = clampValue(Number(state.clearChatDeleteCount || totalMessages), 1, totalMessages);
-    pendingAiReply = null;
+    clearChatReplyState(role.id, { abort: true, clearPending: true, clearBusy: true });
     state.panelStack = [];
     state.scrollPositions["chat-feed"] = 0;
     updateRole(role.id, (nextRole) => {
@@ -68653,8 +68845,8 @@ eventRoot.addEventListener("click", async (event) => {
       setToast("至少保留一个角色");
       return;
     }
+    clearChatReplyState(role.id, { abort: true, clearPending: true, clearBusy: true });
     state.roles = state.roles.filter((item) => item.id !== role.id);
-    pendingAiReply = null;
     state.selectedRoleId = state.roles[0].id;
     state.activeChatRoleId = null;
     state.panelStack = [];
@@ -68737,6 +68929,7 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "delete-message") {
     const role = getActiveChatRole();
     if (!role) return;
+    clearChatReplyStateForRemovedMessage(role.id, messageId);
     updateRole(role.id, (nextRole) => {
       nextRole.chats.messages = nextRole.chats.messages.filter((item) => item.id !== messageId);
       nextRole.chats.selectedMessageIds = nextRole.chats.selectedMessageIds.filter((id) => id !== messageId);
@@ -68763,6 +68956,8 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "delete-selected") {
     const role = getActiveChatRole();
     if (!role) return;
+    const selectedIds = new Set(role.chats.selectedMessageIds || []);
+    selectedIds.forEach((id) => clearChatReplyStateForRemovedMessage(role.id, id));
     updateRole(role.id, (nextRole) => {
       const selected = new Set(nextRole.chats.selectedMessageIds);
       nextRole.chats.messages = nextRole.chats.messages.filter((item) => !selected.has(item.id));
