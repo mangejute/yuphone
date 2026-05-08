@@ -33165,6 +33165,14 @@ const CHAT_REPLY_TIMEOUT_MS = 120_000;
 const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
 const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
 const VIDEO_SESSION_REPLY_TIMEOUT_MS = 90_000;
+const MODEL_REQUEST_HEALTH_MAX_MODELS = 32;
+const MODEL_REQUEST_HEALTH_MAX_RECENT = 16;
+const MODEL_REQUEST_HEALTH_WINDOW_MS = 24 * 60 * 60 * 1000;
+const MODEL_REQUEST_HEALTH_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const MODEL_REQUEST_HEALTH_FAST_MS = 22_000;
+const MODEL_REQUEST_HEALTH_SOFT_SLOW_MS = 30_000;
+const MODEL_REQUEST_HEALTH_HARD_SLOW_MS = 55_000;
+const MODEL_REQUEST_HEALTH_TIMEOUT_MS = 85_000;
 const VIDEO_CALL_SUMMARY_TIMEOUT_MS = 190_000;
 const VIDEO_SESSION_RESTART_DELAY_MS = 160;
 const VIDEO_SESSION_AUTO_SUBMIT_DELAY_MS = 3000;
@@ -34688,6 +34696,297 @@ const serializeState = () => {
 const normalizeApiConfigUrl = (value = "") => String(value || "").trim().replace(/\/+$/, "");
 const normalizeApiConfigModel = (value = "") => String(value || "").trim();
 const normalizeApiConfigKey = (value = "") => String(value || "").trim();
+const normalizeModelRequestTaskKind = (value = "") => String(value || "").trim() || "text-plain";
+
+const getModelRequestFingerprint = (config = {}) => {
+  const type = normalizeApiProviderType(config?.type || "openai");
+  const url = normalizeApiConfigUrl(config?.url || "");
+  const model = normalizeApiConfigModel(config?.model || "");
+  return [type || "openai", url || "unknown-url", model || "unknown-model"].join("|").toLowerCase();
+};
+
+const createEmptyModelRequestHealthRecord = () => ({
+  key: "",
+  endpoint: "",
+  model: "",
+  type: "",
+  total: 0,
+  success: 0,
+  failure: 0,
+  timeout: 0,
+  slow: 0,
+  imageRequests: 0,
+  imageFailures: 0,
+  lastLatencyMs: 0,
+  averageLatencyMs: 0,
+  lastSuccessAt: "",
+  lastFailureAt: "",
+  lastUsedAt: "",
+  recent: [],
+  tasks: {},
+});
+
+const normalizeModelRequestHealthRecentItems = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const latencyMs = Math.max(0, Math.round(Number(item?.latencyMs || 0) || 0));
+      const timestamp = String(item?.timestamp || "").trim();
+      const taskKind = normalizeModelRequestTaskKind(item?.taskKind);
+      const imageCount = Math.max(0, Math.round(Number(item?.imageCount || 0) || 0));
+      const status = item?.status === "success" ? "success" : item?.status === "timeout" ? "timeout" : "error";
+      if (!timestamp) return null;
+      return {
+        timestamp,
+        status,
+        latencyMs,
+        taskKind,
+        imageCount,
+      };
+    })
+    .filter(Boolean)
+    .slice(-MODEL_REQUEST_HEALTH_MAX_RECENT);
+
+const normalizeModelRequestHealthTaskRecord = (task = {}) => ({
+  total: Math.max(0, Math.round(Number(task?.total || 0) || 0)),
+  success: Math.max(0, Math.round(Number(task?.success || 0) || 0)),
+  failure: Math.max(0, Math.round(Number(task?.failure || 0) || 0)),
+  timeout: Math.max(0, Math.round(Number(task?.timeout || 0) || 0)),
+  slow: Math.max(0, Math.round(Number(task?.slow || 0) || 0)),
+  imageRequests: Math.max(0, Math.round(Number(task?.imageRequests || 0) || 0)),
+  imageFailures: Math.max(0, Math.round(Number(task?.imageFailures || 0) || 0)),
+  lastLatencyMs: Math.max(0, Math.round(Number(task?.lastLatencyMs || 0) || 0)),
+  averageLatencyMs: Math.max(0, Math.round(Number(task?.averageLatencyMs || 0) || 0)),
+  lastSuccessAt: String(task?.lastSuccessAt || "").trim(),
+  lastFailureAt: String(task?.lastFailureAt || "").trim(),
+  lastUsedAt: String(task?.lastUsedAt || "").trim(),
+});
+
+const normalizeModelRequestHealthRecord = (record = {}, key = "") => {
+  const normalizedKey = String(key || record?.key || "").trim();
+  const recent = normalizeModelRequestHealthRecentItems(record?.recent);
+  const tasks = Object.fromEntries(
+    Object.entries(record?.tasks && typeof record.tasks === "object" ? record.tasks : {})
+      .map(([taskKind, task]) => [normalizeModelRequestTaskKind(taskKind), normalizeModelRequestHealthTaskRecord(task)])
+      .filter(([taskKind]) => taskKind),
+  );
+  return {
+    ...createEmptyModelRequestHealthRecord(),
+    key: normalizedKey,
+    endpoint: normalizeApiConfigUrl(record?.endpoint || ""),
+    model: normalizeApiConfigModel(record?.model || ""),
+    type: normalizeApiProviderType(record?.type || "openai"),
+    total: Math.max(0, Math.round(Number(record?.total || 0) || 0)),
+    success: Math.max(0, Math.round(Number(record?.success || 0) || 0)),
+    failure: Math.max(0, Math.round(Number(record?.failure || 0) || 0)),
+    timeout: Math.max(0, Math.round(Number(record?.timeout || 0) || 0)),
+    slow: Math.max(0, Math.round(Number(record?.slow || 0) || 0)),
+    imageRequests: Math.max(0, Math.round(Number(record?.imageRequests || 0) || 0)),
+    imageFailures: Math.max(0, Math.round(Number(record?.imageFailures || 0) || 0)),
+    lastLatencyMs: Math.max(0, Math.round(Number(record?.lastLatencyMs || 0) || 0)),
+    averageLatencyMs: Math.max(0, Math.round(Number(record?.averageLatencyMs || 0) || 0)),
+    lastSuccessAt: String(record?.lastSuccessAt || "").trim(),
+    lastFailureAt: String(record?.lastFailureAt || "").trim(),
+    lastUsedAt: String(record?.lastUsedAt || recent[recent.length - 1]?.timestamp || "").trim(),
+    recent,
+    tasks,
+  };
+};
+
+const normalizeModelRequestHealthStore = (store = {}) => {
+  const source = store && typeof store === "object" ? store : {};
+  const entries = Object.entries(source)
+    .map(([key, record]) => normalizeModelRequestHealthRecord(record, key))
+    .filter((record) => record.key);
+  const nowMs = Date.now();
+  return Object.fromEntries(
+    entries
+      .filter((record) => {
+        const lastUsedMs = Date.parse(record.lastUsedAt || record.lastSuccessAt || record.lastFailureAt || "");
+        return !Number.isFinite(lastUsedMs) || nowMs - lastUsedMs <= MODEL_REQUEST_HEALTH_RETENTION_MS;
+      })
+      .sort((left, right) => {
+        const leftMs = Date.parse(left.lastUsedAt || left.lastSuccessAt || left.lastFailureAt || "") || 0;
+        const rightMs = Date.parse(right.lastUsedAt || right.lastSuccessAt || right.lastFailureAt || "") || 0;
+        return rightMs - leftMs;
+      })
+      .slice(0, MODEL_REQUEST_HEALTH_MAX_MODELS)
+      .map((record) => [record.key, record]),
+  );
+};
+
+const ensureModelRequestHealthStore = () => {
+  if (!state.appConfig || typeof state.appConfig !== "object") {
+    state.appConfig = {};
+  }
+  state.appConfig.modelRequestHealth = normalizeModelRequestHealthStore(state.appConfig.modelRequestHealth);
+  return state.appConfig.modelRequestHealth;
+};
+
+const getModelRequestHealthRecord = (config = {}) => {
+  const key = getModelRequestFingerprint(config);
+  const store = ensureModelRequestHealthStore();
+  return store[key] || null;
+};
+
+const getTaskModelRequestHealthRecord = (record = null, taskKind = "") => {
+  const normalizedTaskKind = normalizeModelRequestTaskKind(taskKind);
+  return record?.tasks?.[normalizedTaskKind] || null;
+};
+
+const getRecentModelRequestHealthItems = (record = null, taskKind = "") => {
+  const cutoffMs = Date.now() - MODEL_REQUEST_HEALTH_WINDOW_MS;
+  const normalizedTaskKind = normalizeModelRequestTaskKind(taskKind);
+  return (Array.isArray(record?.recent) ? record.recent : []).filter((item) => {
+    if (normalizedTaskKind && normalizeModelRequestTaskKind(item?.taskKind) !== normalizedTaskKind) return false;
+    const timestampMs = Date.parse(String(item?.timestamp || "").trim());
+    return !Number.isFinite(timestampMs) || timestampMs >= cutoffMs;
+  });
+};
+
+const summarizeModelRequestRecentHealth = (record = null, taskKind = "") => {
+  const recent = getRecentModelRequestHealthItems(record, taskKind);
+  const failures = recent.filter((item) => item.status !== "success").length;
+  const timeouts = recent.filter((item) => item.status === "timeout").length;
+  const successes = recent.filter((item) => item.status === "success");
+  const slow = successes.filter((item) => Number(item.latencyMs || 0) >= MODEL_REQUEST_HEALTH_SOFT_SLOW_MS).length;
+  const imageFailures = recent.filter((item) => item.imageCount > 1 && item.status !== "success").length;
+  const averageLatencyMs = successes.length
+    ? Math.round(successes.reduce((sum, item) => sum + Math.max(0, Number(item.latencyMs || 0) || 0), 0) / successes.length)
+    : 0;
+  const last = recent[recent.length - 1] || null;
+  return {
+    total: recent.length,
+    failures,
+    timeouts,
+    slow,
+    imageFailures,
+    averageLatencyMs,
+    lastStatus: last?.status || "",
+    lastLatencyMs: Math.max(0, Number(last?.latencyMs || 0) || 0),
+  };
+};
+
+const resolveModelRequestDegradeLevel = (record = null, taskKind = "", { imageCount = 0 } = {}) => {
+  const summary = summarizeModelRequestRecentHealth(record, taskKind);
+  const task = getTaskModelRequestHealthRecord(record, taskKind);
+  const baselineLatency = Math.max(summary.averageLatencyMs || 0, Number(task?.averageLatencyMs || 0) || 0);
+  let level = 0;
+  if (summary.lastStatus === "timeout" || summary.timeouts >= 2) level = 3;
+  else if (summary.lastStatus === "error" || summary.failures >= 3 || baselineLatency >= MODEL_REQUEST_HEALTH_HARD_SLOW_MS) level = 2;
+  else if (summary.slow >= 2 || baselineLatency >= MODEL_REQUEST_HEALTH_SOFT_SLOW_MS) level = 1;
+  if (Number(imageCount || 0) > 1 && summary.imageFailures >= 1) {
+    level = Math.max(level, 2);
+  }
+  if (summary.total >= 2 && summary.failures === 0 && summary.timeouts === 0 && baselineLatency > 0 && baselineLatency <= MODEL_REQUEST_HEALTH_FAST_MS) {
+    level = Math.max(0, level - 1);
+  }
+  return clampValue(level, 0, 3);
+};
+
+const getModelRequestContextLevel = (degradeLevel = 0) => {
+  const level = clampValue(Number(degradeLevel || 0) || 0, 0, 3);
+  if (level >= 3) return "minimal";
+  if (level >= 2) return "lean";
+  if (level >= 1) return "balanced";
+  return "rich";
+};
+
+const resolveModelRequestMaxImages = (degradeLevel = 0, requestedImageCount = 0) => {
+  const requested = Math.max(0, Math.round(Number(requestedImageCount || 0) || 0));
+  if (!requested) return 0;
+  const level = clampValue(Number(degradeLevel || 0) || 0, 0, 3);
+  if (level >= 3) return Math.min(requested, 1);
+  if (level >= 2) return Math.min(requested, 1);
+  if (level >= 1) return Math.min(requested, 2);
+  return requested;
+};
+
+const recordModelRequestHealth = ({
+  config = {},
+  taskKind = "",
+  status = "success",
+  latencyMs = 0,
+  imageCount = 0,
+  timestamp = new Date().toISOString(),
+  meta = null,
+} = {}) => {
+  if (!config?.url && !config?.model) return;
+  const normalizedTaskKind = normalizeModelRequestTaskKind(taskKind || meta?.requestStrategy?.taskKind);
+  const safeLatencyMs = Math.max(0, Math.round(Number(latencyMs || meta?.latencyMs || 0) || 0));
+  const safeImageCount = Math.max(0, Math.round(Number(imageCount ?? meta?.imageCount ?? 0) || 0));
+  const normalizedStatus =
+    status === "success" ? "success" : status === "timeout" || safeLatencyMs >= MODEL_REQUEST_HEALTH_TIMEOUT_MS ? "timeout" : "error";
+  const isSlow = normalizedStatus === "success" && safeLatencyMs >= MODEL_REQUEST_HEALTH_SOFT_SLOW_MS;
+  const store = ensureModelRequestHealthStore();
+  const key = getModelRequestFingerprint(config);
+  const previous = normalizeModelRequestHealthRecord(store[key] || {}, key);
+  const task = normalizeModelRequestHealthTaskRecord(previous.tasks?.[normalizedTaskKind] || {});
+  const nextTotal = previous.total + 1;
+  const nextTaskTotal = task.total + 1;
+  const nextAverageLatencyMs = safeLatencyMs
+    ? previous.averageLatencyMs
+      ? Math.round((previous.averageLatencyMs * previous.total + safeLatencyMs) / nextTotal)
+      : safeLatencyMs
+    : previous.averageLatencyMs;
+  const nextTaskAverageLatencyMs = safeLatencyMs
+    ? task.averageLatencyMs
+      ? Math.round((task.averageLatencyMs * task.total + safeLatencyMs) / nextTaskTotal)
+      : safeLatencyMs
+    : task.averageLatencyMs;
+  const recent = normalizeModelRequestHealthRecentItems([
+    ...(previous.recent || []),
+    {
+      timestamp,
+      status: normalizedStatus,
+      latencyMs: safeLatencyMs,
+      taskKind: normalizedTaskKind,
+      imageCount: safeImageCount,
+    },
+  ]);
+  store[key] = {
+    ...previous,
+    key,
+    endpoint: normalizeApiConfigUrl(config?.url || previous.endpoint || ""),
+    model: normalizeApiConfigModel(config?.model || previous.model || ""),
+    type: normalizeApiProviderType(config?.type || previous.type || "openai"),
+    total: nextTotal,
+    success: previous.success + (normalizedStatus === "success" ? 1 : 0),
+    failure: previous.failure + (normalizedStatus !== "success" ? 1 : 0),
+    timeout: previous.timeout + (normalizedStatus === "timeout" ? 1 : 0),
+    slow: previous.slow + (isSlow ? 1 : 0),
+    imageRequests: previous.imageRequests + (safeImageCount > 0 ? 1 : 0),
+    imageFailures: previous.imageFailures + (safeImageCount > 1 && normalizedStatus !== "success" ? 1 : 0),
+    lastLatencyMs: safeLatencyMs || previous.lastLatencyMs,
+    averageLatencyMs: nextAverageLatencyMs,
+    lastSuccessAt: normalizedStatus === "success" ? timestamp : previous.lastSuccessAt,
+    lastFailureAt: normalizedStatus === "success" ? previous.lastFailureAt : timestamp,
+    lastUsedAt: timestamp,
+    recent,
+    tasks: {
+      ...(previous.tasks || {}),
+      [normalizedTaskKind]: {
+        ...task,
+        total: nextTaskTotal,
+        success: task.success + (normalizedStatus === "success" ? 1 : 0),
+        failure: task.failure + (normalizedStatus !== "success" ? 1 : 0),
+        timeout: task.timeout + (normalizedStatus === "timeout" ? 1 : 0),
+        slow: task.slow + (isSlow ? 1 : 0),
+        imageRequests: task.imageRequests + (safeImageCount > 0 ? 1 : 0),
+        imageFailures: task.imageFailures + (safeImageCount > 1 && normalizedStatus !== "success" ? 1 : 0),
+        lastLatencyMs: safeLatencyMs || task.lastLatencyMs,
+        averageLatencyMs: nextTaskAverageLatencyMs,
+        lastSuccessAt: normalizedStatus === "success" ? timestamp : task.lastSuccessAt,
+        lastFailureAt: normalizedStatus === "success" ? task.lastFailureAt : timestamp,
+        lastUsedAt: timestamp,
+      },
+    },
+  };
+  state.appConfig.modelRequestHealth = normalizeModelRequestHealthStore(store);
+  if (typeof queueModelRequestHealthSync === "function") {
+    queueModelRequestHealthSync();
+  }
+};
+
 const isDzziApiConfig = (config = {}) => normalizeApiConfigUrl(config?.url) === DZZI_API_URL;
 const isPandaApiConfig = (config = {}) => {
   const normalizedUrl = normalizeApiConfigUrl(config?.url);
@@ -34895,6 +35194,23 @@ const syncPersistentState = () => {
   state.cacheStamp = new Date().toISOString();
   saveState(serializeState());
   queueAppBadgeSync();
+};
+
+let modelRequestHealthSyncTimer = 0;
+const queueModelRequestHealthSync = ({ flush = false } = {}) => {
+  if (flush) {
+    if (modelRequestHealthSyncTimer) {
+      window.clearTimeout(modelRequestHealthSyncTimer);
+      modelRequestHealthSyncTimer = 0;
+    }
+    syncPersistentState();
+    return;
+  }
+  if (modelRequestHealthSyncTimer) return;
+  modelRequestHealthSyncTimer = window.setTimeout(() => {
+    modelRequestHealthSyncTimer = 0;
+    syncPersistentState();
+  }, 600);
 };
 
 const DESKTOP_APPEARANCE_THEME_IDS = new Set(["classic-white"]);
@@ -37832,6 +38148,138 @@ const shouldUseGeminiCompatibleMode = (config = null) => {
   }
   return isGeminiCompatibleModel(config);
 };
+
+const MODEL_REQUEST_TASK_KIND = Object.freeze({
+  TEXT_PLAIN: "text-plain",
+  TEXT_STRUCTURED: "text-structured",
+  JSON_STRUCTURED: "json-structured",
+  CHAT_REWRITE_PLAIN: "chat-rewrite-plain",
+  CHAT_REPLY_PLAIN: "chat-reply-plain",
+  AUTONOMOUS_REPLY_PLAIN: "autonomous-reply-plain",
+  VIDEO_TEXT_INPUT_PLAIN: "video-text-input-plain",
+  VIDEO_COMPACT_TEXT: "video-compact-text",
+  VIDEO_RESCUE_TEXT: "video-rescue-text",
+  JOURNEY_REWRITE_TEXT: "journey-rewrite-text",
+  JOURNEY_STRUCTURED_JSON: "journey-structured-json",
+});
+
+const GEMINI_COMPATIBLE_TEXT_TASKS = new Set([
+  MODEL_REQUEST_TASK_KIND.TEXT_PLAIN,
+  MODEL_REQUEST_TASK_KIND.CHAT_REWRITE_PLAIN,
+  MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN,
+  MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
+  MODEL_REQUEST_TASK_KIND.VIDEO_TEXT_INPUT_PLAIN,
+]);
+
+const GEMINI_OPENAI_FALLBACK_TASKS = new Set([
+  MODEL_REQUEST_TASK_KIND.VIDEO_COMPACT_TEXT,
+  MODEL_REQUEST_TASK_KIND.VIDEO_RESCUE_TEXT,
+  MODEL_REQUEST_TASK_KIND.JOURNEY_REWRITE_TEXT,
+  MODEL_REQUEST_TASK_KIND.JOURNEY_STRUCTURED_JSON,
+]);
+
+const getModelRequestFamily = (config = {}) => {
+  const type = String(config?.type || "openai").trim().toLowerCase();
+  const model = String(config?.model || "").trim();
+  if (shouldUseGeminiCompatibleMode(config)) return "gemini";
+  if (type === "anthropic" || /claude/i.test(model)) return "anthropic";
+  if (/gpt|o\d|openai/i.test(model)) return "openai";
+  return type || "openai";
+};
+
+const inferModelRequestTaskKind = ({ outputMode = "text", contextFormat = "" } = {}) => {
+  const normalizedOutputMode = String(outputMode || "text").trim().toLowerCase();
+  const normalizedContextFormat = String(contextFormat || "").trim().toLowerCase();
+  if (normalizedOutputMode === "json") return MODEL_REQUEST_TASK_KIND.JSON_STRUCTURED;
+  if (normalizedContextFormat === "plain-text") return MODEL_REQUEST_TASK_KIND.TEXT_PLAIN;
+  return MODEL_REQUEST_TASK_KIND.TEXT_STRUCTURED;
+};
+
+const resolveModelRequestStrategy = (
+  config = {},
+  {
+    taskKind = "",
+    outputMode = "text",
+    contextFormat = "",
+    preferredVariantMode = "",
+    singleVariant = false,
+    imageCount = 0,
+  } = {},
+) => {
+  const normalizedOutputMode = String(outputMode || "text").trim().toLowerCase() === "json" ? "json" : "text";
+  const normalizedContextFormat = String(contextFormat || "").trim().toLowerCase();
+  const normalizedTaskKind =
+    String(taskKind || "").trim() || inferModelRequestTaskKind({ outputMode: normalizedOutputMode, contextFormat: normalizedContextFormat });
+  const family = getModelRequestFamily(config);
+  const healthRecord = getModelRequestHealthRecord(config);
+  const degradeLevel = resolveModelRequestDegradeLevel(healthRecord, normalizedTaskKind, { imageCount });
+  const contextLevel = getModelRequestContextLevel(degradeLevel);
+  const maxImages = resolveModelRequestMaxImages(degradeLevel, imageCount);
+  const explicitVariantMode = String(preferredVariantMode || "").trim();
+  let resolvedVariantMode = explicitVariantMode;
+  if (!resolvedVariantMode) {
+    if (family === "gemini") {
+      resolvedVariantMode = degradeLevel >= 2 && normalizedOutputMode === "text"
+        ? "openai-fallback"
+        : GEMINI_OPENAI_FALLBACK_TASKS.has(normalizedTaskKind)
+        ? "openai-fallback"
+        : "gemini-compatible";
+    } else {
+      resolvedVariantMode = "openai-standard";
+    }
+  }
+  return {
+    taskKind: normalizedTaskKind,
+    outputMode: normalizedOutputMode,
+    contextFormat: normalizedContextFormat,
+    modelFamily: family,
+    preferredVariantMode: resolvedVariantMode,
+    singleVariant: Boolean(singleVariant),
+    plainTextAligned:
+      normalizedContextFormat === "plain-text" ||
+      GEMINI_COMPATIBLE_TEXT_TASKS.has(normalizedTaskKind),
+    omitMaxTokens: shouldOmitMaxTokensForConfig(config),
+    degradeLevel,
+    contextLevel,
+    maxImages,
+    health: summarizeModelRequestRecentHealth(healthRecord, normalizedTaskKind),
+  };
+};
+
+const getModelRequestStrategyMeta = (strategy = null) => {
+  if (!strategy || typeof strategy !== "object") return null;
+  return {
+    taskKind: String(strategy.taskKind || "").trim(),
+    outputMode: String(strategy.outputMode || "").trim(),
+    contextFormat: String(strategy.contextFormat || "").trim(),
+    modelFamily: String(strategy.modelFamily || "").trim(),
+    preferredVariantMode: String(strategy.preferredVariantMode || "").trim(),
+    singleVariant: Boolean(strategy.singleVariant),
+    plainTextAligned: Boolean(strategy.plainTextAligned),
+    omitMaxTokens: Boolean(strategy.omitMaxTokens),
+    degradeLevel: Math.max(0, Number(strategy.degradeLevel || 0) || 0),
+    contextLevel: String(strategy.contextLevel || "").trim(),
+    maxImages: Math.max(0, Number(strategy.maxImages || 0) || 0),
+  };
+};
+
+const resolveModelRequestOptions = (config = {}, options = {}) => {
+  const strategy = resolveModelRequestStrategy(config, options);
+  return {
+    preferredVariantMode: strategy.preferredVariantMode,
+    singleVariant: strategy.singleVariant,
+    modelRequestStrategy: strategy,
+  };
+};
+
+const limitModelRequestImageAttachments = (imageAttachments = [], strategy = null) => {
+  const normalizedItems = (Array.isArray(imageAttachments) ? imageAttachments : []).filter((item) => item?.dataUrl);
+  if (!strategy || !Number.isFinite(Number(strategy.maxImages))) return normalizedItems;
+  const maxImages = Math.max(0, Math.round(Number(strategy.maxImages || 0)));
+  if (!maxImages) return [];
+  return normalizedItems.slice(-maxImages);
+};
+
 const shouldOmitMaxTokensForConfig = (config = {}) => {
   const normalizedUrl = normalizeApiConfigUrl(config?.url);
   const normalizedModel = normalizeApiConfigModel(config?.model);
@@ -38725,6 +39173,81 @@ const buildRoleMemoryContextItems = (role, { limit = 12, textLimit = 300 } = {})
     })
     .slice(0, Math.max(1, Number(limit) || 1))
     .map((item) => (Number(textLimit) > 0 ? truncateContextText(item, textLimit) : item));
+};
+
+const applyRoleContextCompression = (roleContext = null, contextLevel = "rich") => {
+  if (!roleContext || typeof roleContext !== "object") return roleContext;
+  const normalizedLevel = String(contextLevel || "rich").trim().toLowerCase();
+  if (normalizedLevel === "rich") return roleContext;
+  const nextContext = {
+    ...roleContext,
+  };
+
+  if (normalizedLevel === "balanced") {
+    nextContext.worldbook = Array.isArray(roleContext.worldbook) ? roleContext.worldbook.slice(0, 6) : roleContext.worldbook;
+    nextContext.npcs = Array.isArray(roleContext.npcs) ? roleContext.npcs.slice(0, 6) : roleContext.npcs;
+    nextContext.summaryArchive = Array.isArray(roleContext.summaryArchive) ? roleContext.summaryArchive.slice(-2) : roleContext.summaryArchive;
+    nextContext.memory = Array.isArray(roleContext.memory) ? roleContext.memory.slice(0, 5) : roleContext.memory;
+    nextContext.recentMessages = Array.isArray(roleContext.recentMessages) ? roleContext.recentMessages.slice(-32) : roleContext.recentMessages;
+    nextContext.videoCallSummaries = Array.isArray(roleContext.videoCallSummaries)
+      ? roleContext.videoCallSummaries.slice(0, 1)
+      : roleContext.videoCallSummaries;
+    return nextContext;
+  }
+
+  if (normalizedLevel === "lean") {
+    nextContext.worldbook = Array.isArray(roleContext.worldbook)
+      ? roleContext.worldbook.slice(0, 4).map((entry) => ({
+          title: truncateContextText(entry?.title || "", 54),
+          keywords: truncateContextText(entry?.keywords || "", 72),
+          content: truncateContextText(entry?.content || "", 72),
+        }))
+      : roleContext.worldbook;
+    nextContext.npcs = Array.isArray(roleContext.npcs)
+      ? roleContext.npcs.slice(0, 4).map((npc) => ({
+          name: truncateContextText(npc?.name || "", 28),
+          relation: truncateContextText(npc?.relation || npc?.relationship || "", 30),
+          corePersona: truncateContextText(npc?.corePersona || npc?.persona || npc?.summary || "", 48),
+        }))
+      : roleContext.npcs;
+    nextContext.summaryArchive = Array.isArray(roleContext.summaryArchive)
+      ? roleContext.summaryArchive.slice(-1).map((item) => truncateContextText(item, 200))
+      : roleContext.summaryArchive;
+    nextContext.memory = Array.isArray(roleContext.memory)
+      ? roleContext.memory.slice(0, 3).map((item) => truncateContextText(item, 120))
+      : roleContext.memory;
+    nextContext.recentMessages = Array.isArray(roleContext.recentMessages) ? roleContext.recentMessages.slice(-20) : roleContext.recentMessages;
+    nextContext.videoCallSummaries = Array.isArray(roleContext.videoCallSummaries)
+      ? roleContext.videoCallSummaries.slice(0, 1)
+      : roleContext.videoCallSummaries;
+    return nextContext;
+  }
+
+  nextContext.worldbook = Array.isArray(roleContext.worldbook)
+    ? roleContext.worldbook.slice(0, 2).map((entry) => ({
+        title: truncateContextText(entry?.title || "", 42),
+        keywords: truncateContextText(entry?.keywords || "", 54),
+        content: truncateContextText(entry?.content || "", 48),
+      }))
+    : roleContext.worldbook;
+  nextContext.npcs = Array.isArray(roleContext.npcs)
+    ? roleContext.npcs.slice(0, 2).map((npc) => ({
+        name: truncateContextText(npc?.name || "", 24),
+        relation: truncateContextText(npc?.relation || npc?.relationship || "", 24),
+        corePersona: truncateContextText(npc?.corePersona || npc?.persona || npc?.summary || "", 32),
+      }))
+    : roleContext.npcs;
+  nextContext.summaryArchive = Array.isArray(roleContext.summaryArchive)
+    ? roleContext.summaryArchive.slice(-1).map((item) => truncateContextText(item, 120))
+    : roleContext.summaryArchive;
+  nextContext.memory = Array.isArray(roleContext.memory)
+    ? roleContext.memory.slice(0, 2).map((item) => truncateContextText(item, 72))
+    : roleContext.memory;
+  nextContext.recentMessages = Array.isArray(roleContext.recentMessages) ? roleContext.recentMessages.slice(-12) : roleContext.recentMessages;
+  nextContext.videoCallSummaries = Array.isArray(roleContext.videoCallSummaries)
+    ? roleContext.videoCallSummaries.slice(0, 1)
+    : roleContext.videoCallSummaries;
+  return nextContext;
 };
 
 const buildRoleGenerationContext = (
@@ -40754,6 +41277,7 @@ const buildModelResponseMeta = ({
   systemPromptText = "",
   imageCount = 0,
   promptBreakdown = [],
+  modelRequestStrategy = null,
 }) => {
   const usage = normalizeModelUsage(data?.usage);
   return {
@@ -40773,6 +41297,7 @@ const buildModelResponseMeta = ({
     systemPromptChars: String(systemPromptText || "").length,
     imageCount: Math.max(0, Number(imageCount || 0)),
     promptBreakdown: Array.isArray(promptBreakdown) ? promptBreakdown : [],
+    requestStrategy: getModelRequestStrategyMeta(modelRequestStrategy),
   };
 };
 
@@ -40795,6 +41320,8 @@ const requestModelJsonWithConfig = async ({
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
   signal = null,
 }) => {
@@ -40804,7 +41331,29 @@ const requestModelJsonWithConfig = async ({
   if (signal?.aborted) {
     throw createAbortRequestError();
   }
-  const imageAttachments = Array.isArray(payload?.imageAttachments) ? payload.imageAttachments.filter((item) => item?.dataUrl) : [];
+  const rawImageAttachments = Array.isArray(payload?.imageAttachments) ? payload.imageAttachments.filter((item) => item?.dataUrl) : [];
+  const preflightContextPayload = {
+    ...(payload || {}),
+    imageAttachments: rawImageAttachments.map((item, index) => ({
+      index: index + 1,
+      name: item.name || `用户图片${index + 1}`,
+      timestamp: item.timestamp || "",
+    })),
+  };
+  const explicitPreflightPlainTextContext = String(preflightContextPayload?.plainTextContext || "").trim();
+  const shouldUsePreflightPlainTextContext =
+    String(preflightContextPayload?.outputRules?.contextFormat || "").trim() === "plain-text" && Boolean(explicitPreflightPlainTextContext);
+  const requestStrategy =
+    modelRequestStrategy ||
+    resolveModelRequestStrategy(config, {
+      taskKind,
+      outputMode: "json",
+      contextFormat: shouldUsePreflightPlainTextContext ? "plain-text" : "json",
+      preferredVariantMode,
+      singleVariant,
+      imageCount: rawImageAttachments.length,
+    });
+  const imageAttachments = limitModelRequestImageAttachments(rawImageAttachments, requestStrategy);
   const contextPayload = {
     ...(payload || {}),
     imageAttachments: imageAttachments.map((item, index) => ({
@@ -40839,6 +41388,8 @@ const requestModelJsonWithConfig = async ({
         ? Math.max(requestedMaxOutputTokens, 1400)
         : requestedMaxOutputTokens;
   const promptBreakdown = buildPromptBreakdown(finalSystemPrompt, contextPayload);
+  const effectivePreferredVariantMode = requestStrategy.preferredVariantMode;
+  const effectiveSingleVariant = requestStrategy.singleVariant;
 
   const buildOpenAiImageContent = (prefixText = "") =>
     imageAttachments.length
@@ -40909,7 +41460,7 @@ const requestModelJsonWithConfig = async ({
           ],
         },
       ];
-  const normalizedPreferredVariantMode = String(preferredVariantMode || "").trim();
+  const normalizedPreferredVariantMode = String(effectivePreferredVariantMode || "").trim();
   const messageVariants = (() => {
     let variants = defaultMessageVariants.slice();
     if (normalizedPreferredVariantMode) {
@@ -40919,7 +41470,7 @@ const requestModelJsonWithConfig = async ({
         variants = [...preferred, ...remaining];
       }
     }
-    if (singleVariant || STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
+    if (effectiveSingleVariant || STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
       return variants.slice(0, 1);
     }
     return variants;
@@ -40956,12 +41507,22 @@ const requestModelJsonWithConfig = async ({
         systemPromptText: finalSystemPrompt,
         imageCount: imageAttachments.length,
         promptBreakdown,
+        modelRequestStrategy: requestStrategy,
       });
       emitModelRequestTrace(requestTrace, {
         ok: response.ok,
         status: response.status,
         endpoint,
         variantMode: "anthropic",
+        meta,
+      });
+      recordModelRequestHealth({
+        config,
+        taskKind: requestStrategy.taskKind,
+        status: response.ok ? "success" : "error",
+        latencyMs: meta.latencyMs,
+        imageCount: imageAttachments.length,
+        timestamp: meta.timestamp,
         meta,
       });
       if (!response.ok) {
@@ -40992,6 +41553,15 @@ const requestModelJsonWithConfig = async ({
         latencyMs: Math.max(0, Date.now() - startedAtMs),
         errorMessage: error?.message || "Anthropic 请求失败",
       });
+      if (!error?.modelMeta) {
+        recordModelRequestHealth({
+          config,
+          taskKind: requestStrategy.taskKind,
+          status: isAbortRequestError(error) ? "timeout" : "error",
+          latencyMs: Math.max(0, Date.now() - startedAtMs),
+          imageCount: imageAttachments.length,
+        });
+      }
       throw error;
     }
   }
@@ -41028,12 +41598,22 @@ const requestModelJsonWithConfig = async ({
           systemPromptText: finalSystemPrompt,
           imageCount: imageAttachments.length,
           promptBreakdown,
+          modelRequestStrategy: requestStrategy,
         });
         emitModelRequestTrace(requestTrace, {
           ok: response.ok,
           status: response.status,
           endpoint,
           variantMode: variant.mode,
+          meta,
+        });
+        recordModelRequestHealth({
+          config,
+          taskKind: requestStrategy.taskKind,
+          status: response.ok ? "success" : "error",
+          latencyMs: meta.latencyMs,
+          imageCount: imageAttachments.length,
+          timestamp: meta.timestamp,
           meta,
         });
         if (!response.ok) {
@@ -41095,6 +41675,13 @@ const requestModelJsonWithConfig = async ({
           variantMode: variant.mode,
           latencyMs: Math.max(0, Date.now() - startedAtMs),
           errorMessage: error?.message || "模型请求失败",
+        });
+        recordModelRequestHealth({
+          config,
+          taskKind: requestStrategy.taskKind,
+          status: isAbortRequestError(error) ? "timeout" : "error",
+          latencyMs: Math.max(0, Date.now() - startedAtMs),
+          imageCount: imageAttachments.length,
         });
         lastError = error;
       }
@@ -41180,6 +41767,8 @@ const requestModelTextWithConfig = async ({
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
   signal = null,
 }) => {
@@ -41189,7 +41778,29 @@ const requestModelTextWithConfig = async ({
   if (signal?.aborted) {
     throw createAbortRequestError();
   }
-  const imageAttachments = Array.isArray(payload?.imageAttachments) ? payload.imageAttachments.filter((item) => item?.dataUrl) : [];
+  const rawImageAttachments = Array.isArray(payload?.imageAttachments) ? payload.imageAttachments.filter((item) => item?.dataUrl) : [];
+  const preflightContextPayload = {
+    ...(payload || {}),
+    imageAttachments: rawImageAttachments.map((item, index) => ({
+      index: index + 1,
+      name: item.name || `用户图片${index + 1}`,
+      timestamp: item.timestamp || "",
+    })),
+  };
+  const explicitPreflightPlainTextContext = String(preflightContextPayload?.plainTextContext || "").trim();
+  const shouldUsePreflightPlainTextContext =
+    String(preflightContextPayload?.outputRules?.contextFormat || "").trim() === "plain-text" && Boolean(explicitPreflightPlainTextContext);
+  const requestStrategy =
+    modelRequestStrategy ||
+    resolveModelRequestStrategy(config, {
+      taskKind,
+      outputMode: "text",
+      contextFormat: shouldUsePreflightPlainTextContext ? "plain-text" : "json",
+      preferredVariantMode,
+      singleVariant,
+      imageCount: rawImageAttachments.length,
+    });
+  const imageAttachments = limitModelRequestImageAttachments(rawImageAttachments, requestStrategy);
   const contextPayload = {
     ...(payload || {}),
     imageAttachments: imageAttachments.map((item, index) => ({
@@ -41214,6 +41825,8 @@ const requestModelTextWithConfig = async ({
   );
   const maxOutputTokens = requestedMaxOutputTokens;
   const promptBreakdown = buildPromptBreakdown(finalSystemPrompt, contextPayload);
+  const effectivePreferredVariantMode = requestStrategy.preferredVariantMode;
+  const effectiveSingleVariant = requestStrategy.singleVariant;
 
   const buildOpenAiImageContent = (prefixText = "") =>
     imageAttachments.length
@@ -41323,7 +41936,7 @@ const requestModelTextWithConfig = async ({
           ],
         },
       ];
-  const normalizedPreferredVariantMode = String(preferredVariantMode || "").trim();
+  const normalizedPreferredVariantMode = String(effectivePreferredVariantMode || "").trim();
   const messageVariants = (() => {
     let variants = defaultMessageVariants.slice();
     if (normalizedPreferredVariantMode) {
@@ -41333,7 +41946,7 @@ const requestModelTextWithConfig = async ({
         variants = [...preferred, ...remaining];
       }
     }
-    if (singleVariant || STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
+    if (effectiveSingleVariant || STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
       return variants.slice(0, 1);
     }
     return variants;
@@ -41370,12 +41983,22 @@ const requestModelTextWithConfig = async ({
         systemPromptText: finalSystemPrompt,
         imageCount: imageAttachments.length,
         promptBreakdown,
+        modelRequestStrategy: requestStrategy,
       });
       emitModelRequestTrace(requestTrace, {
         ok: response.ok,
         status: response.status,
         endpoint,
         variantMode: "anthropic",
+        meta,
+      });
+      recordModelRequestHealth({
+        config,
+        taskKind: requestStrategy.taskKind,
+        status: response.ok ? "success" : "error",
+        latencyMs: meta.latencyMs,
+        imageCount: imageAttachments.length,
+        timestamp: meta.timestamp,
         meta,
       });
       if (!response.ok) {
@@ -41406,6 +42029,15 @@ const requestModelTextWithConfig = async ({
         latencyMs: Math.max(0, Date.now() - startedAtMs),
         errorMessage: error?.message || "Anthropic 请求失败",
       });
+      if (!error?.modelMeta) {
+        recordModelRequestHealth({
+          config,
+          taskKind: requestStrategy.taskKind,
+          status: isAbortRequestError(error) ? "timeout" : "error",
+          latencyMs: Math.max(0, Date.now() - startedAtMs),
+          imageCount: imageAttachments.length,
+        });
+      }
       throw error;
     }
   }
@@ -41441,12 +42073,22 @@ const requestModelTextWithConfig = async ({
           systemPromptText: finalSystemPrompt,
           imageCount: imageAttachments.length,
           promptBreakdown,
+          modelRequestStrategy: requestStrategy,
         });
         emitModelRequestTrace(requestTrace, {
           ok: response.ok,
           status: response.status,
           endpoint,
           variantMode: variant.mode,
+          meta,
+        });
+        recordModelRequestHealth({
+          config,
+          taskKind: requestStrategy.taskKind,
+          status: response.ok ? "success" : "error",
+          latencyMs: meta.latencyMs,
+          imageCount: imageAttachments.length,
+          timestamp: meta.timestamp,
           meta,
         });
         if (!response.ok) {
@@ -41482,6 +42124,13 @@ const requestModelTextWithConfig = async ({
           variantMode: variant.mode,
           latencyMs: Math.max(0, Date.now() - startedAtMs),
           errorMessage: error?.message || "模型请求失败",
+        });
+        recordModelRequestHealth({
+          config,
+          taskKind: requestStrategy.taskKind,
+          status: isAbortRequestError(error) ? "timeout" : "error",
+          latencyMs: Math.max(0, Date.now() - startedAtMs),
+          imageCount: imageAttachments.length,
         });
         lastError = error;
       }
@@ -41534,6 +42183,8 @@ const requestModelTextWithConfigFallback = async ({
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
   signal = null,
 }) => {
@@ -41553,6 +42204,8 @@ const requestModelTextWithConfigFallback = async ({
         temperatureOverride,
         preferredVariantMode,
         singleVariant,
+        taskKind,
+        modelRequestStrategy,
         requestTrace,
         signal,
       });
@@ -41581,6 +42234,8 @@ const requestModelTextWithConfigFallback = async ({
         temperatureOverride,
         preferredVariantMode,
         singleVariant,
+        taskKind,
+        modelRequestStrategy,
         requestTrace,
         signal,
       });
@@ -41607,6 +42262,8 @@ const requestModelJsonWithConfigFallback = async ({
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
   signal = null,
 }) => {
@@ -41625,6 +42282,8 @@ const requestModelJsonWithConfigFallback = async ({
         temperatureOverride,
         preferredVariantMode,
         singleVariant,
+        taskKind,
+        modelRequestStrategy,
         requestTrace,
         signal,
       });
@@ -41653,6 +42312,8 @@ const requestModelJsonWithConfigFallback = async ({
         temperatureOverride,
         preferredVariantMode,
         singleVariant,
+        taskKind,
+        modelRequestStrategy,
         requestTrace,
         signal,
       });
@@ -41677,6 +42338,8 @@ const requestPrimaryModelJson = async ({
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
   signal = null,
 }) =>
@@ -41693,6 +42356,8 @@ const requestPrimaryModelJson = async ({
     temperatureOverride,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
     requestTrace,
     signal,
   });
@@ -41705,6 +42370,8 @@ const requestPrimaryModelText = async ({
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
   signal = null,
 }) =>
@@ -41721,6 +42388,8 @@ const requestPrimaryModelText = async ({
     temperatureOverride,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
     requestTrace,
     signal,
   });
@@ -41734,6 +42403,8 @@ const requestSecondaryModelJson = async ({
   signal = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
 }) =>
   requestModelJsonWithConfigFallback({
     primaryConfig: getSecondaryApiConfig(),
@@ -41749,6 +42420,8 @@ const requestSecondaryModelJson = async ({
     signal,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
   });
 
 const requestSecondaryModelText = async ({
@@ -41760,6 +42433,8 @@ const requestSecondaryModelText = async ({
   signal = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
 }) =>
   requestModelTextWithConfigFallback({
@@ -41776,6 +42451,8 @@ const requestSecondaryModelText = async ({
     signal,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
     requestTrace,
   });
 
@@ -41788,6 +42465,8 @@ const requestPlannerModelJson = async ({
   signal = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
 }) =>
   requestModelJsonWithConfigFallback({
     primaryConfig: getPlannerApiConfig(),
@@ -41803,6 +42482,8 @@ const requestPlannerModelJson = async ({
     signal,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
   });
 
 const requestPlannerModelText = async ({
@@ -41814,6 +42495,8 @@ const requestPlannerModelText = async ({
   signal = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
 }) =>
   requestModelTextWithConfigFallback({
@@ -41830,6 +42513,8 @@ const requestPlannerModelText = async ({
     signal,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
     requestTrace,
   });
 
@@ -41839,10 +42524,12 @@ const getJourneyApiConfig = () => {
 
 const getJourneyTextApiConfig = () => getStableDzziTextApiConfig(getJourneyApiConfig());
 
-const getJourneyStructuredRequestOptions = (config = getJourneyApiConfig()) => ({
-  preferredVariantMode: shouldUseGeminiCompatibleMode(config) ? "openai-fallback" : "openai-standard",
-  singleVariant: true,
-});
+const getJourneyStructuredRequestOptions = (config = getJourneyApiConfig()) =>
+  resolveModelRequestOptions(config, {
+    taskKind: MODEL_REQUEST_TASK_KIND.JOURNEY_STRUCTURED_JSON,
+    outputMode: "json",
+    singleVariant: true,
+  });
 
 const requestJourneyModelText = async ({
   systemPrompt,
@@ -41853,6 +42540,8 @@ const requestJourneyModelText = async ({
   signal = null,
   preferredVariantMode = "",
   singleVariant = false,
+  taskKind = "",
+  modelRequestStrategy = null,
   requestTrace = null,
 }) =>
   requestModelTextWithConfigFallback({
@@ -41869,6 +42558,8 @@ const requestJourneyModelText = async ({
     signal,
     preferredVariantMode,
     singleVariant,
+    taskKind,
+    modelRequestStrategy,
     requestTrace,
   });
 
@@ -44857,17 +45548,21 @@ const requestPrimaryChatReplyRescueRewrite = async (
     throw new Error("缺少可重写的聊天草稿");
   }
 
-  const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
+  const requestStrategy = resolveModelRequestStrategy(getPrimaryApiConfig(), {
+    taskKind: MODEL_REQUEST_TASK_KIND.CHAT_REWRITE_PLAIN,
+    contextFormat: "plain-text",
+    singleVariant: true,
+    imageCount: imageAttachments.length,
+  });
   const normalizedImageAttachments = Array.isArray(imageAttachments)
     ? imageAttachments.filter((item) => item?.dataUrl)
     : [];
   const hasImageAttachments = normalizedImageAttachments.length > 0;
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role);
-  const roleContext = buildChatFullRoleContext(role, {
+  const roleContext = applyRoleContextCompression(buildChatFullRoleContext(role, {
     userInput,
     generationMode: "chat",
-  });
+  }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: "把偏短或半截的聊天草稿重写成完整自然的 3 到 6 条聊天回复",
     userInput,
@@ -44938,8 +45633,8 @@ ${dailyLifeMemoryPrompt}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.3,
-    preferredVariantMode,
-    singleVariant: true,
+    taskKind: MODEL_REQUEST_TASK_KIND.CHAT_REWRITE_PLAIN,
+    modelRequestStrategy: requestStrategy,
     requestTrace,
     signal,
   });
@@ -44983,17 +45678,21 @@ const requestPrimaryChatReplyTextFallback = async (
     signal = null,
   } = {},
 ) => {
-  const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
+  const requestStrategy = resolveModelRequestStrategy(getPrimaryApiConfig(), {
+    taskKind: MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN,
+    contextFormat: "plain-text",
+    singleVariant: true,
+    imageCount: imageAttachments.length,
+  });
   const normalizedImageAttachments = Array.isArray(imageAttachments)
     ? imageAttachments.filter((item) => item?.dataUrl)
     : [];
   const hasImageAttachments = normalizedImageAttachments.length > 0;
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role);
-  const roleContext = buildChatFullRoleContext(role, {
+  const roleContext = applyRoleContextCompression(buildChatFullRoleContext(role, {
     userInput,
     generationMode: "chat",
-  });
+  }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: "当结构化回复不稳定时 用纯文本格式生成同一轮聊天回复",
     userInput,
@@ -45060,8 +45759,8 @@ ${dailyLifeMemoryPrompt}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.35,
-    preferredVariantMode,
-    singleVariant: true,
+    taskKind: MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN,
+    modelRequestStrategy: requestStrategy,
     requestTrace,
     signal,
   });
@@ -45099,14 +45798,17 @@ const requestAutonomousChatReplyTextFallback = async (
 ) => {
   const normalizedMode = mode === "offline" ? "offline" : "proactive";
   const syntheticNow = parseValidTimestamp(scheduledAt) || new Date();
-  const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
+  const requestStrategy = resolveModelRequestStrategy(getPrimaryApiConfig(), {
+    taskKind: MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
+    contextFormat: "plain-text",
+    singleVariant: true,
+  });
   const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role, syntheticNow);
-  const roleContext = buildChatFullRoleContext(role, {
+  const roleContext = applyRoleContextCompression(buildChatFullRoleContext(role, {
     userInput: promptSeed,
     now: syntheticNow,
     generationMode: normalizedMode,
-  });
+  }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: normalizedMode === "offline" ? "用纯文本格式补救离线消息" : "用纯文本格式补救主动消息",
     userInput: promptSeed,
@@ -45150,8 +45852,8 @@ ${dailyLifeMemoryPrompt}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.35,
-    preferredVariantMode,
-    singleVariant: true,
+    taskKind: MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
+    modelRequestStrategy: requestStrategy,
     requestTrace,
   });
 
@@ -54517,7 +55219,12 @@ const requestPrimaryVideoReplyFallback = async (
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
   if (signal?.aborted) throw createAbortRequestError();
   const stableVideoConfig = getStableVideoPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(stableVideoConfig) ? "openai-fallback" : "openai-standard";
+  const requestStrategy = resolveModelRequestStrategy(stableVideoConfig, {
+    taskKind: MODEL_REQUEST_TASK_KIND.VIDEO_COMPACT_TEXT,
+    singleVariant: true,
+    imageCount: imageAttachments.length,
+  });
+  const normalizedImageAttachments = limitModelRequestImageAttachments(imageAttachments, requestStrategy);
   const roleName = role?.profile?.note || role?.profile?.name || "角色";
   const timelineAnchor = getVideoSessionTimelineAnchor(role);
   const timelineAnchorText = formatVideoSessionTimelineAnchorText(timelineAnchor);
@@ -54525,12 +55232,12 @@ const requestPrimaryVideoReplyFallback = async (
   const referenceCity = role?.profile?.realCityReference || role?.profile?.location || "";
   const currentStatus = getVideoSafeCurrentStatusText(role);
   const goalTitles = (role?.goals || []).slice(0, 2).map((item) => String(item?.title || "").trim()).filter(Boolean);
-  const roleContext = buildRoleGenerationContext(role, {
+  const roleContext = applyRoleContextCompression(buildRoleGenerationContext(role, {
     userInput,
     worldbookMode: "all",
     structuredTask: true,
     generationMode: "video",
-  });
+  }), requestStrategy.contextLevel);
   const roundPromptBlock = buildVideoSessionRoundPromptBlock(roundContext);
   const roundContextPayload = buildVideoSessionRoundContextPayload(roundContext);
   const apiResponse = await requestModelTextWithConfigFallback({
@@ -54558,7 +55265,7 @@ ${roundPromptBlock}
         videoDialogLog,
       }),
       roundContext: roundContextPayload,
-      imageAttachments,
+      imageAttachments: normalizedImageAttachments,
       outputRules: {
         singleMessage: true,
         requireVoiceReply: normalizedResponseMode === "voice",
@@ -54567,8 +55274,8 @@ ${roundPromptBlock}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.18,
-    preferredVariantMode,
-    singleVariant: true,
+    taskKind: MODEL_REQUEST_TASK_KIND.VIDEO_COMPACT_TEXT,
+    modelRequestStrategy: requestStrategy,
     requestTrace,
     signal,
   });
@@ -54608,21 +55315,24 @@ const requestPrimaryVideoTextInputPlainReply = async (
 ) => {
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
   if (signal?.aborted) throw createAbortRequestError();
-  const primaryConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryConfig) ? "gemini-compatible" : "openai-standard";
+  const requestStrategy = resolveModelRequestStrategy(getPrimaryApiConfig(), {
+    taskKind: MODEL_REQUEST_TASK_KIND.VIDEO_TEXT_INPUT_PLAIN,
+    contextFormat: "plain-text",
+    singleVariant: true,
+    imageCount: imageAttachments.length,
+  });
   const normalizedUserInput = getVideoSessionRoundUserInput(userInput, roundContext);
-  const normalizedImageAttachments = Array.isArray(imageAttachments)
-    ? imageAttachments.filter((item) => item?.dataUrl)
-    : [];
+  const normalizedImageAttachments = limitModelRequestImageAttachments(imageAttachments, requestStrategy);
   const hasImageAttachments = normalizedImageAttachments.length > 0;
-  const roleContext = buildRoleGenerationContext(role, {
+  const preserveFullVideoContext = requestStrategy.contextLevel === "rich" || requestStrategy.contextLevel === "balanced";
+  const roleContext = applyRoleContextCompression(buildRoleGenerationContext(role, {
     userInput: normalizedUserInput,
     worldbookMode: "all",
     structuredTask: false,
     generationMode: "video",
-    preserveAllWorldbookEntries: true,
-    preserveAllNpcEntries: true,
-  });
+    preserveAllWorldbookEntries: preserveFullVideoContext,
+    preserveAllNpcEntries: preserveFullVideoContext,
+  }), requestStrategy.contextLevel);
   const timelineAnchor = getVideoSessionTimelineAnchor(role);
   const timelineAnchorText = formatVideoSessionTimelineAnchorText(timelineAnchor);
   const currentPlace = timelineAnchor?.currentPlace || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
@@ -54671,7 +55381,7 @@ const requestPrimaryVideoTextInputPlainReply = async (
 - 绝对不要说自己是 AI、模型、程序、助手、文本工具，也不要提 Gemini、Google、OpenAI、payload、JSON、schema
 - ${REFERENCE_CITY_USAGE_RULE}
 ${roundPromptBlock ? `- ${roundPromptBlock.replace(/\n+/g, "\n- ")}` : ""}
-${hasImageAttachments ? "- 这轮附带了 3 张内截图时，先看最新一张，再结合前面的画面变化理解当前状态" : ""}
+${hasImageAttachments ? `- 这轮附带了 ${normalizedImageAttachments.length} 张截图时，先看最新一张，再结合前面的画面变化理解当前状态` : ""}
 ${normalizedResponseMode === "voice" ? "- 这轮必须返回适合直接念出来的 [语音] 正文" : "- 这轮必须返回自然口语文字回复"}
 ${dailyLifeMemoryPrompt}
 直接输出协议文本`,
@@ -54691,8 +55401,8 @@ ${dailyLifeMemoryPrompt}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.22,
-    preferredVariantMode,
-    singleVariant: true,
+    taskKind: MODEL_REQUEST_TASK_KIND.VIDEO_TEXT_INPUT_PLAIN,
+    modelRequestStrategy: requestStrategy,
     requestTrace,
     signal,
   });
@@ -54733,13 +55443,18 @@ const requestPrimaryVideoReplyTextRescue = async (
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
   if (signal?.aborted) throw createAbortRequestError();
   const primaryVideoConfig = getPrimaryApiConfig();
-  const preferredVariantMode = shouldUseGeminiCompatibleMode(primaryVideoConfig) ? "openai-fallback" : "openai-standard";
-  const roleContext = buildRoleGenerationContext(role, {
+  const requestStrategy = resolveModelRequestStrategy(primaryVideoConfig, {
+    taskKind: MODEL_REQUEST_TASK_KIND.VIDEO_RESCUE_TEXT,
+    singleVariant: true,
+    imageCount: imageAttachments.length,
+  });
+  const normalizedImageAttachments = limitModelRequestImageAttachments(imageAttachments, requestStrategy);
+  const roleContext = applyRoleContextCompression(buildRoleGenerationContext(role, {
     userInput,
     worldbookMode: "all",
     structuredTask: true,
     generationMode: "video",
-  });
+  }), requestStrategy.contextLevel);
   const roleName = role?.profile?.note || role?.profile?.name || "角色";
   const timelineAnchor = getVideoSessionTimelineAnchor(role);
   const timelineAnchorText = formatVideoSessionTimelineAnchorText(timelineAnchor);
@@ -54769,7 +55484,7 @@ ${roundPromptBlock}
         videoDialogLog,
       }),
       roundContext: roundContextPayload,
-      imageAttachments,
+      imageAttachments: normalizedImageAttachments,
       outputRules: {
         singleMessage: true,
         requireVoiceReply: normalizedResponseMode === "voice",
@@ -54778,8 +55493,8 @@ ${roundPromptBlock}
     includeMeta: true,
     rejectFinishReasonLength: false,
     temperatureOverride: 0.16,
-      preferredVariantMode,
-      singleVariant: true,
+      taskKind: MODEL_REQUEST_TASK_KIND.VIDEO_RESCUE_TEXT,
+      modelRequestStrategy: requestStrategy,
       requestTrace,
       signal,
     });
@@ -63898,10 +64613,10 @@ const refreshVideoSessionFrameCapturePlan = () => {
   queueNextVideoSessionFrameCapture();
 };
 
-const getVideoSessionRoundFrameAttachments = () =>
+const getVideoSessionRoundFrameAttachments = (limit = VIDEO_SESSION_MODEL_FRAME_LIMIT) =>
   state.videoSession?.cameraEnabled
     ? videoSessionRuntime.frameBuffer
-        .slice(-VIDEO_SESSION_MODEL_FRAME_LIMIT)
+        .slice(-Math.max(1, Math.round(Number(limit || VIDEO_SESSION_MODEL_FRAME_LIMIT) || VIDEO_SESSION_MODEL_FRAME_LIMIT)))
         .map((frame, index) => buildVideoSessionFrameAttachment(frame.dataUrl, index, frame.timestamp))
     : [];
 
@@ -65006,6 +65721,13 @@ const requestPrimaryVideoReply = async (
   const normalizedInput = sanitizeChatLine(String(userInput || "").trim());
   const normalizedResponseMode = String(responseMode || "text").trim() === "voice" ? "voice" : "text";
   if (signal?.aborted) throw createAbortRequestError();
+  const initialVideoStrategy = resolveModelRequestStrategy(getPrimaryApiConfig(), {
+    taskKind: normalizedInput ? MODEL_REQUEST_TASK_KIND.VIDEO_TEXT_INPUT_PLAIN : MODEL_REQUEST_TASK_KIND.VIDEO_COMPACT_TEXT,
+    contextFormat: normalizedInput ? "plain-text" : "",
+    singleVariant: true,
+    imageCount: imageAttachments.length,
+  });
+  const normalizedImageAttachments = limitModelRequestImageAttachments(imageAttachments, initialVideoStrategy);
   const triggeredWorldbookEntries = getTriggeredWorldbookEntries(role, normalizedInput);
   const referenceCatalog = buildRoleReferenceCatalog(role, {
     worldbookEntries: triggeredWorldbookEntries.length ? triggeredWorldbookEntries : undefined,
@@ -65032,13 +65754,13 @@ const requestPrimaryVideoReply = async (
   };
 
   try {
-    const textResponse = await requestPrimaryVideoReplyFallback(role, normalizedInput, {
-      responseMode: normalizedResponseMode,
-      videoDialogLog,
-      imageAttachments,
-      requiredWorldbookTitles: triggeredWorldbookEntries.map((entry) => entry?.title),
-      referenceCatalog,
-      roundContext,
+      const textResponse = await requestPrimaryVideoReplyFallback(role, normalizedInput, {
+        responseMode: normalizedResponseMode,
+        videoDialogLog,
+        imageAttachments: normalizedImageAttachments,
+        requiredWorldbookTitles: triggeredWorldbookEntries.map((entry) => entry?.title),
+        referenceCatalog,
+        roundContext,
       requestTrace,
       signal,
     });
@@ -65059,7 +65781,7 @@ const requestPrimaryVideoReply = async (
       const rescueResponse = await requestPrimaryVideoReplyTextRescue(role, normalizedInput, {
         responseMode: normalizedResponseMode,
         videoDialogLog,
-        imageAttachments,
+        imageAttachments: normalizedImageAttachments,
         requiredWorldbookTitles: triggeredWorldbookEntries.map((entry) => entry?.title),
           referenceCatalog,
           roundContext,
@@ -65331,6 +66053,19 @@ const submitVideoSessionRound = async ({ allowVisualOnly = false, source = "manu
       pushVideoSessionFrame();
       frameAttachments = getVideoSessionRoundFrameAttachments();
     }
+    const videoRoundRequestStrategy = resolveModelRequestStrategy(
+      inputMode === "text" && promptText ? getPrimaryApiConfig() : getStableVideoPrimaryApiConfig(),
+      {
+        taskKind:
+          inputMode === "text" && promptText
+            ? MODEL_REQUEST_TASK_KIND.VIDEO_TEXT_INPUT_PLAIN
+            : MODEL_REQUEST_TASK_KIND.VIDEO_COMPACT_TEXT,
+        contextFormat: inputMode === "text" && promptText ? "plain-text" : "",
+        singleVariant: true,
+        imageCount: frameAttachments.length,
+      },
+    );
+    frameAttachments = limitModelRequestImageAttachments(frameAttachments, videoRoundRequestStrategy);
 
     if (inputMode === "text" && !promptText && !allowPassiveVisualRound) {
       state.videoSession.status = "typing";
