@@ -19794,6 +19794,12 @@ body {
   margin-top: 12px;
 }
 
+.memory-embedding-provider-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .wallet-transaction-row b {
   color: #c2410c;
   font-size: 13px;
@@ -22884,6 +22890,8 @@ const ensureDefaultPandaApiConfig = (config = {}) => ({
     ...(config?.memory || {}),
     preset: String(config?.memory?.preset || "\u718a\u732b").trim() || "\u718a\u732b",
     embeddingEnabled: config?.memory?.embeddingEnabled === true,
+    embeddingUrl: String(config?.memory?.embeddingUrl || "").trim(),
+    embeddingKey: String(config?.memory?.embeddingKey || "").trim(),
     embeddingModel: String(config?.memory?.embeddingModel || "").trim(),
   },
   presets: [...new Set(["\u718a\u732b", ...(Array.isArray(config?.presets) ? config.presets : [])])],
@@ -22979,6 +22987,8 @@ const createDefaultApiConfig = () => ensureDefaultPandaApiConfig({
     key: "sk-bmAJbbuoZ22XHKvHaAuUvtdWH8IiDq1SqbfeX1tyW1XxxDdO",
     preset: "",
     embeddingEnabled: false,
+    embeddingUrl: "",
+    embeddingKey: "",
     embeddingModel: "",
   },
   memory: {
@@ -23767,6 +23777,8 @@ const mergeState = (incoming = {}) => {
         ...fallback.appConfig.memory,
         ...incoming.appConfig?.memory,
         embeddingEnabled: incoming.appConfig?.memory?.embeddingEnabled === true,
+        embeddingUrl: String(incoming.appConfig?.memory?.embeddingUrl || fallback.appConfig.memory?.embeddingUrl || "").trim(),
+        embeddingKey: String(incoming.appConfig?.memory?.embeddingKey || fallback.appConfig.memory?.embeddingKey || "").trim(),
         embeddingModel: String(incoming.appConfig?.memory?.embeddingModel || fallback.appConfig.memory?.embeddingModel || "").trim(),
         name:
           repairKnownText(incoming.appConfig?.memory?.name) ||
@@ -25026,7 +25038,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.09-memory-v3-v4-04";
+const APP_BUILD_VERSION_LABEL = "v2026.05.10-qwen3-vl-embedding-02";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -27367,8 +27379,19 @@ const renderMemoryApiCard = (api = {}, state = {}) => `
     </label>
 
     <div class="setting-label">Embedding 模型</div>
-    <input class="soft-input" data-config="memory.embeddingModel" value="${escapeHtml(api.embeddingModel || "")}" placeholder="例如 text-embedding-3-small 或中转站支持的 embedding 模型" />
-    <div class="setting-mini-note">开启后可为记忆卡片重建真向量索引；聊天、朋友圈和行程会在可用时把向量相似度加入召回排序，失败时自动回退关键词检索。</div>
+    <input class="soft-input" data-config="memory.embeddingModel" value="${escapeHtml(api.embeddingModel || "")}" placeholder="例如 qwen3-vl-embedding" />
+
+    <div class="memory-embedding-provider-grid">
+      <div>
+        <div class="setting-label">Embedding 接口地址</div>
+        <input class="soft-input" data-config="memory.embeddingUrl" value="${escapeHtml(api.embeddingUrl || "")}" placeholder="可选，例如 https://dashscope.aliyuncs.com" />
+      </div>
+      <div>
+        <div class="setting-label">Embedding API Key</div>
+        <input class="soft-input" data-config="memory.embeddingKey" type="password" value="${escapeHtml(api.embeddingKey || "")}" placeholder="可选，不填则复用上方记忆 API Key" />
+      </div>
+    </div>
+    <div class="setting-mini-note">qwen3-vl-embedding 会自动走阿里百炼 DashScope 原生多模态 Embedding 接口，当前记忆检索只提交文字内容；请使用北京地域的百炼 API Key。其他 OpenAI 兼容向量模型仍走 /embeddings，失败时自动回退关键词检索。</div>
     ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起记忆 API 请求。</div>' : ""}
   </section>
 `;
@@ -34992,6 +35015,8 @@ const MEMORY_API_DEFAULTS = Object.freeze({
   key: "",
   followSecondaryModel: true,
   embeddingEnabled: false,
+  embeddingUrl: "",
+  embeddingKey: "",
   embeddingModel: "",
   preset: "\u718a\u732b",
 });
@@ -35192,6 +35217,8 @@ const normalizeMemoryApiConfig = (secondaryConfig = SECONDARY_API_DEFAULTS, memo
     : memoryConfig?.model || getDefaultPlannerModelForConfig(secondaryConfig),
   key: memoryConfig?.key || secondaryConfig.key || MEMORY_API_DEFAULTS.key,
   embeddingEnabled: memoryConfig?.embeddingEnabled === true,
+  embeddingUrl: String(memoryConfig?.embeddingUrl || "").trim(),
+  embeddingKey: String(memoryConfig?.embeddingKey || "").trim(),
   embeddingModel: String(memoryConfig?.embeddingModel || "").trim(),
   preset: memoryConfig?.preset || secondaryConfig.preset || MEMORY_API_DEFAULTS.preset,
 });
@@ -41078,10 +41105,16 @@ const getLivingMemoryEmbeddingSimilarity = (left = [], right = []) => {
 };
 const getLivingMemoryEmbeddingConfig = () => {
   const config = getMemoryApiConfig();
+  const embeddingUrl = String(config?.embeddingUrl || "").trim();
+  const embeddingKey = String(config?.embeddingKey || "").trim();
   const embeddingModel = String(config?.embeddingModel || "").trim();
   return {
     ...config,
+    url: embeddingUrl || config.url,
+    key: embeddingKey || config.key,
     model: embeddingModel,
+    embeddingUrl,
+    embeddingKey,
     embeddingModel,
     enabled: config?.embeddingEnabled === true,
   };
@@ -44272,6 +44305,100 @@ const requestModelTextWithConfig = async ({
 
 const hasCompleteApiConfig = (config = {}) => Boolean(config?.url && config?.model && config?.key);
 
+const getEmbeddingBatchSizeForConfig = (config = {}) => {
+  const model = String(config?.embeddingModel || config?.model || "").trim().toLowerCase();
+  const url = String(config?.url || config?.embeddingUrl || "").trim().toLowerCase();
+  if (model.includes("qwen3-vl-embedding")) return 10;
+  if (model.includes("text-embedding-v4") || model.includes("qwen3") || model.includes("qwen-3") || url.includes("dashscope")) {
+    return 10;
+  }
+  return 16;
+};
+
+const isQwen3VlEmbeddingConfig = (config = {}) => {
+  const model = String(config?.embeddingModel || config?.model || "").trim().toLowerCase();
+  return model.includes("qwen3-vl-embedding");
+};
+
+const DASH_SCOPE_MULTIMODAL_EMBEDDING_PATH = "/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding";
+
+const getDashScopeMultimodalEmbeddingEndpoint = (base = "") => {
+  const normalized = String(base || "").replace(/\/+$/, "");
+  if (!normalized) return "";
+  if (normalized.includes(DASH_SCOPE_MULTIMODAL_EMBEDDING_PATH)) return normalized;
+  if (/dashscope(?:-intl)?\.aliyuncs\.com/i.test(normalized)) {
+    const origin = normalized.match(/^https?:\/\/[^/]+/i)?.[0] || "https://dashscope.aliyuncs.com";
+    return `${origin}${DASH_SCOPE_MULTIMODAL_EMBEDDING_PATH}`;
+  }
+  return ensureEndpoint(normalized, DASH_SCOPE_MULTIMODAL_EMBEDDING_PATH);
+};
+
+const shouldRequestFloatEmbeddingEncoding = (config = {}) => {
+  if (isQwen3VlEmbeddingConfig(config)) return false;
+  const model = String(config?.embeddingModel || config?.model || "").trim().toLowerCase();
+  const url = String(config?.url || config?.embeddingUrl || "").trim().toLowerCase();
+  return model.includes("text-embedding-v4") || model.includes("qwen3") || model.includes("qwen-3") || url.includes("dashscope");
+};
+
+const extractEmbeddingVectorsFromResponse = (data = {}) => {
+  const pools = [
+    data?.output?.embeddings,
+    data?.output?.data,
+    data?.embeddings,
+    data?.data,
+    data?.output,
+  ];
+  for (const pool of pools) {
+    if (!Array.isArray(pool)) continue;
+    const orderedPool = pool.some((item) => Number.isFinite(Number(item?.index)))
+      ? [...pool].sort((left, right) => Number(left?.index ?? 0) - Number(right?.index ?? 0))
+      : pool;
+    const vectors = orderedPool
+      .map((item) => normalizeLivingMemoryRuntimeEmbeddingVector(item?.embedding || item?.vector || item?.values || item))
+      .filter((item) => item.length);
+    if (vectors.length) return vectors;
+  }
+  const singleVector = normalizeLivingMemoryRuntimeEmbeddingVector(data?.output?.embedding || data?.embedding);
+  return singleVector.length ? [singleVector] : [];
+};
+
+const requestQwen3VlEmbeddingVectorsWithConfig = async (config = {}, normalizedInputs = [], { signal = null } = {}) => {
+  const endpoint = getDashScopeMultimodalEmbeddingEndpoint(config.url);
+  const startedAtMs = Date.now();
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.key}`,
+    },
+    signal,
+    body: JSON.stringify({
+      model: config.embeddingModel,
+      input: {
+        contents: normalizedInputs.map((text) => ({ text })),
+      },
+      parameters: {
+        dimension: 1024,
+      },
+    }),
+  });
+  const { data, rawText } = await parseJsonLikeResponse(response);
+  if (!response.ok) {
+    throw attachModelMetaToError(new Error(buildApiErrorMessage(data, `向量请求失败 ${response.status}`, rawText)), {
+      endpoint,
+      model: config.embeddingModel,
+      timestamp: new Date().toISOString(),
+      latencyMs: Math.max(0, Date.now() - startedAtMs),
+      transportMode: "dashscope-multimodal-embedding",
+    });
+  }
+  const vectors = extractEmbeddingVectorsFromResponse(data);
+  if (vectors.length !== normalizedInputs.length) {
+    throw new Error("向量返回数量和输入数量不一致");
+  }
+  return vectors;
+};
+
 const requestEmbeddingVectorsWithConfig = async (config = {}, inputs = [], { signal = null } = {}) => {
   ensureApiRequestsEnabled();
   const normalizedInputs = (Array.isArray(inputs) ? inputs : [inputs])
@@ -44282,6 +44409,9 @@ const requestEmbeddingVectorsWithConfig = async (config = {}, inputs = [], { sig
     throw new Error("记忆向量配置不完整，请填写 Embedding 模型");
   }
   if (signal?.aborted) throw createAbortRequestError();
+  if (isQwen3VlEmbeddingConfig(config)) {
+    return requestQwen3VlEmbeddingVectorsWithConfig(config, normalizedInputs, { signal });
+  }
   const endpoint = ensureEndpoint(config.url, "/embeddings");
   const startedAtMs = Date.now();
   const response = await fetch(endpoint, {
@@ -44294,6 +44424,8 @@ const requestEmbeddingVectorsWithConfig = async (config = {}, inputs = [], { sig
     body: JSON.stringify({
       model: config.embeddingModel,
       input: normalizedInputs,
+      ...(shouldRequestFloatEmbeddingEncoding(config) ? { dimensions: 1024 } : {}),
+      ...(shouldRequestFloatEmbeddingEncoding(config) ? { encoding_format: "float" } : {}),
     }),
   });
   const { data, rawText } = await parseJsonLikeResponse(response);
@@ -44306,9 +44438,7 @@ const requestEmbeddingVectorsWithConfig = async (config = {}, inputs = [], { sig
       transportMode: "openai-embeddings",
     });
   }
-  const vectors = (Array.isArray(data?.data) ? data.data : [])
-    .map((item) => normalizeLivingMemoryRuntimeEmbeddingVector(item?.embedding))
-    .filter((item) => item.length);
+  const vectors = extractEmbeddingVectorsFromResponse(data);
   if (vectors.length !== normalizedInputs.length) {
     throw new Error("向量返回数量和输入数量不一致");
   }
@@ -52643,7 +52773,7 @@ const rebuildLivingMemoryEmbeddingsForRole = async (roleId) => {
   paint();
   let embeddedCount = 0;
   try {
-    const batchSize = 16;
+    const batchSize = getEmbeddingBatchSizeForConfig(config);
     const embeddingMap = new Map();
     for (let index = 0; index < cards.length; index += batchSize) {
       const batch = cards.slice(index, index + batchSize);
