@@ -25038,7 +25038,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.10-qwen3-vl-embedding-02";
+const APP_BUILD_VERSION_LABEL = "v2026.05.10-chat-timeout-memory-03";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -34486,7 +34486,8 @@ const VIDEO_SESSION_RECENT_CHAT_DETAIL_LIMIT = 12;
 const VIDEO_SESSION_WORLDBOOK_DETAIL_LIMIT = 8;
 const VIDEO_SESSION_NPC_DETAIL_LIMIT = 6;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
-const CHAT_REPLY_TIMEOUT_MS = 120_000;
+const CHAT_REPLY_TIMEOUT_MS = 180_000;
+const CHAT_REPLY_QUERY_EMBEDDING_TIMEOUT_MS = 3000;
 const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
 const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
 const VIDEO_SESSION_REPLY_TIMEOUT_MS = 90_000;
@@ -41223,7 +41224,7 @@ const buildRoleGenerationContextAsync = async (
   let queryEmbedding = null;
   if (query && hasLivingMemoryEmbeddingConfig()) {
     try {
-      queryEmbedding = await requestLivingMemoryEmbeddingVector(query);
+      queryEmbedding = await requestLivingMemoryEmbeddingVector(query, { signal: options?.signal || null });
     } catch (error) {
       console.warn("[living-memory] query embedding skipped", error);
     }
@@ -43464,6 +43465,35 @@ const buildModelResponseMeta = ({
   };
 };
 
+const buildModelRequestPreflightMeta = ({
+  config = {},
+  endpoint = "",
+  variantMode = "",
+  startedAtMs = Date.now(),
+  contextText = "",
+  systemPromptText = "",
+  imageCount = 0,
+  promptBreakdown = [],
+  modelRequestStrategy = null,
+} = {}) => ({
+  model: String(config?.model || "").trim(),
+  endpoint: String(endpoint || "").trim(),
+  transportMode: String(variantMode || config?.type || "").trim(),
+  timestamp: new Date(startedAtMs).toISOString(),
+  latencyMs: 0,
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+  cachedTokens: 0,
+  reasoningTokens: 0,
+  estimatedPromptTokens: estimatePromptTokensFromText(systemPromptText) + estimatePromptTokensFromText(contextText),
+  contextChars: String(contextText || "").length,
+  systemPromptChars: String(systemPromptText || "").length,
+  imageCount: Math.max(0, Number(imageCount || 0)),
+  promptBreakdown: Array.isArray(promptBreakdown) ? promptBreakdown : [],
+  requestStrategy: getModelRequestStrategyMeta(modelRequestStrategy),
+});
+
 const emitModelRequestTrace = (requestTrace, payload = {}) => {
   if (typeof requestTrace !== "function") return;
   try {
@@ -43553,6 +43583,15 @@ const requestModelJsonWithConfig = async ({
   const promptBreakdown = buildPromptBreakdown(finalSystemPrompt, contextPayload);
   const effectivePreferredVariantMode = requestStrategy.preferredVariantMode;
   const effectiveSingleVariant = requestStrategy.singleVariant;
+  let lastPreflightMeta = buildModelRequestPreflightMeta({
+    config,
+    startedAtMs: Date.now(),
+    contextText: context,
+    systemPromptText: finalSystemPrompt,
+    imageCount: imageAttachments.length,
+    promptBreakdown,
+    modelRequestStrategy: requestStrategy,
+  });
 
   const buildOpenAiImageContent = (prefixText = "") =>
     imageAttachments.length
@@ -43733,6 +43772,17 @@ const requestModelJsonWithConfig = async ({
   for (const endpoint of getOpenAiEndpointCandidates(config.url).slice(0, STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? 1 : undefined)) {
     for (const variant of messageVariants) {
       const startedAtMs = Date.now();
+      lastPreflightMeta = buildModelRequestPreflightMeta({
+        config,
+        endpoint,
+        variantMode: variant.mode,
+        startedAtMs,
+        contextText: context,
+        systemPromptText: finalSystemPrompt,
+        imageCount: imageAttachments.length,
+        promptBreakdown,
+        modelRequestStrategy: requestStrategy,
+      });
       try {
         const response = await fetch(endpoint, {
           method: "POST",
@@ -43846,7 +43896,7 @@ const requestModelJsonWithConfig = async ({
           latencyMs: Math.max(0, Date.now() - startedAtMs),
           imageCount: imageAttachments.length,
         });
-        lastError = error;
+        lastError = error?.modelMeta ? error : attachModelMetaToError(error, lastPreflightMeta);
       }
     }
   }
@@ -44456,7 +44506,7 @@ const requestLivingMemoryEmbeddingVector = async (text = "", { signal = null } =
         linked.dispose();
       }
     },
-    8000,
+    CHAT_REPLY_QUERY_EMBEDDING_TIMEOUT_MS,
     "记忆向量查询超时",
   );
   return vectors[0] || [];
@@ -47894,6 +47944,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
   const roleContext = applyRoleContextCompression(await buildChatFullRoleContextAsync(role, {
     userInput,
     generationMode: "chat",
+    signal,
   }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: "把偏短或半截的聊天草稿重写成完整自然的 3 到 6 条聊天回复",
@@ -48024,6 +48075,7 @@ const requestPrimaryChatReplyTextFallback = async (
   const roleContext = applyRoleContextCompression(await buildChatFullRoleContextAsync(role, {
     userInput,
     generationMode: "chat",
+    signal,
   }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: "当结构化回复不稳定时 用纯文本格式生成同一轮聊天回复",
@@ -48126,6 +48178,7 @@ const requestAutonomousChatReplyTextFallback = async (
     promptSeed = "",
     referenceCatalog = null,
     requestTrace = null,
+    signal = null,
   } = {},
 ) => {
   const normalizedMode = mode === "offline" ? "offline" : "proactive";
@@ -48140,6 +48193,7 @@ const requestAutonomousChatReplyTextFallback = async (
     userInput: promptSeed,
     now: syntheticNow,
     generationMode: normalizedMode,
+    signal: null,
   }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: normalizedMode === "offline" ? "用纯文本格式补救离线消息" : "用纯文本格式补救主动消息",
@@ -48187,6 +48241,7 @@ ${dailyLifeMemoryPrompt}
     taskKind: MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
     modelRequestStrategy: requestStrategy,
     requestTrace,
+    signal,
   });
 
   const parsed = parsePrimaryChatPlainTextFallback(role, response?.text || "", {
@@ -49865,8 +49920,9 @@ const requestAutonomousOfflineBatchReply = async (
   scheduledAtList = [],
   {
     batchError = null,
+    signal = null,
   } = {},
-) => requestAutonomousOfflineBatchReplyWithSingleFallback(role, scheduledAtList, { batchError });
+) => requestAutonomousOfflineBatchReplyWithSingleFallback(role, scheduledAtList, { batchError, signal });
 
 const buildAutonomousOfflineBatchFallbackMeta = (responses = [], batchError = null) => {
   const metas = (Array.isArray(responses) ? responses : []).map((item) => item?.meta).filter(Boolean);
@@ -49884,6 +49940,7 @@ const requestAutonomousOfflineBatchReplyWithSingleFallback = async (
   scheduledAtList = [],
   {
     batchError = null,
+    signal = null,
   } = {},
 ) => {
   const normalizedSchedule = [...new Set(scheduledAtList.map((item) => normalizeLooseTimestamp(item)).filter(Boolean))].sort();
@@ -49895,7 +49952,7 @@ const requestAutonomousOfflineBatchReplyWithSingleFallback = async (
   const segments = [];
 
   for (const scheduledAt of normalizedSchedule) {
-    const response = await requestAutonomousChatReply(role, "offline", { scheduledAt });
+    const response = await requestAutonomousChatReply(role, "offline", { scheduledAt, signal });
     if (!response?.result) {
       throw batchError || new Error("离线批量降级后仍未生成可用消息");
     }
@@ -49914,7 +49971,7 @@ const requestAutonomousOfflineBatchReplyWithSingleFallback = async (
   };
 };
 
-const requestAutonomousChatReply = async (role, mode = "proactive", { scheduledAt = "", scheduledAtList = [] } = {}) => {
+const requestAutonomousChatReply = async (role, mode = "proactive", { scheduledAt = "", scheduledAtList = [], signal = null } = {}) => {
   const normalizedMode = mode === "offline" ? "offline" : "proactive";
   const normalizedSchedule = [...new Set(scheduledAtList.map((item) => normalizeLooseTimestamp(item)).filter(Boolean))].sort();
   const effectiveSchedule = STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? normalizedSchedule.slice(0, 1) : normalizedSchedule;
@@ -49923,7 +49980,7 @@ const requestAutonomousChatReply = async (role, mode = "proactive", { scheduledA
   const promptSeed = getAutonomousPromptSeed(role, normalizedMode);
 
   if (normalizedMode === "offline" && effectiveSchedule.length > 1) {
-    return requestAutonomousOfflineBatchReplyWithSingleFallback(role, effectiveSchedule);
+    return requestAutonomousOfflineBatchReplyWithSingleFallback(role, effectiveSchedule, { signal });
   }
 
   try {
@@ -49931,6 +49988,7 @@ const requestAutonomousChatReply = async (role, mode = "proactive", { scheduledA
       scheduledAt: syntheticNow.toISOString(),
       promptSeed,
       referenceCatalog,
+      signal,
     });
     const validationMessage = validateAutonomousChatResult(role, normalizedMode, textResponse.result, referenceCatalog);
     if (validationMessage) {
@@ -50060,6 +50118,14 @@ const requestAutonomousAiReply = async (
   )].sort();
   const startedAt = normalizeLooseTimestamp(scheduledAt) || normalizedScheduledAtList[0] || new Date().toISOString();
   const shouldShowTyping = state.activeChatRoleId === roleId && !state.chatReplyBusyRoleId;
+  const abortController = new AbortController();
+  let autonomousTimedOut = false;
+  const autonomousTimeoutId = window.setTimeout(() => {
+    autonomousTimedOut = true;
+    if (!abortController.signal.aborted) {
+      abortController.abort();
+    }
+  }, CHAT_REPLY_TIMEOUT_MS);
 
   addBusyToken("apiGenerationBusy", token);
   if (shouldShowTyping) {
@@ -50102,6 +50168,7 @@ const requestAutonomousAiReply = async (
     apiResponse = await requestAutonomousChatReply(freshRole, normalizedMode, {
       scheduledAt: startedAt,
       scheduledAtList: STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? normalizedScheduledAtList.slice(0, 1) : normalizedScheduledAtList,
+      signal: abortController.signal,
     });
     result = apiResponse?.result || null;
     if (apiResponse?.meta) {
@@ -50182,11 +50249,28 @@ const requestAutonomousAiReply = async (
     queueAutoSummaryCheckForRole(roleId);
     return true;
   } catch (error) {
+    const displayErrorMessage =
+      autonomousTimedOut || isAbortRequestError(error)
+        ? normalizedMode === "offline"
+          ? "离线消息生成超时"
+          : "主动消息生成超时"
+        : error?.message || "主 API 调用失败";
     persistPrimaryChatUsageSnapshot(roleId, {
       mode: normalizedMode,
-      status: "error",
-      meta: error?.modelMeta || null,
-      errorMessage: error?.message || "主 API 调用失败",
+      status: autonomousTimedOut || isAbortRequestError(error) ? "cancelled" : "error",
+      meta: withRoundWallClockMeta(
+        error?.modelMeta
+          ? {
+              ...error.modelMeta,
+              latencyMs: autonomousTimedOut
+                ? Math.max(Number(error.modelMeta.latencyMs || 0), CHAT_REPLY_TIMEOUT_MS)
+                : Number(error.modelMeta.latencyMs || 0),
+            }
+          : null,
+        new Date(startedAt).getTime() || Date.now(),
+        Date.now(),
+      ),
+      errorMessage: displayErrorMessage,
     });
     updateRole(roleId, (nextRole) => {
       const failedAt = new Date().toISOString();
@@ -50197,10 +50281,11 @@ const requestAutonomousAiReply = async (
       return nextRole;
     }, { paintNow: false });
     if (force || state.activeChatRoleId === roleId) {
-      setToast(error?.message || "主 API 调用失败，未生成消息");
+      setToast(displayErrorMessage);
     }
     return false;
   } finally {
+    window.clearTimeout(autonomousTimeoutId);
     removeBusyToken("apiGenerationBusy", token);
     if (shouldShowTyping && state.chatReplyBusyRoleId === roleId) {
       state.chatReplyBusyRoleId = null;
@@ -65219,10 +65304,22 @@ const requestAndAppendAiReply = async (
   } catch (error) {
     if (isAbortRequestError(error)) {
       const abortedMessage = replyTimedOut ? "生成回复超时" : "已中断生成回复";
+      const fallbackMeta = error?.modelMeta || null;
       persistPrimaryChatUsageSnapshot(roleId, {
         mode: "reply",
         status: "cancelled",
-        meta: withRoundWallClockMeta(error?.modelMeta || null, roundStartedAtMs, Date.now()),
+        meta: withRoundWallClockMeta(
+          fallbackMeta
+            ? {
+                ...fallbackMeta,
+                latencyMs: replyTimedOut
+                  ? Math.max(Number(fallbackMeta.latencyMs || 0), CHAT_REPLY_TIMEOUT_MS)
+                  : Number(fallbackMeta.latencyMs || 0),
+              }
+            : null,
+          roundStartedAtMs,
+          Date.now(),
+        ),
         errorMessage: abortedMessage,
       });
       setToast(abortedMessage);
