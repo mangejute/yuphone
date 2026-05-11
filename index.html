@@ -2380,13 +2380,46 @@ select {
 
 .chat-screen.bubble-theme-wechat .voice-card.expanded,
 .chat-screen.bubble-theme-custom .voice-card.expanded {
+  align-items: start;
+  justify-items: start;
   padding-bottom: 0 !important;
+}
+
+.chat-screen.bubble-theme-wechat .voice-card.user-voice-card.expanded,
+.chat-screen.bubble-theme-custom .voice-card.user-voice-card.expanded {
+  justify-items: end;
+}
+
+.chat-screen.bubble-theme-wechat .chat-message-line.voice-line .theme-message-avatar-slot,
+.chat-screen.bubble-theme-custom .chat-message-line.voice-line .theme-message-avatar-slot {
+  align-self: start !important;
+  height: calc(38px * var(--chat-bubble-scale, 1));
+  min-height: calc(38px * var(--chat-bubble-scale, 1));
+  overflow: visible;
+}
+
+.chat-screen.bubble-theme-wechat .chat-message-line.voice-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-custom .chat-message-line.voice-line .chat-bubble-wrap {
+  align-self: start !important;
 }
 
 .chat-screen.bubble-theme-wechat .voice-card .voice-pill,
 .chat-screen.bubble-theme-custom .voice-card .voice-pill {
   position: relative;
+  grid-row: 1;
   z-index: 1;
+}
+
+.chat-screen.bubble-theme-wechat .voice-card.expanded .voice-transcript,
+.chat-screen.bubble-theme-custom .voice-card.expanded .voice-transcript {
+  grid-row: 2;
+  margin-top: 3px;
+  justify-self: start;
+}
+
+.chat-screen.bubble-theme-wechat .voice-card.user-voice-card.expanded .voice-transcript,
+.chat-screen.bubble-theme-custom .voice-card.user-voice-card.expanded .voice-transcript {
+  justify-self: end;
 }
 
 .voice-action-btn {
@@ -25518,7 +25551,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.11-storage-rescue-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.12-wechat-voice-expand-align-01";
 
 const escapeHtml = (value = "") =>
   String(value)
