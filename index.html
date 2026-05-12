@@ -2390,36 +2390,55 @@ select {
   justify-items: end;
 }
 
+.chat-screen.bubble-theme-wechat .chat-message-line.voice-line,
+.chat-screen.bubble-theme-custom .chat-message-line.voice-line {
+  row-gap: 3px;
+  align-items: start;
+}
+
 .chat-screen.bubble-theme-wechat .chat-message-line.voice-line .theme-message-avatar-slot,
 .chat-screen.bubble-theme-custom .chat-message-line.voice-line .theme-message-avatar-slot {
   align-self: start !important;
-  height: calc(38px * var(--chat-bubble-scale, 1));
-  min-height: calc(38px * var(--chat-bubble-scale, 1));
+  grid-row: 1;
   overflow: visible;
 }
 
 .chat-screen.bubble-theme-wechat .chat-message-line.voice-line .chat-bubble-wrap,
 .chat-screen.bubble-theme-custom .chat-message-line.voice-line .chat-bubble-wrap {
   align-self: start !important;
+  grid-row: 1;
+}
+
+.chat-screen.bubble-theme-wechat .chat-voice-transcript-slot,
+.chat-screen.bubble-theme-custom .chat-voice-transcript-slot {
+  display: grid;
+  grid-row: 2;
+  min-width: 0;
+  width: min(calc(320px * var(--chat-bubble-scale, 1)), 72vw);
+  max-width: 100%;
+}
+
+.chat-screen.bubble-theme-wechat .chat-voice-transcript-slot.ai-voice-transcript-slot,
+.chat-screen.bubble-theme-custom .chat-voice-transcript-slot.ai-voice-transcript-slot {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.chat-screen.bubble-theme-wechat .chat-voice-transcript-slot.user-voice-transcript-slot,
+.chat-screen.bubble-theme-custom .chat-voice-transcript-slot.user-voice-transcript-slot {
+  grid-column: 1;
+  justify-self: end;
 }
 
 .chat-screen.bubble-theme-wechat .voice-card .voice-pill,
 .chat-screen.bubble-theme-custom .voice-card .voice-pill {
   position: relative;
-  grid-row: 1;
   z-index: 1;
 }
 
-.chat-screen.bubble-theme-wechat .voice-card.expanded .voice-transcript,
-.chat-screen.bubble-theme-custom .voice-card.expanded .voice-transcript {
-  grid-row: 2;
-  margin-top: 3px;
-  justify-self: start;
-}
-
-.chat-screen.bubble-theme-wechat .voice-card.user-voice-card.expanded .voice-transcript,
-.chat-screen.bubble-theme-custom .voice-card.user-voice-card.expanded .voice-transcript {
-  justify-self: end;
+.chat-screen.bubble-theme-wechat .voice-card > .voice-transcript,
+.chat-screen.bubble-theme-custom .voice-card > .voice-transcript {
+  display: none !important;
 }
 
 .voice-action-btn {
@@ -9344,6 +9363,22 @@ body {
   overflow: visible !important;
 }
 
+.chat-message-line.media-line .ai-scene-card,
+.chat-row.media-line .ai-scene-card {
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
+  width: min(var(--chat-image-size), 70vw) !important;
+  max-width: min(var(--chat-image-size), 70vw) !important;
+  min-height: calc(var(--chat-image-size) + 18px) !important;
+  padding: 12px 12px 10px !important;
+  border: 1px solid #ececef !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(17, 17, 17, 0.06) !important;
+  color: #111111 !important;
+  overflow: hidden !important;
+}
+
 .chat-message-line.media-line .image-placeholder.image-real,
 .chat-row.media-line .image-placeholder.image-real {
   display: block !important;
@@ -12332,7 +12367,7 @@ html.chat-composer-focused .ref-chat-composer {
   display: grid;
   grid-template-columns: var(--chat-avatar-size) minmax(0, 1fr);
   gap: var(--chat-avatar-gap);
-  align-items: center;
+  align-items: start;
   justify-items: stretch;
 }
 
@@ -12447,11 +12482,6 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-custom .theme-message-avatar-slot,
 .chat-screen.bubble-theme-qq .qq-message-avatar-slot {
   align-self: start;
-}
-
-.chat-screen.bubble-theme-wechat .theme-message-avatar-slot,
-.chat-screen.bubble-theme-custom .theme-message-avatar-slot {
-  align-self: center;
 }
 
 .chat-screen.bubble-theme-qq .theme-message-avatar,
@@ -12959,6 +12989,19 @@ html.chat-composer-focused .ref-chat-composer {
   content: none !important;
 }
 
+.chat-screen.bubble-theme-wechat .chat-message-line.media-line .ai-scene-card,
+.chat-screen.bubble-theme-custom .chat-message-line.media-line .ai-scene-card {
+  width: min(var(--chat-image-size), 70vw) !important;
+  max-width: min(var(--chat-image-size), 70vw) !important;
+  min-height: calc(var(--chat-image-size) + 18px) !important;
+  padding: 12px 12px 10px !important;
+  border: 1px solid #ececef !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(17, 17, 17, 0.06) !important;
+  overflow: hidden !important;
+}
+
 .chat-screen.bubble-theme-wechat .chat-message-line.media-line .image-real {
   display: block !important;
   width: fit-content !important;
@@ -12984,7 +13027,7 @@ html.chat-composer-focused .ref-chat-composer {
 
 .chat-screen.bubble-theme-wechat .bubble-tail,
 .chat-screen.bubble-theme-custom .bubble-tail {
-  top: 50% !important;
+  top: calc(var(--chat-avatar-size) / 2 + var(--chat-tail-offset-y, 0px)) !important;
   width: 8px !important;
   height: 12px !important;
   opacity: 1;
@@ -13014,7 +13057,7 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .chat-bubble::after {
   content: "" !important;
   position: absolute;
-  top: calc(50% + var(--chat-tail-offset-y, 0px));
+  top: calc(var(--chat-avatar-size) / 2 + var(--chat-tail-offset-y, 0px));
   width: 8px;
   height: 12px;
   background-position: center;
@@ -25551,7 +25594,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.12-wechat-voice-expand-align-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.12-wechat-top-align-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -25868,6 +25911,21 @@ const renderAvatar = (profile, className = "avatar", alt = "头像") => {
 };
 
 const renderMessageMediaDebugBadge = () => "";
+
+const renderVoiceTranscriptBlock = (message, role = null) => {
+  const voiceCacheEntry = role?.voiceCache?.[message.id] || null;
+  const voiceLoading = voiceCacheEntry?.status === "loading";
+  const voiceReady = Boolean(voiceCacheEntry?.dataUrl);
+  return `
+    <div class="voice-transcript">
+      <div class="voice-transcript-actions">
+        <button type="button" data-action="play-voice" data-message-id="${message.id}">生成</button>
+        <button type="button" data-action="download-voice" data-message-id="${message.id}" ${voiceLoading || !voiceReady ? "disabled" : ""}>下载</button>
+      </div>
+      <div class="voice-transcript-text">${nlToBr(message.content)}</div>
+    </div>
+  `;
+};
 
 const renderAvatarStage = (profile, label, action, alt = "头像") => `
   <div class="avatar-stage-block">
@@ -28353,19 +28411,6 @@ const renderMessageContent = (message, role = null, state = {}, { suppressQuote 
             </button>
           </div>
         </div>
-        ${
-          voiceExpanded
-            ? `
-              <div class="voice-transcript">
-                <div class="voice-transcript-actions">
-                  <button type="button" data-action="play-voice" data-message-id="${message.id}">生成</button>
-                  <button type="button" data-action="download-voice" data-message-id="${message.id}" ${voiceLoading || !voiceReady ? "disabled" : ""}>下载</button>
-                </div>
-                <div class="voice-transcript-text">${nlToBr(message.content)}</div>
-              </div>
-            `
-            : ""
-        }
       </div>
     `;
   }
@@ -30504,6 +30549,10 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
   const bubbleBody = renderMessageContent(message, role, state, { suppressQuote: useWechatQuoteStyle });
   const hasExternalQuote = Boolean(externalQuote);
   const usesLineQuoteSlot = hasExternalQuote && chatSkin === "wechat";
+  const voiceTranscriptSlot =
+    message.type === "voice" && Array.isArray(state?.expandedVoiceMessageIds) && state.expandedVoiceMessageIds.includes(message.id)
+      ? `<div class="chat-voice-transcript-slot ${isUser ? "user-voice-transcript-slot" : "ai-voice-transcript-slot"}">${renderVoiceTranscriptBlock(message, role)}</div>`
+      : "";
   const quoteSlot = usesLineQuoteSlot
     ? `<div class="chat-quote-slot ${isUser ? "user-quote-slot" : "ai-quote-slot"}">${externalQuote}</div>`
     : "";
@@ -30524,6 +30573,7 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
         </${bubbleTag}>
         ${inlineExternalQuote}
       </div>
+      ${voiceTranscriptSlot}
       ${quoteSlot}
       ${isUser ? messageAvatar : ""}
     </div>
@@ -34496,6 +34546,21 @@ ${scope} .chat-row.media-line .image-placeholder.image-real {
   place-items: initial !important;
   overflow: visible !important;
 }
+${scope} .chat-message-line.media-line .ai-scene-card,
+${scope} .chat-row.media-line .ai-scene-card {
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
+  width: min(var(--chat-image-size), 70vw) !important;
+  max-width: min(var(--chat-image-size), 70vw) !important;
+  min-height: calc(var(--chat-image-size) + 18px) !important;
+  padding: 12px 12px 10px !important;
+  border: 1px solid #ececef !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(17, 17, 17, 0.06) !important;
+  color: #111111 !important;
+  overflow: hidden !important;
+}
 ${scope} .chat-message-line.user-line.image-line .chat-bubble-wrap,
 ${scope} .chat-message-line.user-line.image-line .chat-bubble.image-bubble,
 ${scope} .chat-message-line.user-line.image-line .image-real {
@@ -34529,6 +34594,9 @@ ${scope} .voice-card.user-voice-card .voice-pill {
   background: var(--chat-user-bubble-color) !important;
 }
 ${scope} .voice-card.user-voice-card .voice-transcript {
+  background: color-mix(in srgb, var(--chat-user-bubble-color) 78%, white 22%) !important;
+}
+${scope} .chat-voice-transcript-slot.user-voice-transcript-slot .voice-transcript {
   background: color-mix(in srgb, var(--chat-user-bubble-color) 78%, white 22%) !important;
 }
 `);
@@ -41137,6 +41205,62 @@ const pickTimelineContextForNow = (role, now = new Date()) => {
   };
 };
 
+const buildRoleTimelineActivityContext = (role, now = new Date()) => {
+  const safeNow = now instanceof Date ? now : new Date(now || Date.now());
+  const fallback = {
+    isBeforeFirstTimeline: false,
+    timelineWakeAt: "",
+    timelineWakeTime: "",
+    timelineWakeTitle: "",
+    timelineAwakeByNow: true,
+  };
+  if (Number.isNaN(safeNow.getTime())) return fallback;
+
+  const todayKey = formatJourneyDayKey(safeNow);
+  const entries = getRoleTimelineForDate(role, todayKey)
+    .map((item, index) => {
+      const range = parseRuntimeTimelineRange(item?.time || "");
+      if (!range) return null;
+      const startClock = `${String(Math.floor(range.start / 60)).padStart(2, "0")}:${String(range.start % 60).padStart(2, "0")}`;
+      const startDateKey = Math.floor(range.start / 60) < JOURNEY_DAY_BOUNDARY_HOUR ? shiftDateKey(todayKey, 1) : todayKey;
+      const startDate = new Date(`${startDateKey}T${startClock}:00`);
+      if (Number.isNaN(startDate.getTime())) return null;
+      return {
+        item,
+        index,
+        startDate,
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.startDate.getTime() - right.startDate.getTime() || left.index - right.index);
+  const first = entries[0] || null;
+  if (!first) return fallback;
+
+  const firstText = [first.item?.title, first.item?.detail, first.item?.place, first.item?.mood].filter(Boolean).join(" ");
+  const scheduledBeforeFirst = safeNow.getTime() < first.startDate.getTime();
+  const shouldTreatBeforeFirstAsRest = role?.settings?.realityMode !== false && scheduledBeforeFirst;
+
+  return {
+    isBeforeFirstTimeline: scheduledBeforeFirst,
+    timelineWakeAt: first.startDate.toISOString(),
+    timelineWakeTime: String(first.item?.time || "").trim(),
+    timelineWakeTitle: String(first.item?.title || "").trim(),
+    timelineAwakeByNow: !shouldTreatBeforeFirstAsRest,
+  };
+};
+
+const getRoleTimelineAwarePlace = (role, now = new Date()) =>
+  getRoleCurrentPlace(role, now, { ignoreExplicit: true }) || getRoleCurrentPlace(role, now) || role?.profile?.location || "";
+
+const shouldDeferAutonomousForRest = (role, now = new Date()) => {
+  if (!role || role?.settings?.realityMode === false) return false;
+  const timelineActivity = buildRoleTimelineActivityContext(role, now);
+  if (!timelineActivity.timelineAwakeByNow) return true;
+  const timelineContext = pickTimelineContextForNow(role, now);
+  if (timelineContext.current) return false;
+  return isSleeping(role, now);
+};
+
 const buildRoleTimeContext = (role, now = new Date()) => {
   const currentTimeText = now.toLocaleString("zh-CN", { hour12: false });
   const pureCurrentTimeText = new Intl.DateTimeFormat("zh-CN", {
@@ -41150,6 +41274,7 @@ const buildRoleTimeContext = (role, now = new Date()) => {
     hour12: false,
   }).format(now);
   const timeContext = pickTimelineContextForNow(role, now);
+  const timelineActivity = buildRoleTimelineActivityContext(role, now);
   const holiday = getChinaHolidayInfo(now);
   const lastMessage = (role?.chats?.messages || []).slice(-1)[0] || null;
   const lastMessageAt = String(lastMessage?.timestamp || "").trim();
@@ -41166,7 +41291,12 @@ const buildRoleTimeContext = (role, now = new Date()) => {
     realityMode: role?.settings?.realityMode !== false,
     sleepWindow: `${role?.settings?.sleepStart || "03:00"}-${role?.settings?.sleepEnd || "10:00"}`,
     isSleepingNow: isSleeping(role, now),
-    currentPlace: getRoleCurrentPlace(role),
+    isTimelineRestingNow: !timelineActivity.timelineAwakeByNow,
+    timelineAwakeByNow: timelineActivity.timelineAwakeByNow,
+    timelineWakeAt: timelineActivity.timelineWakeAt,
+    timelineWakeTime: timelineActivity.timelineWakeTime,
+    timelineWakeTitle: timelineActivity.timelineWakeTitle,
+    currentPlace: getRoleTimelineAwarePlace(role, now),
     holiday,
     currentTimeline: timeContext.current,
     previousTimeline: timeContext.previous,
@@ -42394,7 +42524,7 @@ const buildRoleGenerationContext = (
       onlineStyle: truncateContextText(role.profile.onlineStyle, isVideoMode ? 80 : structuredTask ? 220 : 420),
       memorySummary: truncateContextText(role.profile.memorySummary, isVideoMode ? 220 : structuredTask ? 280 : 520),
       worldbookDraft: truncateContextText(role.profile.worldbookDraft, isVideoMode ? 80 : structuredTask ? 220 : 420),
-      currentPlace: getRoleCurrentPlace(role),
+      currentPlace: getRoleTimelineAwarePlace(role, now),
       location: role.profile.location,
       realCityReference: role.profile.realCityReference,
       weather: role.profile.weather,
@@ -42615,7 +42745,7 @@ const buildRoleLightTextContext = (role, { userInput = "", now = new Date(), rec
     userName: String(state.userProfile?.name || "用户").trim(),
     persona: truncateContextText(role?.profile?.bio || role?.profile?.personality || "", 180),
     style: truncateContextText(role?.profile?.onlineStyle || role?.profile?.speakingStyle || "", 120),
-    currentPlace: truncateContextText(getRoleCurrentPlace(role) || role?.profile?.location || "", 40),
+    currentPlace: truncateContextText(getRoleTimelineAwarePlace(role, now), 40),
     currentStatus: truncateContextText(role?.status?.headerText || "", 24),
     currentTime: roleTimeContext.nowText,
     currentTimePlainText: roleTimeContext.pureNowText,
@@ -42878,7 +43008,7 @@ const buildJourneyGenerationContext = (role, userInput = "", targetDateKey = for
       summaryLimit: 44,
       beatTextLimit: 32,
     }),
-    mapPlaces: getRoleUsableMapPlaces(role, 6)
+    mapPlaces: getJourneyRankedUsableMapPlaces(role, 10, { targetDateKey: normalizedTargetDate })
       .map((item) => ({
       name: String(item?.name || "").trim(),
       description: truncateContextText(item?.description || "", 40),
@@ -45877,8 +46007,149 @@ const getRoleUsableMapPlaceNames = (role, limit = 18) =>
     limit,
   );
 
-const getJourneyAllowedPlaceNames = (role, limit = 18) => {
-  const mapPlaceNames = getRoleUsableMapPlaceNames(role, limit);
+const normalizeJourneyPlaceRankKey = (value = "") =>
+  String(value || "")
+    .replace(/[·•｜|,，.。:：;；、\-—–_~（）()\[\]【】"'“”‘’\s]/g, "")
+    .trim()
+    .toLowerCase();
+
+const isJourneyRankedPlaceMatch = (left = "", right = "") => {
+  const leftKey = normalizeJourneyPlaceRankKey(left);
+  const rightKey = normalizeJourneyPlaceRankKey(right);
+  if (!leftKey || !rightKey) return false;
+  if (leftKey === rightKey) return true;
+  return Math.min(leftKey.length, rightKey.length) >= 4 && (leftKey.includes(rightKey) || rightKey.includes(leftKey));
+};
+
+const getJourneyPlaceUsageOrdinal = (dateKey = "") => {
+  const rawDateKey = String(dateKey || "").trim();
+  if (!rawDateKey) return 0;
+  const normalizedDateKey = formatDateKey(rawDateKey);
+  if (!normalizedDateKey) return 0;
+  const parsed = Date.parse(`${normalizedDateKey}T12:00:00`);
+  return Number.isFinite(parsed) ? Math.round(parsed / 86400000) : 0;
+};
+
+const getJourneyPlaceRotationSeed = (role, targetDateKey = formatDateKey()) => {
+  const seedSource = [
+    formatDateKey(targetDateKey),
+    String(role?.id || "").trim(),
+    String(role?.profile?.note || role?.profile?.name || "").trim(),
+  ].join("|");
+  let hash = 0;
+  for (let index = 0; index < seedSource.length; index += 1) {
+    hash = (hash * 31 + seedSource.charCodeAt(index)) % 1000003;
+  }
+  return hash;
+};
+
+const collectJourneyPlaceUsageSources = (role) => {
+  const sources = [];
+  const addTimeline = (timeline = [], dateKey = "", sourceRank = 0) => {
+    (Array.isArray(timeline) ? timeline : []).forEach((item, index) => {
+      const place = String(item?.place || item?.location || item?.scene || "").trim();
+      if (!place) return;
+      const rawDateKey = String(item?.journeyDateKey || item?.date || dateKey || "").trim();
+      sources.push({
+        place,
+        dateKey: rawDateKey ? formatDateKey(rawDateKey) : "",
+        sourceRank,
+        index,
+      });
+    });
+  };
+
+  Object.entries(role?.timelineByDate || {}).forEach(([dateKey, timeline]) => addTimeline(timeline, dateKey, 1));
+  addTimeline(role?.timeline || [], formatJourneyDayKey(), 2);
+  Object.entries(role?.journeyLinkedByDate || {}).forEach(([dateKey, snapshot]) =>
+    addTimeline(snapshot?.timeline || snapshot?.entries || [], dateKey, 3),
+  );
+  addTimeline(role?.monitor?.timeline || [], "", 4);
+  return sources;
+};
+
+const getJourneyRankedUsableMapPlaces = (role, limit = 18, { targetDateKey = formatDateKey() } = {}) => {
+  const rawPlaces = getRoleUsableMapPlaces(role, 96)
+    .map((item, index) => ({
+      ...item,
+      _rankIndex: index,
+      _rankKey: normalizeJourneyPlaceRankKey(item?.name || ""),
+    }))
+    .filter((item) => item._rankKey);
+  const seenKeys = new Set();
+  const places = rawPlaces.filter((item) => {
+    if (seenKeys.has(item._rankKey)) return false;
+    seenKeys.add(item._rankKey);
+    return true;
+  });
+  if (!places.length) return [];
+
+  const usageMap = new Map(
+    places.map((item) => [
+      item._rankKey,
+      {
+        count: 0,
+        lastOrdinal: 0,
+        lastSourceRank: 0,
+        lastIndex: -1,
+      },
+    ]),
+  );
+  const usageSources = collectJourneyPlaceUsageSources(role);
+  usageSources.forEach((source) => {
+    const matchedPlace = places.find((item) => isJourneyRankedPlaceMatch(source.place, item.name));
+    if (!matchedPlace) return;
+    const usage = usageMap.get(matchedPlace._rankKey);
+    if (!usage) return;
+    const ordinal = getJourneyPlaceUsageOrdinal(source.dateKey);
+    usage.count += 1;
+    if (
+      ordinal > usage.lastOrdinal ||
+      (ordinal === usage.lastOrdinal && Number(source.sourceRank || 0) >= usage.lastSourceRank && Number(source.index || 0) > usage.lastIndex)
+    ) {
+      usage.lastOrdinal = ordinal;
+      usage.lastSourceRank = Number(source.sourceRank || 0);
+      usage.lastIndex = Number(source.index || 0);
+    }
+  });
+
+  const rotationSeed = getJourneyPlaceRotationSeed(role, targetDateKey);
+  const currentPlace = String(getRoleCurrentPlace(role) || role?.profile?.location || "").trim();
+  const safeLimit = Math.max(1, Number(limit) || places.length || 18);
+  return places
+    .map((item) => {
+      const usage = usageMap.get(item._rankKey) || {};
+      const rotatedIndex = (Number(item._rankIndex || 0) + rotationSeed) % Math.max(1, places.length);
+      const isCurrent = currentPlace && isJourneyRankedPlaceMatch(currentPlace, item.name);
+      return {
+        ...item,
+        _rankUsageCount: Number(usage.count || 0),
+        _rankLastOrdinal: Number(usage.lastOrdinal || 0),
+        _rankRotatedIndex: rotatedIndex,
+        _rankIsCurrent: Boolean(isCurrent),
+      };
+    })
+    .sort((left, right) => {
+      if (left._rankIsCurrent !== right._rankIsCurrent) return left._rankIsCurrent ? 1 : -1;
+      const leftNeverUsed = left._rankUsageCount === 0;
+      const rightNeverUsed = right._rankUsageCount === 0;
+      if (leftNeverUsed !== rightNeverUsed) return leftNeverUsed ? -1 : 1;
+      if (left._rankLastOrdinal !== right._rankLastOrdinal) return left._rankLastOrdinal - right._rankLastOrdinal;
+      if (left._rankUsageCount !== right._rankUsageCount) return left._rankUsageCount - right._rankUsageCount;
+      return left._rankRotatedIndex - right._rankRotatedIndex;
+    })
+    .slice(0, safeLimit)
+    .map(({ _rankIndex, _rankKey, _rankUsageCount, _rankLastOrdinal, _rankRotatedIndex, _rankIsCurrent, ...item }) => item);
+};
+
+const getJourneyRankedUsableMapPlaceNames = (role, limit = 18, options = {}) =>
+  normalizeReferenceItems(
+    getJourneyRankedUsableMapPlaces(role, limit, options).map((item) => item?.name),
+    limit,
+  );
+
+const getJourneyAllowedPlaceNames = (role, limit = 18, options = {}) => {
+  const mapPlaceNames = getJourneyRankedUsableMapPlaceNames(role, limit, options);
   if (mapPlaceNames.length) return mapPlaceNames;
   return normalizeReferenceItems([getRoleCurrentPlace(role), role?.profile?.location], limit);
 };
@@ -49114,6 +49385,9 @@ const requestAutonomousChatReplyTextFallback = async (
     userInput: promptSeed,
     roleContext,
   });
+  const timelineRestGuard = roleContext?.timeContext?.isTimelineRestingNow
+    ? `当前时间点还早于当天第一段行程 ${roleContext.timeContext.timelineWakeTime || ""} ${roleContext.timeContext.timelineWakeTitle || ""}，角色还没正式起床或开始白天安排；不得说已经醒了、才睡了几小时、已经打包、已经出门、已经处理快递或后续事项`
+    : "";
   const response = await requestPrimaryModelText({
     systemPrompt: `生成${normalizedMode === "offline" ? "离线消息" : "主动消息"}，只输出纯文本协议。
 第一行：状态：10字内状态
@@ -49127,6 +49401,7 @@ const requestAutonomousChatReplyTextFallback = async (
 绝对不要把结果包进 JSON、数组、对象或任何字段结构里
 绝对不要输出三反引号、json 代码块、代码块、花括号包裹的外层结构；最终答案第一行必须直接从“状态：”开始
 必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、昨天/今天/明天行程窗口、生活轨迹、突发事件、地图、NPC 和目标。
+${timelineRestGuard}
 优先消化“最高优先级：角色主观意识”里的自我生活线与关系反应线，再写自然消息
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${buildBlockedTermsPrompt(role)}
@@ -49266,6 +49541,17 @@ const getMinutesSince = (timestamp, now = new Date()) => {
   const parsed = parseValidTimestamp(timestamp);
   if (!parsed) return Number.POSITIVE_INFINITY;
   return Math.max(0, (now.getTime() - parsed.getTime()) / 60_000);
+};
+
+const resolveOfflineDueTimestampByTimeline = (role, scheduledAt, now = new Date()) => {
+  const timelineActivity = buildRoleTimelineActivityContext(role, scheduledAt);
+  if (!timelineActivity.timelineAwakeByNow) {
+    const wakeAt = parseValidTimestamp(timelineActivity.timelineWakeAt);
+    if (wakeAt && wakeAt.getTime() <= now.getTime()) return wakeAt;
+    return null;
+  }
+  if (shouldDeferAutonomousForRest(role, scheduledAt)) return null;
+  return scheduledAt;
 };
 
 const CHAT_REPLY_MONITOR_PREFLIGHT_MINUTES = 20;
@@ -49890,13 +50176,18 @@ const getOfflineDueTimestamps = (role, now = new Date()) => {
   const anchorMs = Math.max(sessionStart.getTime(), lastOfflineAt?.getTime() || 0);
   const dueCount = Math.min(MAX_OFFLINE_CATCH_UP_ROUNDS, Math.max(0, Math.floor((now.getTime() - anchorMs) / intervalMs)));
   const dueTimestamps = [];
+  const seenDueTimestamps = new Set();
 
   for (let index = 1; index <= dueCount; index += 1) {
     const scheduledMs = anchorMs + intervalMs * index;
     if (scheduledMs > now.getTime()) break;
     const scheduledAt = new Date(scheduledMs);
-    if (isSleeping(role, scheduledAt)) continue;
-    dueTimestamps.push(scheduledAt.toISOString());
+    const resolvedAt = resolveOfflineDueTimestampByTimeline(role, scheduledAt, now);
+    if (!resolvedAt || resolvedAt.getTime() > now.getTime()) continue;
+    const normalizedDueAt = resolvedAt.toISOString();
+    if (seenDueTimestamps.has(normalizedDueAt)) continue;
+    seenDueTimestamps.add(normalizedDueAt);
+    dueTimestamps.push(normalizedDueAt);
   }
 
   return dueTimestamps;
@@ -50419,8 +50710,8 @@ const splitAutonomousFallbackTextItems = (value = "", { minParts = 3, maxParts =
   return [];
 };
 
-const buildAutonomousMessageFallbackPool = (role, normalizedMode, { promptSeed = "", statusText = "" } = {}) => {
-  const place = sanitizeChatLine(getRoleCurrentPlace(role) || role?.profile?.location || "");
+const buildAutonomousMessageFallbackPool = (role, normalizedMode, { promptSeed = "", statusText = "", now = new Date() } = {}) => {
+  const place = sanitizeChatLine(getRoleCurrentPlace(role, now) || role?.profile?.location || "");
   const normalizedStatus = sanitizeChatLine(statusText || "");
   const compactSeed = sanitizeChatLine(promptSeed || "");
   const modeSpecific =
@@ -50444,12 +50735,13 @@ const ensureAutonomousMessageMinimumCount = (
   role,
   messages,
   normalizedMode,
-  { promptSeed = "", statusText = "", minCount = 3 } = {},
+  { promptSeed = "", statusText = "", minCount = 3, now = new Date() } = {},
 ) => {
   void role;
   void normalizedMode;
   void promptSeed;
   void statusText;
+  void now;
   const targetMinCount = Math.max(1, Number(minCount) || 1);
   const list = Array.isArray(messages) ? messages.filter(Boolean).slice(0, 6) : [];
   if (list.length >= targetMinCount) return list;
@@ -50565,20 +50857,28 @@ const getAutonomousRecentTopicHint = (role) => {
   return joinPromptHints(recent).slice(-80);
 };
 
-const getAutonomousPromptSeed = (role, mode) => {
-  const currentPlace = getRoleCurrentPlace(role);
+const getAutonomousPromptSeed = (role, mode, { now = new Date() } = {}) => {
+  const currentPlace = getRoleTimelineAwarePlace(role, now);
   const activeGoals = getActiveRoleGoals(role);
   const longGoal = activeGoals.find((item) => String(item?.type || "long") !== "short");
   const shortGoal = activeGoals.find((item) => String(item?.type || "") === "short");
-  const latestTimeline = (role.timeline || []).find(Boolean);
+  const roleTimeContext = buildRoleTimeContext(role, now);
+  const currentTimeline = roleTimeContext.currentTimeline || null;
+  const previousTimeline = roleTimeContext.previousTimeline || null;
+  const nextTimeline = roleTimeContext.nextTimeline || null;
+  const activeTimeline = currentTimeline || previousTimeline || nextTimeline || (role.timeline || []).find(Boolean);
   const recentTopic = getAutonomousRecentTopicHint(role);
+  const timeGuard = roleTimeContext.isTimelineRestingNow
+    ? `当前离线时间点还早于当天第一段行程 ${roleTimeContext.timelineWakeTime || ""} ${roleTimeContext.timelineWakeTitle || ""}，角色还没正式起床或开始白天安排，不能说已经醒了、已经打包、已经出门或已经处理后续事项`
+    : "";
 
   if (mode === "offline") {
     return [
       `请像 ${role.profile.note} 平时回消息那样自然留下一整轮离线消息 这一轮也必须是 3 到 6 条`,
       recentTopic ? `最近对话线索 ${recentTopic}` : "",
+      timeGuard,
       currentPlace ? `当前地点参考 ${currentPlace}` : "",
-      latestTimeline?.title ? `最近行程参考 ${latestTimeline.title}` : "",
+      activeTimeline?.title ? `当前时间点行程参考 ${activeTimeline.title}` : "",
       shortGoal?.title ? `短期目标参考 ${shortGoal.title}` : "",
       "不要机械复述这些提示 只把它们当作背景",
     ]
@@ -50589,6 +50889,7 @@ const getAutonomousPromptSeed = (role, mode) => {
   return [
     `请像 ${role.profile.note} 平时回消息那样自然主动开口 这一轮也必须是 3 到 6 条`,
     recentTopic ? `最近对话线索 ${recentTopic}` : "",
+    timeGuard,
     currentPlace ? `当前地点参考 ${currentPlace}` : "",
     longGoal?.title ? `长期目标参考 ${longGoal.title}` : "",
     shortGoal?.title ? `短期目标参考 ${shortGoal.title}` : "",
@@ -50607,7 +50908,7 @@ const shouldScheduleAutonomousMessage = (role, now, mode) => {
   } else if (!appVisible && !isBackgroundKeepAliveAutonomousAllowed()) {
     return false;
   }
-  if (isSleeping(role, now)) return false;
+  if (shouldDeferAutonomousForRest(role, now)) return false;
 
   if (mode === "offline") {
     return getOfflineDueTimestamps(role, now).length > 0;
@@ -50653,8 +50954,13 @@ const diagnoseAutonomousMessage = (role, mode) => {
     }
   }
 
-  if (isSleeping(role, now)) {
-    issues.push(`当前在休息时间 ${role.settings?.sleepStart || "03:00"}-${role.settings?.sleepEnd || "10:00"}`);
+  if (shouldDeferAutonomousForRest(role, now)) {
+    const timelineActivity = buildRoleTimelineActivityContext(role, now);
+    issues.push(
+      timelineActivity.timelineWakeTime
+        ? `当前还早于行程开始 ${timelineActivity.timelineWakeTime} ${timelineActivity.timelineWakeTitle || ""}`
+        : `当前在休息时间 ${role.settings?.sleepStart || "03:00"}-${role.settings?.sleepEnd || "10:00"}`,
+    );
   }
 
   if (isRoleBusyGenerating(role.id)) {
@@ -51051,7 +51357,7 @@ const requestAutonomousAiReply = async (
     let freshRole = getRoleById(state, roleId);
     if (!freshRole) return false;
     const syntheticNow = parseValidTimestamp(startedAt) || new Date();
-    if (!ignoreSleep && isSleeping(freshRole, syntheticNow)) return false;
+    if (!ignoreSleep && shouldDeferAutonomousForRest(freshRole, syntheticNow)) return false;
     await autoRefreshWeatherContext({
       roleId,
       includeUser: false,
@@ -55056,10 +55362,10 @@ const JOURNEY_FOCUS_WORK_ENTRY_RE =
 
 const isJourneyTransientStopPlace = (value = "") => JOURNEY_TRANSIENT_STOP_PLACE_RE.test(sanitizeJourneyWeekTextField(value));
 
-const findJourneyKnownPlacesInText = (role, value = "") => {
+const findJourneyKnownPlacesInText = (role, value = "", options = {}) => {
   const text = sanitizeJourneyWeekTextField(value);
   if (!text) return [];
-  return getJourneyAllowedPlaces(role).filter((place) => text === place || text.includes(place) || place.includes(text));
+  return getJourneyAllowedPlaces(role, options).filter((place) => text === place || text.includes(place) || place.includes(text));
 };
 
 const resolveJourneyFocusedWorkDestination = (role, entries = [], index = 0) => {
@@ -55479,20 +55785,20 @@ const sanitizeJourneyWeekTextField = (value = "") =>
 const JOURNEY_WEATHERISH_TEXT_RE =
   /(?:\d{1,2}:\d{2}|°C|℃|天气|气温|温度|体感|湿度|晴|阴|雨|雪|云|风|雾|雷|多云|少云|阵雨|雷阵雨|暴雨|小雨|中雨|大雨)/i;
 
-const getJourneyAllowedPlaces = (role) =>
+const getJourneyAllowedPlaces = (role, options = {}) =>
   normalizeReferenceItems(
     [
       getRoleCurrentPlace(role),
       role?.profile?.location,
-      ...getRoleUsableMapPlaceNames(role, 48),
+      ...getJourneyRankedUsableMapPlaceNames(role, 48, options),
     ],
     48,
   );
 
-const findJourneyKnownPlaceInText = (role, value = "") => {
+const findJourneyKnownPlaceInText = (role, value = "", options = {}) => {
   const text = sanitizeJourneyWeekTextField(value);
   if (!text) return "";
-  return getJourneyAllowedPlaces(role).find((place) => text === place || text.includes(place) || place.includes(text)) || "";
+  return getJourneyAllowedPlaces(role, options).find((place) => text === place || text.includes(place) || place.includes(text)) || "";
 };
 
 const JOURNEY_LIVING_SPACE_PLACE_RE =
@@ -55875,10 +56181,10 @@ const buildLifeMonitorEventTitleFallback = (event = {}, fortuneRoll = null, anch
   return buildLifeFateSyntheticEventTitle(fortuneRoll, anchorLabel || String(event?.status || "").trim() || "今日岔口");
 };
 
-const getJourneyAlternativePlaces = (role) => {
+const getJourneyAlternativePlaces = (role, options = {}) => {
   const currentPlace = sanitizeJourneyWeekTextField(getRoleCurrentPlace(role) || role?.profile?.location || "");
   return normalizeReferenceItems(
-    getRoleUsableMapPlaces(role, 18)
+    getJourneyRankedUsableMapPlaces(role, 18, options)
       .map((item) => sanitizeJourneyWeekTextField(item?.name || ""))
       .filter(Boolean)
       .filter((place) => {
@@ -55889,9 +56195,10 @@ const getJourneyAlternativePlaces = (role) => {
   );
 };
 
-const pickJourneySlotFallbackPlace = (role, slotKey = "") => {
+const pickJourneySlotFallbackPlace = (role, slotKey = "", options = {}) => {
   const currentPlace = sanitizeJourneyWeekTextField(getRoleCurrentPlace(role) || role?.profile?.location || "当前地点") || "当前地点";
-  const allowedPlaces = getJourneyAllowedPlaceNames(role, 18).map((item) => sanitizeJourneyWeekTextField(item)).filter(Boolean);
+  const rotationPlaces = getJourneyRankedUsableMapPlaceNames(role, 18, options).map((item) => sanitizeJourneyWeekTextField(item)).filter(Boolean);
+  const allowedPlaces = normalizeReferenceItems([currentPlace, ...rotationPlaces], 18);
   const anchorPlace =
     allowedPlaces.find((place) => place === currentPlace || place.includes(currentPlace) || currentPlace.includes(place)) ||
     allowedPlaces[0] ||
@@ -55924,13 +56231,13 @@ const getJourneyTimelineDerivedSlotKey = (item = {}, index = 0, total = 0) =>
   normalizeJourneyWeekSlotKey(item?.slotKey || item?.key || item?.period || "") ||
   (index === 0 ? "morning" : index === Math.max(0, total - 1) ? "night" : index === 1 ? "midday" : "afternoon");
 
-const enforceJourneyTimelineMapPlaceSpread = (role, timeline = []) => {
+const enforceJourneyTimelineMapPlaceSpread = (role, timeline = [], options = {}) => {
   const normalizedTimeline = normalizeJourneyTimelineItems(timeline);
   if (!normalizedTimeline.length) return normalizedTimeline;
 
   const currentPlace = sanitizeJourneyWeekTextField(getRoleCurrentPlace(role) || role?.profile?.location || "");
-  const alternativePlaces = getJourneyAlternativePlaces(role);
-  const allowedPlaces = getJourneyAllowedPlaces(role);
+  const alternativePlaces = getJourneyAlternativePlaces(role, options);
+  const allowedPlaces = getJourneyAllowedPlaces(role, options);
   if (!alternativePlaces.length || !allowedPlaces.length) return normalizedTimeline;
 
   const isInvalidAllowedPlace = (value = "") => {
@@ -55949,7 +56256,7 @@ const enforceJourneyTimelineMapPlaceSpread = (role, timeline = []) => {
     const knownPlace = sanitizeJourneyWeekTextField(
       findJourneyKnownPlaceInText(role, [item?.place, titleText, detailText].filter(Boolean).join(" ")),
     );
-    const fallbackPlace = sanitizeJourneyWeekTextField(knownPlace || pickJourneySlotFallbackPlace(role, slotKey) || currentPlace);
+    const fallbackPlace = sanitizeJourneyWeekTextField(knownPlace || pickJourneySlotFallbackPlace(role, slotKey, options) || currentPlace);
     let safePlace = sanitizeJourneyWeekTextField(item?.place || "") || knownPlace || fallbackPlace;
     if (isInvalidAllowedPlace(safePlace) || looksLikeJourneyWeatherishText(safePlace)) {
       safePlace = fallbackPlace || currentPlace;
@@ -55985,7 +56292,7 @@ const enforceJourneyTimelineMapPlaceSpread = (role, timeline = []) => {
     nextTimeline = nextTimeline.map((item, index) => {
       const slotKey = getJourneyTimelineDerivedSlotKey(item, index, nextTimeline.length);
       if (!["midday", "afternoon"].includes(slotKey)) return item;
-      const fallbackPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, slotKey) || currentPlace);
+      const fallbackPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, slotKey, options) || currentPlace);
       if (!fallbackPlace || fallbackPlace === sanitizeJourneyWeekTextField(item?.place || "")) return item;
       changed = true;
       return {
@@ -55999,12 +56306,12 @@ const enforceJourneyTimelineMapPlaceSpread = (role, timeline = []) => {
   return changed ? nextTimeline : normalizedTimeline;
 };
 
-const rebalanceJourneyCollapsedDayPlaces = (role, dayPayload = {}) => {
+const rebalanceJourneyCollapsedDayPlaces = (role, dayPayload = {}, options = {}) => {
   const timeline = normalizeJourneyTimelineItems(dayPayload?.timeline || dayPayload?.entries || dayPayload?.items || []);
   if (!timeline.length) return dayPayload;
 
   const currentPlace = sanitizeJourneyWeekTextField(getRoleCurrentPlace(role) || role?.profile?.location || "");
-  const alternativePlaces = getJourneyAlternativePlaces(role);
+  const alternativePlaces = getJourneyAlternativePlaces(role, options);
   if (!alternativePlaces.length) return dayPayload;
 
   const uniquePlaces = [...new Set(timeline.map((item) => sanitizeJourneyWeekTextField(item?.place || "")).filter(Boolean))];
@@ -56037,7 +56344,7 @@ const rebalanceJourneyCollapsedDayPlaces = (role, dayPayload = {}) => {
       (slotKey === "night" && (JOURNEY_HOME_LIKE_ENTRY_RE.test(`${titleText} ${detailText}`) || isJourneyLivingSpacePlace(collapsedPlace)));
     if (shouldStayHome) return item;
 
-    const fallbackPlace = pickJourneySlotFallbackPlace(role, slotKey);
+    const fallbackPlace = pickJourneySlotFallbackPlace(role, slotKey, options);
     const safeFallbackPlace = sanitizeJourneyWeekTextField(fallbackPlace);
     if (!safeFallbackPlace || safeFallbackPlace === collapsedPlace) return item;
 
@@ -56057,6 +56364,7 @@ const rebalanceJourneyCollapsedDayPlaces = (role, dayPayload = {}) => {
 };
 
 const buildJourneyPlaceDiversityPrompt = (currentPlace = "") => `- 如果可用地点至少有 2 个，同一天至少出现 2 个不同地点，不要所有条目都写成 currentPlace
+- 可用地点列表已经按未去过/很久没去优先排序，midday 和 afternoon 要优先使用列表前排的非 currentPlace 地点，不要长期只围着常去地点写
 - 如果 currentPlace 是${isJourneyLivingSpacePlace(currentPlace) ? `“${currentPlace || "卧室"}”` : "卧室 / 家里 / 房间"}这类居住空间，它只适合起床 夜间休息 或在家收尾，midday / afternoon 优先改用其他已给地点`;
 
 const looksLikeJourneyWeatherishText = (value = "") => JOURNEY_WEATHERISH_TEXT_RE.test(sanitizeJourneyWeekTextField(value));
@@ -56453,7 +56761,7 @@ const requestJourneyWeekMissingSlotLines = async (
   const preferredVariantMode = shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
   const singleDayGeminiBudget = dayPlans.length === 1 && shouldUseGeminiCompatibleMode(plannerConfig);
   const mealTimes = Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : [];
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 6);
+  const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12);
   const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const existingFilledSlots = dayPlans.map((plan, index) => ({
@@ -56689,7 +56997,7 @@ const requestJourneyWeekCompactDayPlanSetData = async (
   const preferredVariantMode = shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
   const singleDayGeminiBudget = dayPlans.length === 1 && shouldUseGeminiCompatibleMode(plannerConfig);
   const mealTimes = Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : [];
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 6);
+  const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12);
   const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
   const firstLabel = dayPlans[0]?.targetDateLabel || formatJourneyDateLabel();
   const lastLabel = dayPlans[dayPlans.length - 1]?.targetDateLabel || firstLabel;
@@ -56747,6 +57055,7 @@ const requestJourneyWeekCompactDayPlanSetData = async (
     rebalanceJourneyCollapsedDayPlaces(
       role,
       repairJourneyWeekDayPayload(role, day, dayPlans[index]?.targetDate, dayPlans[index]?.slotTemplates || []),
+      { targetDateKey: dayPlans[index]?.targetDate },
     ),
   );
   return {
@@ -56900,6 +57209,7 @@ const requestJourneyWeekDailyPreviewData = async (role, raw, startDateKey = form
     return rebalanceJourneyCollapsedDayPlaces(
       role,
       repairJourneyWeekDayPayload(role, item.value.day, dayPlan.targetDate, dayPlan.slotTemplates || []),
+      { targetDateKey: dayPlan.targetDate },
     );
   });
 
@@ -57092,16 +57402,16 @@ const normalizeJourneyWeekCompactTitle = (value = "", fallback = "") => {
   return sanitizeJourneyWeekTextField(matched?.[1] || fallback);
 };
 
-const normalizeJourneyWeekSlotEntry = (role, slot, source = {}) => {
+const normalizeJourneyWeekSlotEntry = (role, slot, source = {}, options = {}) => {
   const rawTitle = String(source?.title || source?.name || source?.task || source?.action || "").trim();
   const rawPlace = String(source?.place || source?.location || source?.scene || "").trim();
   const rawDetail = String(source?.detail || source?.description || source?.content || source?.note || "").trim();
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
-  const slotFallbackPlace = pickJourneySlotFallbackPlace(role, String(slot?.key || "").trim());
+  const slotFallbackPlace = pickJourneySlotFallbackPlace(role, String(slot?.key || "").trim(), options);
   const slotLabel = String(slot?.label || "").trim();
-  const titleKnownPlace = findJourneyKnownPlaceInText(role, rawTitle);
-  const placeKnownPlace = findJourneyKnownPlaceInText(role, rawPlace);
-  const detailKnownPlace = findJourneyKnownPlaceInText(role, rawDetail);
+  const titleKnownPlace = findJourneyKnownPlaceInText(role, rawTitle, options);
+  const placeKnownPlace = findJourneyKnownPlaceInText(role, rawPlace, options);
+  const detailKnownPlace = findJourneyKnownPlaceInText(role, rawDetail, options);
   const titleLooksLikeTime = JOURNEY_COMPACT_TIME_FIELD_RE.test(rawTitle);
   const titleLooksGeneric =
     !rawTitle ||
@@ -57123,7 +57433,7 @@ const normalizeJourneyWeekSlotEntry = (role, slot, source = {}) => {
     place = placeKnownPlace;
   }
 
-  if (!title || findJourneyKnownPlaceInText(role, title) || looksLikeJourneyWeatherishText(title)) {
+  if (!title || findJourneyKnownPlaceInText(role, title, options) || looksLikeJourneyWeatherishText(title)) {
     title = normalizeJourneyWeekCompactTitle(rawDetail, slotLabel || "行程");
   }
   if (!place || looksLikeJourneyWeatherishText(place)) {
@@ -57137,7 +57447,8 @@ const normalizeJourneyWeekSlotEntry = (role, slot, source = {}) => {
   };
 };
 
-const repairJourneyWeekDayPayload = (role, payload, targetDateKey = formatDateKey(), slotTemplates = []) => {
+const repairJourneyWeekDayPayload = (role, payload, targetDateKey = formatDateKey(), slotTemplates = [], options = {}) => {
+  const rotationOptions = { targetDateKey: formatDateKey(targetDateKey), ...(options || {}) };
   const safePayload = payload && typeof payload === "object" ? { ...payload } : {};
   const sourceTimeline = normalizeJourneyTimelineItems(
     safePayload.timeline || safePayload.entries || safePayload.items || safePayload.schedule || [],
@@ -57154,7 +57465,7 @@ const repairJourneyWeekDayPayload = (role, payload, targetDateKey = formatDateKe
   });
   const repairedTimeline = slotTemplates.map((slot, index) => {
     const source = keyedTimeline.get(slot.key) || unkeyedTimeline[index] || {};
-    const normalizedEntry = normalizeJourneyWeekSlotEntry(role, slot, source);
+    const normalizedEntry = normalizeJourneyWeekSlotEntry(role, slot, source, rotationOptions);
     const fallbackEntry = {
       title: normalizedEntry.title,
       place: normalizedEntry.place,
@@ -57176,7 +57487,7 @@ const repairJourneyWeekDayPayload = (role, payload, targetDateKey = formatDateKe
   return {
     ...safePayload,
     targetDate: formatDateKey(targetDateKey),
-    timeline: enforceJourneyTimelineMapPlaceSpread(role, repairedTimeline),
+    timeline: enforceJourneyTimelineMapPlaceSpread(role, repairedTimeline, rotationOptions),
     goal_updates: [],
     monitor: null,
     event: null,
@@ -57342,7 +57653,9 @@ const requestJourneyStableTextPlanSetData = async (
   const preferredVariantMode = shouldUseGeminiCompatibleMode(plannerConfig) ? "gemini-compatible" : "openai-standard";
   const singleDayGeminiBudget = dayPlans.length === 1 && shouldUseGeminiCompatibleMode(plannerConfig);
   const mealTimes = Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : [];
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 8);
+  const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12, {
+    targetDateKey: dayPlans[0]?.targetDate || formatDateKey(),
+  });
   const npcNames = (role?.npcs || []).slice(0, 6).map((item) => String(item?.name || "").trim()).filter(Boolean);
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "";
   const apiResponse = await requestJourneyModelText({
@@ -57449,6 +57762,7 @@ const requestJourneyStableTextPlanSetData = async (
     rebalanceJourneyCollapsedDayPlaces(
       role,
       repairJourneyWeekDayPayload(role, day, dayPlans[index]?.targetDate, dayPlans[index]?.slotTemplates || []),
+      { targetDateKey: dayPlans[index]?.targetDate },
     ),
   );
   const validationMessage = getJourneyStableValidationMessage(role, repairedDays);
@@ -57530,9 +57844,9 @@ const buildJourneyRewriteSlimContext = (role) => {
       [
         currentPlace,
         role?.profile?.location,
-        ...getRoleUsableMapPlaceNames(role, 10),
+        ...getJourneyRankedUsableMapPlaceNames(role, 14),
       ],
-      10,
+      14,
     ),
     npcNames: normalizeReferenceItems((role?.npcs || []).map((item) => item?.name), 6),
     wakeTime: role?.settings?.sleepEnd || "10:00",
@@ -57966,7 +58280,8 @@ const repairJourneyRewriteResolvedDays = (role, dayPlans = [], sourceDays = []) 
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const referenceCity = String(role?.profile?.realCityReference || "").trim();
   const repairedDays = dayPlans.map((plan, index) => {
-    const repairedDay = repairJourneyWeekDayPayload(role, sourceDays[index], plan.targetDate, plan.slotTemplates || []);
+    const rotationOptions = { targetDateKey: plan.targetDate };
+    const repairedDay = repairJourneyWeekDayPayload(role, sourceDays[index], plan.targetDate, plan.slotTemplates || [], rotationOptions);
     const rebalancedDay = rebalanceJourneyCollapsedDayPlaces(role, {
       ...repairedDay,
       timeline: normalizeJourneyTimelineItems(repairedDay.timeline || []).map((item) => {
@@ -57974,6 +58289,7 @@ const repairJourneyRewriteResolvedDays = (role, dayPlans = [], sourceDays = []) 
           findJourneyKnownPlaceInText(
             role,
             [item?.place, item?.title, item?.detail].filter(Boolean).join(" "),
+            rotationOptions,
           ) || currentPlace;
         let safePlace = sanitizeJourneyWeekTextField(item?.place || "") || knownPlace || currentPlace;
         if (referenceCity && safePlace === referenceCity && currentPlace && currentPlace !== referenceCity) {
@@ -57987,10 +58303,10 @@ const repairJourneyRewriteResolvedDays = (role, dayPlans = [], sourceDays = []) 
           place: sanitizeJourneyWeekTextField(safePlace || currentPlace) || currentPlace,
         };
       }),
-    });
+    }, rotationOptions);
     return {
       ...rebalancedDay,
-      timeline: enforceJourneyTimelineMapPlaceSpread(role, rebalancedDay.timeline || []),
+      timeline: enforceJourneyTimelineMapPlaceSpread(role, rebalancedDay.timeline || [], rotationOptions),
     };
   });
   const validationMessage = getJourneyStableValidationMessage(role, repairedDays);
@@ -58476,7 +58792,7 @@ const requestJourneyWeekPreviewData = async (role, raw, startDateKey = formatDat
       slotTemplates: buildJourneyWeekSlotTemplatesForDate(role, targetDate),
     };
   });
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 6);
+  const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12);
   const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
 
   const slimWeekContext = {
@@ -58620,6 +58936,7 @@ ${dayPlans[0].targetDate}||morning||起床洗漱||${enabledPlaces[0] || getRoleC
     rebalanceJourneyCollapsedDayPlaces(
       role,
       repairJourneyWeekDayPayload(role, day, dayPlans[index]?.targetDate, dayPlans[index]?.slotTemplates || []),
+      { targetDateKey: dayPlans[index]?.targetDate },
     ),
   );
   const weeklyResults = finalizeJourneyWeekPreviewResults(role, repairedDays, dayPlans);
@@ -58652,7 +58969,7 @@ const requestJourneyWeekPreviewFastRescueData = async (role, raw, startDateKey =
       slotTemplates: buildJourneyWeekSlotTemplatesForDate(role, targetDate, { compact: true }),
     };
   });
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 6);
+  const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12, { targetDateKey: normalizedStartDate });
   const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
 
   const apiResponse = await requestJourneyModelText({
@@ -58744,6 +59061,7 @@ ${dayPlans[0].targetDate}||morning||起床洗漱||${enabledPlaces[0] || getRoleC
     rebalanceJourneyCollapsedDayPlaces(
       role,
       repairJourneyWeekDayPayload(role, day, dayPlans[index]?.targetDate, dayPlans[index]?.slotTemplates || []),
+      { targetDateKey: dayPlans[index]?.targetDate },
     ),
   );
   const weeklyResults = finalizeJourneyWeekPreviewResults(role, repairedDays, dayPlans);
@@ -58785,7 +59103,9 @@ const requestJourneyWeekPreviewDayByDayRescueData = async (
     throw new Error("7天行程逐天补救后仍有缺失");
   }
   const repairedDays = mergedDays.map((day, index) =>
-    repairJourneyWeekDayPayload(role, day, dayPlans[index]?.targetDate, dayPlans[index]?.slotTemplates || []),
+    repairJourneyWeekDayPayload(role, day, dayPlans[index]?.targetDate, dayPlans[index]?.slotTemplates || [], {
+      targetDateKey: dayPlans[index]?.targetDate,
+    }),
   );
   return {
     weeklyResults: finalizeJourneyWeekPreviewResults(role, repairedDays, dayPlans),
@@ -59273,7 +59593,7 @@ const buildLifeMonitorA3PlainTextContext = ({
   forceRegenerate = false,
 } = {}) => {
   const profile = role?.profile || {};
-  const enabledPlaces = getRoleUsableMapPlaceNames(role, 6);
+  const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12, { targetDateKey: normalizedTargetDate });
   const worldbook = getActiveWorldbookSummary(role)
     .slice(0, 2)
     .map((item) =>
@@ -59387,7 +59707,7 @@ const buildJourneyA3PlainTextContext = ({
     .filter(Boolean);
   const mapPlaces = normalizeArray(allowedPlaces).length
     ? normalizeArray(allowedPlaces)
-    : getRoleUsableMapPlaceNames(role, 6);
+    : getJourneyRankedUsableMapPlaceNames(role, 12, { targetDateKey: normalizedTargetDate });
   const shortGoalLines = normalizeArray(activeShortGoals)
     .slice(0, ACTIVE_GOAL_CAPS.short)
     .map((item) => `${item.title || "短期目标"}(${Number(item.progress || 0)}%)`);
@@ -61841,7 +62161,7 @@ const regenerateJourneyEntry = async (journeyId, journeyIndex = -1) => {
   const siblingTimeline = sourceTimeline.filter((_, itemIndex) => itemIndex !== index);
   const alternatePlaceCandidates = normalizeReferenceItems(
     [
-      ...getRoleUsableMapPlaceNames(role, 12),
+      ...getJourneyRankedUsableMapPlaceNames(role, 14, { targetDateKey: normalizedTargetDate }),
       ...siblingTimeline.map((entry) => entry?.place),
     ].filter((place) => normalizeJourneyTextForCompare(place) !== normalizeJourneyTextForCompare(currentItem?.place || "")),
     8,
@@ -62595,6 +62915,10 @@ const applyJourneyPreviewToRole = (
   { includeMeta = true, updateCurrentMonitor = includeMeta, mergeGoals = includeMeta, mergeHistory = includeMeta } = {},
 ) => {
   setRoleTimelineForDate(role, journeyData.targetDate, journeyData.entries.map((item) => ({ ...item })));
+  role.runtime = {
+    ...(role.runtime || {}),
+    journeyPlaceRotationUpdatedAt: new Date().toISOString(),
+  };
 
   if (!isTodayDateKey(journeyData.targetDate) && (!Array.isArray(role.timeline) || !role.timeline.length)) {
     role.timeline = journeyData.entries.map((item) => ({ ...item }));
