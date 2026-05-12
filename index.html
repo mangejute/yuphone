@@ -2416,6 +2416,13 @@ select {
   min-width: 0;
   width: min(calc(320px * var(--chat-bubble-scale, 1)), 72vw);
   max-width: 100%;
+  margin-top: 4px;
+}
+
+.chat-screen.bubble-theme-wechat .chat-message-line.voice-line.has-external-quote-line .chat-voice-transcript-slot,
+.chat-screen.bubble-theme-custom .chat-message-line.voice-line.has-external-quote-line .chat-voice-transcript-slot {
+  grid-row: 3;
+  margin-top: 3px;
 }
 
 .chat-screen.bubble-theme-wechat .chat-voice-transcript-slot.ai-voice-transcript-slot,
@@ -21905,6 +21912,7 @@ const getLifeFateTotalWeight = (value = {}) => {
 
 const createMonitorFortuneData = (value = {}) => {
   const safeValue = value && typeof value === "object" ? value : {};
+  const safeMainEventType = safeValue.mainEventType && typeof safeValue.mainEventType === "object" ? safeValue.mainEventType : {};
   return {
     dateKey: String(safeValue.dateKey || "").trim(),
     tierKey: String(safeValue.tierKey || "steady").trim() || "steady",
@@ -21912,7 +21920,22 @@ const createMonitorFortuneData = (value = {}) => {
     summary: String(safeValue.summary || safeValue.note || "").trim(),
     eventTriggered: Boolean(safeValue.eventTriggered),
     triggerChance: clampStoreNumber(safeValue.triggerChance ?? LIFE_FORTUNE_TRIGGER_DEFAULT, 0, 100),
-    storyHooks: normalizeArray(safeValue.storyHooks).map((item) => String(item || "").trim()).filter(Boolean).slice(0, 3),
+    effectiveTriggerChance: clampStoreNumber(safeValue.effectiveTriggerChance ?? 0, 0, 100),
+    variationScore: clampStoreNumber(safeValue.variationScore ?? 0, 0, 100),
+    requiredConcreteMoments: clampStoreNumber(safeValue.requiredConcreteMoments ?? 1, 1, 5),
+    dramaDirective: String(safeValue.dramaDirective || "").trim(),
+    storyHooks: normalizeArray(safeValue.storyHooks).map((item) => String(item || "").trim()).filter(Boolean).slice(0, 4),
+    storyThemes: normalizeArray(safeValue.storyThemes).map((item) => String(item || "").trim()).filter(Boolean).slice(0, 4),
+    mainEventType: {
+      key: String(safeMainEventType.key || safeValue.mainEventTypeKey || "").trim(),
+      label: String(safeMainEventType.label || safeValue.mainEventTypeLabel || "").trim(),
+      directive: String(safeMainEventType.directive || safeValue.mainEventDirective || "").trim(),
+      npcNames: normalizeArray(safeMainEventType.npcNames || safeValue.mainEventNpcNames)
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, 4),
+      npcHints: String(safeMainEventType.npcHints || safeValue.mainEventNpcHints || "").trim(),
+    },
   };
 };
 const CHAT_BUBBLE_THEME_OPTIONS = Object.freeze([
@@ -25594,7 +25617,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.12-wechat-top-align-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.12-wechat-voice-quote-stack-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -42299,6 +42322,116 @@ const buildRoleMemoryContextItems = (role, { limit = 12, textLimit = 300, query 
     .map((item) => (Number(textLimit) > 0 ? truncateContextText(item, textLimit) : item));
 };
 
+const NPC_CONTEXT_DEFAULT_LIMIT = 12;
+
+const getNpcContextSourceEntries = (source) => {
+  if (Array.isArray(source)) return source;
+  if (Array.isArray(source?.npcs)) return source.npcs;
+  return [];
+};
+
+const getNpcContextName = (npc = "") => String(npc?.name || npc || "").trim();
+
+const getNpcContextRelation = (npc = {}) =>
+  String(npc?.relationship || npc?.relation || npc?.role || "").trim();
+
+const getNpcContextSummary = (npc = {}) =>
+  String(npc?.summary || npc?.corePersona || npc?.persona || npc?.description || npc?.context || "").trim();
+
+const normalizeNpcContextEntry = (
+  npc = {},
+  { nameLimit = 40, relationLimit = 64, summaryLimit = 140 } = {},
+) => {
+  const name = truncateContextText(getNpcContextName(npc), nameLimit);
+  const relation = truncateContextText(getNpcContextRelation(npc), relationLimit);
+  const summary = truncateContextText(getNpcContextSummary(npc), summaryLimit);
+  const gender = truncateContextText(npc?.gender || npc?.sex || "", 12);
+  const age = truncateContextText(npc?.age || npc?.birth || "", 24);
+  return {
+    name,
+    relation,
+    summary,
+    corePersona: summary,
+    gender,
+    age,
+  };
+};
+
+const formatNpcContextLine = (npc = {}, index = -1, options = {}) => {
+  const entry = normalizeNpcContextEntry(npc, options);
+  const parts = [
+    entry.name,
+    entry.relation ? `关系:${entry.relation}` : "",
+    entry.summary ? `简介:${entry.summary}` : "",
+    entry.gender ? `性别:${entry.gender}` : "",
+    entry.age ? `年龄/生日:${entry.age}` : "",
+  ].filter(Boolean);
+  if (!parts.length) return "";
+  return `${index >= 0 ? `${index + 1}. ` : ""}${parts.join("｜")}`;
+};
+
+const buildNpcContextEntries = (
+  roleOrNpcs,
+  {
+    userInput = "",
+    limit = NPC_CONTEXT_DEFAULT_LIMIT,
+    nameLimit = 40,
+    relationLimit = 64,
+    summaryLimit = 140,
+    preserveAllEntries = false,
+  } = {},
+) => {
+  const source = getNpcContextSourceEntries(roleOrNpcs)
+    .filter((item) => item?.enabled !== false)
+    .filter((item) => getNpcContextName(item) || getNpcContextRelation(item) || getNpcContextSummary(item));
+  const normalizedQuery = String(userInput || "").trim().toLowerCase();
+  const queryTokens = normalizedQuery
+    .split(/[\s，。！？、,.!?;；:：/\\|_-]+/u)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2);
+  const ranked = source
+    .map((item, index) => {
+      const haystack = [getNpcContextName(item), getNpcContextRelation(item), getNpcContextSummary(item)]
+        .join(" ")
+        .toLowerCase();
+      const hit =
+        Boolean(normalizedQuery && haystack.includes(normalizedQuery)) ||
+        queryTokens.some((token) => haystack.includes(token));
+      return { item, index, hit };
+    })
+    .sort((left, right) => {
+      if (left.hit !== right.hit) return left.hit ? -1 : 1;
+      return left.index - right.index;
+    })
+    .map(({ item }) => item);
+  const safeLimit = preserveAllEntries ? ranked.length : Math.max(1, Number(limit) || NPC_CONTEXT_DEFAULT_LIMIT);
+  return ranked
+    .slice(0, safeLimit)
+    .map((item) => normalizeNpcContextEntry(item, { nameLimit, relationLimit, summaryLimit }))
+    .filter((item) => item.name || item.relation || item.summary);
+};
+
+const buildNpcContextText = (npcs = [], { itemLimit = NPC_CONTEXT_DEFAULT_LIMIT, relationLimit = 64, summaryLimit = 140 } = {}) =>
+  getNpcContextSourceEntries(npcs)
+    .slice(0, Math.max(1, Number(itemLimit) || NPC_CONTEXT_DEFAULT_LIMIT))
+    .map((item, index) => formatNpcContextLine(item, index, { relationLimit, summaryLimit }))
+    .filter(Boolean)
+    .join("\n");
+
+const buildNpcContextInlineText = (
+  npcs = [],
+  { itemLimit = NPC_CONTEXT_DEFAULT_LIMIT, relationLimit = 42, summaryLimit = 72 } = {},
+) =>
+  buildNpcContextText(npcs, { itemLimit, relationLimit, summaryLimit })
+    .replace(/\n+/g, "；")
+    .trim();
+
+const getNpcContextNames = (npcs = [], limit = NPC_CONTEXT_DEFAULT_LIMIT) =>
+  getNpcContextSourceEntries(npcs)
+    .map((item) => getNpcContextName(item))
+    .filter(Boolean)
+    .slice(0, Math.max(1, Number(limit) || NPC_CONTEXT_DEFAULT_LIMIT));
+
 const applyRoleContextCompression = (roleContext = null, contextLevel = "rich") => {
   if (!roleContext || typeof roleContext !== "object") return roleContext;
   const normalizedLevel = String(contextLevel || "rich").trim().toLowerCase();
@@ -42309,7 +42442,7 @@ const applyRoleContextCompression = (roleContext = null, contextLevel = "rich") 
 
   if (normalizedLevel === "balanced") {
     nextContext.worldbook = Array.isArray(roleContext.worldbook) ? roleContext.worldbook.slice(0, 6) : roleContext.worldbook;
-    nextContext.npcs = Array.isArray(roleContext.npcs) ? roleContext.npcs.slice(0, 6) : roleContext.npcs;
+    nextContext.npcs = Array.isArray(roleContext.npcs) ? roleContext.npcs.slice(0, NPC_CONTEXT_DEFAULT_LIMIT) : roleContext.npcs;
     nextContext.summaryArchive = Array.isArray(roleContext.summaryArchive) ? roleContext.summaryArchive.slice(-2) : roleContext.summaryArchive;
     nextContext.memory = Array.isArray(roleContext.memory) ? roleContext.memory.slice(0, 5) : roleContext.memory;
     nextContext.recentMessages = Array.isArray(roleContext.recentMessages) ? roleContext.recentMessages.slice(-32) : roleContext.recentMessages;
@@ -42328,10 +42461,10 @@ const applyRoleContextCompression = (roleContext = null, contextLevel = "rich") 
         }))
       : roleContext.worldbook;
     nextContext.npcs = Array.isArray(roleContext.npcs)
-      ? roleContext.npcs.slice(0, 4).map((npc) => ({
+      ? roleContext.npcs.slice(0, NPC_CONTEXT_DEFAULT_LIMIT).map((npc) => ({
           name: truncateContextText(npc?.name || "", 28),
-          relation: truncateContextText(npc?.relation || npc?.relationship || "", 30),
-          corePersona: truncateContextText(npc?.corePersona || npc?.persona || npc?.summary || "", 48),
+          relation: truncateContextText(npc?.relation || npc?.relationship || "", 42),
+          summary: truncateContextText(npc?.summary || npc?.corePersona || npc?.persona || "", 84),
         }))
       : roleContext.npcs;
     nextContext.summaryArchive = Array.isArray(roleContext.summaryArchive)
@@ -42355,10 +42488,10 @@ const applyRoleContextCompression = (roleContext = null, contextLevel = "rich") 
       }))
     : roleContext.worldbook;
   nextContext.npcs = Array.isArray(roleContext.npcs)
-    ? roleContext.npcs.slice(0, 2).map((npc) => ({
+    ? roleContext.npcs.slice(0, 8).map((npc) => ({
         name: truncateContextText(npc?.name || "", 24),
-        relation: truncateContextText(npc?.relation || npc?.relationship || "", 24),
-        corePersona: truncateContextText(npc?.corePersona || npc?.persona || npc?.summary || "", 32),
+        relation: truncateContextText(npc?.relation || npc?.relationship || "", 36),
+        summary: truncateContextText(npc?.summary || npc?.corePersona || npc?.persona || "", 64),
       }))
     : roleContext.npcs;
   nextContext.summaryArchive = Array.isArray(roleContext.summaryArchive)
@@ -42438,41 +42571,13 @@ const buildRoleGenerationContext = (
         detail: truncateContextText(item?.detail || "", 56),
       }))
     : todayTimelineItems;
-  const npcSourceEntries = (role.npcs || []).filter((item) => item?.enabled !== false);
-  const npcMatchedText = String(userInput || "").trim().toLowerCase();
-  const prioritizedNpcEntries = npcSourceEntries
-    .map((item, index) => {
-      const matchText = [
-        item?.name,
-        item?.relationship,
-        item?.relation,
-        item?.corePersona,
-        item?.persona,
-        item?.summary,
-      ]
-        .map((value) => String(value || "").trim().toLowerCase())
-        .filter(Boolean);
-      return {
-        item,
-        index,
-        hit: Boolean(npcMatchedText && matchText.some((value) => npcMatchedText.includes(value) || value.includes(npcMatchedText))),
-      };
-    })
-    .sort((left, right) => {
-      if (left.hit !== right.hit) return left.hit ? -1 : 1;
-      return left.index - right.index;
-    })
-    .map(({ item }) => item);
-  const compactNpcs = (preserveAllNpcEntries ? npcSourceEntries : prioritizedNpcEntries.slice(0, isVideoMode ? VIDEO_SESSION_NPC_DETAIL_LIMIT : 16)).map((item) =>
-    isVideoMode
-      ? {
-          name: String(item?.name || "").trim(),
-          relation: truncateContextText(item?.relationship || item?.relation || "", 36),
-          corePersona: truncateContextText(item?.corePersona || item?.persona || item?.summary || "", 72),
-          enabled: item?.enabled !== false,
-        }
-      : item,
-  );
+  const compactNpcs = buildNpcContextEntries(role, {
+    userInput,
+    limit: isVideoMode ? VIDEO_SESSION_NPC_DETAIL_LIMIT : NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: isVideoMode ? 36 : structuredTask ? 56 : 96,
+    summaryLimit: isVideoMode ? 72 : structuredTask ? 120 : 220,
+    preserveAllEntries: preserveAllNpcEntries || (!isVideoMode && !structuredTask),
+  });
   const compactMonitor = buildCompactMonitorContext(role.monitor, {
     summaryLimit: isVideoMode ? 120 : shouldPreserveLifeStoryContext ? 320 : structuredTask ? 180 : 260,
     timelineLimit: isVideoMode ? 2 : shouldPreserveLifeStoryContext ? 5 : 3,
@@ -43045,11 +43150,12 @@ const buildJourneyGenerationContext = (role, userInput = "", targetDateKey = for
       mood: String(item?.mood || "").trim(),
       detail: truncateContextText(item?.detail || "", 36),
     })),
-    npcs: (role?.npcs || []).slice(0, 4).map((item) => ({
-      name: String(item?.name || "").trim(),
-      relation: truncateContextText(item?.relationship || item?.relation || "", 28),
-      summary: truncateContextText(item?.corePersona || item?.persona || item?.summary || "", 40),
-    })),
+    npcs: buildNpcContextEntries(role, {
+      userInput,
+      limit: NPC_CONTEXT_DEFAULT_LIMIT,
+      relationLimit: 56,
+      summaryLimit: 120,
+    }),
     worldbook: worldbookEntries,
     memory: buildRoleMemoryContextItems(role, {
       limit: 8,
@@ -44250,7 +44356,11 @@ const buildChatPlainTextContext = ({
       ? `突发事件和余波：${compactChatContextValue(roleContext.events, { textLimit: 240, itemLimit: 10 })}`
       : "",
     Array.isArray(roleContext?.npcs) && roleContext.npcs.length
-      ? `NPC关系：${compactChatContextValue(roleContext.npcs, { textLimit: 180, itemLimit: 16 })}`
+      ? `NPC关系（来自NPC面板，未写进世界书也必须视为真实人物关系）：\n${buildNpcContextText(roleContext.npcs, {
+          itemLimit: NPC_CONTEXT_DEFAULT_LIMIT,
+          relationLimit: 64,
+          summaryLimit: 160,
+        })}`
       : "",
     Array.isArray(roleContext?.worldbook) && roleContext.worldbook.length
       ? `世界书：\n${buildChatFullArrayLines(
@@ -56762,7 +56872,13 @@ const requestJourneyWeekMissingSlotLines = async (
   const singleDayGeminiBudget = dayPlans.length === 1 && shouldUseGeminiCompatibleMode(plannerConfig);
   const mealTimes = Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : [];
   const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12);
-  const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: journeyPrompt,
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 96,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const existingFilledSlots = dayPlans.map((plan, index) => ({
     targetDate: plan.targetDate,
@@ -56792,6 +56908,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 地点只能从上面提供的地点里选，没有合适时写列表里的第一个地点，不要编造新的城市名或地标
 ${buildJourneyPlaceDiversityPrompt(currentPlace)}
 - 如果涉及 NPC，可以在详情里自然写 @名字，但只能使用提供名单，不要编造新的 @名字
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 - 只写现代城市日常生活，不允许解释、编号、空行、代码块`,
     payload: {
       task: `补齐未来 7 天行程里缺失的 ${missingSlots.length} 个槽位`,
@@ -56801,6 +56918,7 @@ ${buildJourneyPlaceDiversityPrompt(currentPlace)}
       weather: role?.profile?.weather || "",
       places: enabledPlaces,
       npcNames,
+      npcDetails,
       mealTimes: [
         { label: "早餐", time: mealTimes[0] || "10:30" },
         { label: "午餐", time: mealTimes[1] || "14:00" },
@@ -56916,7 +57034,7 @@ const buildJourneyWeekCompactDayPlans = (role, startDateKey = formatDateKey(), t
     };
   });
 
-const buildJourneyWeekCompactSlimContext = (role, enabledPlaces = [], npcNames = [], mealTimes = []) => ({
+const buildJourneyWeekCompactSlimContext = (role, enabledPlaces = [], npcNames = [], mealTimes = [], npcDetails = []) => ({
   roleName: role?.profile?.note || role?.profile?.name || "",
   currentPlace: enabledPlaces[0] || getRoleCurrentPlace(role) || role?.profile?.location || "",
   referenceCity: role?.profile?.realCityReference || role?.profile?.location || "",
@@ -56925,6 +57043,7 @@ const buildJourneyWeekCompactSlimContext = (role, enabledPlaces = [], npcNames =
   goalTitles: (role?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean),
   places: enabledPlaces,
   npcNames,
+  npcDetails,
   wakeTime: role?.settings?.sleepEnd || "10:00",
   sleepTime: role?.settings?.sleepStart || "03:00",
   mealTimes: [
@@ -56934,7 +57053,7 @@ const buildJourneyWeekCompactSlimContext = (role, enabledPlaces = [], npcNames =
   ],
 });
 
-const buildJourneyWeekCompactSystemPrompt = (role, dayPlans = [], enabledPlaces = [], npcNames = []) => {
+const buildJourneyWeekCompactSystemPrompt = (role, dayPlans = [], enabledPlaces = [], npcNames = [], npcDetails = []) => {
   const currentPlace = enabledPlaces.join(" / ") || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const anchorPlace = sanitizeJourneyWeekTextField(enabledPlaces[0] || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点");
   const middayPlace = sanitizeJourneyWeekTextField(enabledPlaces[0] || pickJourneySlotFallbackPlace(role, "midday") || anchorPlace);
@@ -56961,6 +57080,7 @@ YYYY-MM-DD||早标题##早地点##早详情||午标题##午地点##午详情||�
 - 地点字段只能从 payload.slimContext.places 里选 没有合适时写列表里的第一个地点 不要自己编新的城市 地标或商圈
 ${buildJourneyPlaceDiversityPrompt(currentPlace)}
 - 如果涉及 NPC 只能在详情里自然写 @名字 可用 NPC: ${npcNames.join(" / ") || "暂无"} 不要编造新的 @名字
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 - 场景只能是现代城市日常生活 不允许玄幻 古风 游戏任务 旅游攻略 异世界
 ${buildJourneyMultiDayContinuityPrompt(role, dayPlans[0]?.targetDate || formatDateKey())}
 - 自定义补充要求如果很长 只抓最关键的一两点
@@ -56998,11 +57118,17 @@ const requestJourneyWeekCompactDayPlanSetData = async (
   const singleDayGeminiBudget = dayPlans.length === 1 && shouldUseGeminiCompatibleMode(plannerConfig);
   const mealTimes = Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : [];
   const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12);
-  const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: journeyPrompt,
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 96,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
   const firstLabel = dayPlans[0]?.targetDateLabel || formatJourneyDateLabel();
   const lastLabel = dayPlans[dayPlans.length - 1]?.targetDateLabel || firstLabel;
   const apiResponse = await requestJourneyModelText({
-    systemPrompt: buildJourneyWeekCompactSystemPrompt(role, dayPlans, enabledPlaces, npcNames),
+    systemPrompt: buildJourneyWeekCompactSystemPrompt(role, dayPlans, enabledPlaces, npcNames, npcDetails),
     payload: {
       task: firstLabel === lastLabel
         ? `快速生成 ${firstLabel} 的紧凑行程预览`
@@ -57016,7 +57142,7 @@ const requestJourneyWeekCompactDayPlanSetData = async (
         holidayHint: item.holidayHint,
         isRestDay: item.isRestDay,
       })),
-      slimContext: buildJourneyWeekCompactSlimContext(role, enabledPlaces, npcNames, mealTimes),
+      slimContext: buildJourneyWeekCompactSlimContext(role, enabledPlaces, npcNames, mealTimes, npcDetails),
       outputRules: {
         format: "YYYY-MM-DD||早标题##早地点##早详情||午标题##午地点##午详情||下标题##下地点##下详情||晚标题##晚地点##晚详情",
         lineCount: dayPlans.length,
@@ -57585,7 +57711,7 @@ const getJourneyStableValidationMessage = (role, days = []) => {
   return "";
 };
 
-const buildJourneyStableTextSystemPrompt = (role, dayPlans = [], enabledPlaces = [], npcNames = [], { compact = false } = {}) => {
+const buildJourneyStableTextSystemPrompt = (role, dayPlans = [], enabledPlaces = [], npcNames = [], { compact = false, npcDetails = [] } = {}) => {
   const totalDays = Math.max(1, Array.isArray(dayPlans) ? dayPlans.length : 1);
   const totalLines = dayPlans.reduce(
     (sum, plan) => sum + Math.max(1, Array.isArray(plan?.slotTemplates) ? plan.slotTemplates.length : 4),
@@ -57617,6 +57743,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 地点字段只能从 payload.slimContext.placeOptions 里选，没有合适时写列表里的第一个地点，不要编造新的城市、商圈或地标
 ${buildJourneyPlaceDiversityPrompt(currentPlace)}
 - 如果涉及 NPC，只能在详情里自然写 @名字，可用 NPC：${npcNames.join(" / ") || "暂无"}，不要编造新的 @名字
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 - 场景只能是现代城市日常生活，不允许玄幻、古风、游戏任务、旅游攻略、异世界
 ${buildJourneyMultiDayContinuityPrompt(role, dayPlans[0]?.targetDate || formatDateKey())}
 - 用户补充要求如果很长，只抓 1 到 2 个最关键要求，不要复述背景，不要为了铺垫拖慢输出
@@ -57656,10 +57783,16 @@ const requestJourneyStableTextPlanSetData = async (
   const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12, {
     targetDateKey: dayPlans[0]?.targetDate || formatDateKey(),
   });
-  const npcNames = (role?.npcs || []).slice(0, 6).map((item) => String(item?.name || "").trim()).filter(Boolean);
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: journeyPrompt,
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 96,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "";
   const apiResponse = await requestJourneyModelText({
-    systemPrompt: buildJourneyStableTextSystemPrompt(role, dayPlans, enabledPlaces, npcNames, { compact }),
+    systemPrompt: buildJourneyStableTextSystemPrompt(role, dayPlans, enabledPlaces, npcNames, { compact, npcDetails }),
     payload: {
       task:
         dayPlans.length === 1
@@ -57694,6 +57827,7 @@ const requestJourneyStableTextPlanSetData = async (
           .filter((item) => item.title),
         placeOptions: enabledPlaces,
         npcNames,
+        npcDetails,
         wakeTime: role?.settings?.sleepEnd || "10:00",
         sleepTime: role?.settings?.sleepStart || "03:00",
         mealTimes: [
@@ -57830,6 +57964,11 @@ const JOURNEY_REWRITE_REQUEST_RETRY_DELAY_MS = 700;
 const buildJourneyRewriteSlimContext = (role) => {
   const mealTimes = Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : [];
   const currentPlace = getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
+  const npcDetails = buildNpcContextEntries(role, {
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 96,
+  });
   return {
     roleName: role?.profile?.note || role?.profile?.name || "角色",
     currentPlace,
@@ -57848,7 +57987,8 @@ const buildJourneyRewriteSlimContext = (role) => {
       ],
       14,
     ),
-    npcNames: normalizeReferenceItems((role?.npcs || []).map((item) => item?.name), 6),
+    npcNames: getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT),
+    npcDetails,
     wakeTime: role?.settings?.sleepEnd || "10:00",
     sleepTime: role?.settings?.sleepStart || "03:00",
     mealTimes: [
@@ -57903,6 +58043,11 @@ const buildJourneyRewriteSystemPrompt = (
   const currentPlace = slimContext.currentPlace || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点";
   const placeText = (Array.isArray(slimContext?.places) ? slimContext.places : []).join(" / ") || currentPlace;
   const npcText = (Array.isArray(slimContext?.npcNames) ? slimContext.npcNames : []).join(" / ") || "暂无";
+  const npcDetailsText = buildNpcContextInlineText(slimContext?.npcDetails || [], {
+    itemLimit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 42,
+    summaryLimit: 72,
+  });
   const exampleDate = dayPlans[0]?.targetDate || formatDateKey();
   if (missingOnly) {
     return `你现在只补齐缺失的行程槽位，不要重写已有内容。
@@ -57918,6 +58063,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 地点只能从 currentPlace 或这些地点里选：${placeText}
 - referenceCity 只作现实参照，不能直接写成实际地点
 - 如果涉及 NPC，只能在详情里自然写 @名字，可用名字只有：${npcText}
+- NPC面板人物关系：${npcDetailsText || "暂无"}
 - 只写现代城市日常生活，不要解释，不要空行，不要代码块
 示例：
 ${exampleDate}||morning||起床洗漱||${currentPlace}||吃完早餐顺手看今天安排`;
@@ -57936,6 +58082,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 地点只能从 currentPlace 或这些地点里选：${placeText}；没有合适时就写 currentPlace
 - referenceCity 只作现实参照，不能直接写成实际地点
 - 如果涉及 NPC，只能在详情里自然写 @名字，可用名字只有：${npcText}
+- NPC面板人物关系：${npcDetailsText || "暂无"}
 - 只写现代城市日常生活，不要天气播报，不要旅游攻略，不要玄幻古风，不要空行，不要代码块
 - 用户补充要求很长时，只抓最关键的 1 到 2 点执行，不要复述背景
 示例：
@@ -58793,7 +58940,13 @@ const requestJourneyWeekPreviewData = async (role, raw, startDateKey = formatDat
     };
   });
   const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12);
-  const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: journeyPrompt,
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 96,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
 
   const slimWeekContext = {
     profile: {
@@ -58829,10 +58982,8 @@ const requestJourneyWeekPreviewData = async (role, raw, startDateKey = formatDat
       title: item.title,
       place: item.place,
     })),
-    npcs: (baseContext.npcs || []).slice(0, 3).map((item) => ({
-      name: item.name,
-      relation: item.relation,
-    })),
+    npcs: (baseContext.npcs || []).slice(0, NPC_CONTEXT_DEFAULT_LIMIT),
+    npcDetails,
     currentTime: baseContext.currentTime,
   };
   const apiResponse = await requestJourneyModelText({
@@ -58856,6 +59007,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 地点字段只能从上面给出的地图地点里选，没有合适时写列表里的第一个地点，不要编造新的城市、商圈或地标
 ${buildJourneyPlaceDiversityPrompt(slimWeekContext.profile.currentPlace || slimWeekContext.profile.location || "")}
 - 如果涉及 NPC，可以在详情里自然写 @名字，但只能使用提供名单
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 - 场景只能是现代城市日常生活，不允许玄幻、古风、游戏任务、旅游攻略、异世界
 - 不要输出日文、韩文或英文整段内容
 ${buildJourneyMultiDayContinuityPrompt(role, normalizedStartDate)}
@@ -58892,6 +59044,7 @@ ${dayPlans[0].targetDate}||morning||起床洗漱||${enabledPlaces[0] || getRoleC
         goalTitles: (slimWeekContext.goals || []).map((item) => item.title).filter(Boolean),
         placeOptions: enabledPlaces,
         npcNames,
+        npcDetails,
         wakeTime: role?.settings?.sleepEnd || "10:00",
         sleepTime: role?.settings?.sleepStart || "03:00",
         mealTimes: [
@@ -58970,7 +59123,13 @@ const requestJourneyWeekPreviewFastRescueData = async (role, raw, startDateKey =
     };
   });
   const enabledPlaces = getJourneyRankedUsableMapPlaceNames(role, 12, { targetDateKey: normalizedStartDate });
-  const npcNames = (role?.npcs || []).slice(0, 5).map((item) => String(item?.name || "").trim()).filter(Boolean);
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: journeyPrompt,
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 96,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
 
   const apiResponse = await requestJourneyModelText({
     systemPrompt: `你现在只负责快速补出连续 7 天可直接预览的简版行程。
@@ -58989,6 +59148,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 地点字段只能从上面给出的地图地点里选，没有合适时写列表里的第一个地点，不要编造新的城市、商圈或地标
 ${buildJourneyPlaceDiversityPrompt(currentPlace)}
 - 如果需要写 NPC，只能从这些名字里选：${npcNames.join(" / ") || "暂无"}
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 ${buildJourneyMultiDayContinuityPrompt(role, normalizedStartDate)}
 - 不要写序号、空行、代码块
 示例:
@@ -59015,6 +59175,7 @@ ${dayPlans[0].targetDate}||morning||起床洗漱||${enabledPlaces[0] || getRoleC
         goalTitles: (role?.goals || []).slice(0, 3).map((item) => String(item?.title || "").trim()).filter(Boolean),
         places: enabledPlaces,
         npcNames,
+        npcDetails,
         wakeTime: role?.settings?.sleepEnd || "10:00",
         sleepTime: role?.settings?.sleepStart || "03:00",
         mealTimes: [
@@ -59507,7 +59668,7 @@ const buildPureTextGenerationContext = ({
   const contextGoals = roleContext?.goals || journeyContext?.goals || slimContext?.goalTitles || slimContext?.goals || [];
   const contextEvents = roleContext?.events || journeyContext?.events || slimContext?.existingEvent || [];
   const contextMapPlaces = roleContext?.mapPlaces || journeyContext?.mapPlaces || slimContext?.placeOptions || [];
-  const contextNpcs = roleContext?.npcs || journeyContext?.npcs || slimContext?.npcNames || [];
+  const contextNpcs = roleContext?.npcs || journeyContext?.npcs || slimContext?.npcDetails || slimContext?.npcNames || [];
   const contextWorldbook = roleContext?.worldbook || journeyContext?.worldbook || [];
   const contextTimelineScope = roleContext?.timelineScope || "";
   const contextTimelineWindow = roleContext?.timelineWindow || [];
@@ -59537,7 +59698,10 @@ const buildPureTextGenerationContext = ({
     ["用户设定", contextUserProfile],
     ["当前状态", contextStatus],
     ["目标", contextGoals],
-    ["NPC关系", contextNpcs],
+    [
+      "NPC关系（来自NPC面板，未写进世界书也必须视为真实人物关系）",
+      Array.isArray(contextNpcs) ? buildNpcContextInlineText(contextNpcs, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT }) : contextNpcs,
+    ],
     ["世界书", contextWorldbook],
     ["地图地点", contextMapPlaces],
     ["行程读取范围", contextTimelineScope],
@@ -59558,8 +59722,11 @@ const buildPureTextGenerationContext = ({
         ? [
             fortuneSettings ? `每日触发概率：${Number(fortuneSettings?.eventTriggerChance || 0)}%` : "",
             fortuneRoll ? `本次有效概率：${Number(fortuneRoll?.effectiveTriggerChance || 0)}%` : "",
-            fortuneRoll?.tierLabel ? `运势：${fortuneRoll.tierLabel}` : "",
-            fortuneRoll?.eventTriggered != null ? `是否命中突发事件：${fortuneRoll.eventTriggered ? "是" : "否"}` : "",
+      fortuneRoll?.tierLabel ? `运势：${fortuneRoll.tierLabel}` : "",
+      fortuneRoll?.eventTriggered != null ? `是否命中突发事件：${fortuneRoll.eventTriggered ? "是" : "否"}` : "",
+      fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
+      fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
+      fortuneRoll?.mainEventType?.npcHints ? `主事件NPC：${fortuneRoll.mainEventType.npcHints}` : "",
           ]
             .filter(Boolean)
             .join("；")
@@ -59586,6 +59753,7 @@ const buildLifeMonitorA3PlainTextContext = ({
   journeyAnchorText = "",
   goalTitles = [],
   npcNames = [],
+  npcDetails = [],
   sameDayMonitorTimeline = [],
   existingEvent = null,
   lifeFateSettings = null,
@@ -59638,6 +59806,9 @@ const buildLifeMonitorA3PlainTextContext = ({
     profile?.weatherLiveHint || profile?.weather ? `天气：${profile.weatherLiveHint || profile.weather}` : "",
     enabledPlaces.length ? `地图地点：${enabledPlaces.join(" / ")}` : "",
     npcNames.length ? `NPC：${npcNames.join(" / ")}` : "",
+    Array.isArray(npcDetails) && npcDetails.length
+      ? `NPC关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 96 })}`
+      : "",
     goalTitles.length ? `生活轨迹短期目标：${goalTitles.join(" / ")}` : "",
     journeyAnchorText ? `当天行程锚点：${truncateContextText(journeyAnchorText, 180)}` : "",
     sameDayNodes.length ? `当天已有生活轨迹：${sameDayNodes.join("；")}` : "",
@@ -59647,6 +59818,9 @@ const buildLifeMonitorA3PlainTextContext = ({
     summaryArchive.length ? `自动总结：${summaryArchive.join("；")}` : "",
     recentMessages.length ? `最近聊天：${recentMessages.join("；")}` : "",
     `概率：每日${Number(lifeFateSettings?.eventTriggerChance || 0)}%，本次有效${Number(fortuneRoll?.effectiveTriggerChance || 0)}%，运势${fortuneRoll?.tierLabel || "平稳"}`,
+    fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
+    fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
+    fortuneRoll?.mainEventType?.npcHints ? `主事件优先NPC：${fortuneRoll.mainEventType.npcHints}` : "",
     Array.isArray(fortuneRoll?.storyHooks) && fortuneRoll.storyHooks.length
       ? `题材钩子：${fortuneRoll.storyHooks.slice(0, 4).join(" / ")}`
       : "",
@@ -59667,6 +59841,7 @@ const buildJourneyA3PlainTextContext = ({
   activeShortGoals = [],
   activeLongGoals = [],
   npcNames = [],
+  npcDetails = [],
   timeSeeds = [],
   preferredEntryCount = JOURNEY_DYNAMIC_ENTRY_MIN,
   targetHoliday = null,
@@ -59728,6 +59903,9 @@ const buildJourneyA3PlainTextContext = ({
     profile?.weatherLiveHint || profile?.weather ? `天气：${profile.weatherLiveHint || profile.weather}` : "",
     mapPlaces.length ? `可用地点：${mapPlaces.join(" / ")}` : "",
     npcNames.length ? `NPC：${npcNames.join(" / ")}` : "",
+    Array.isArray(npcDetails) && npcDetails.length
+      ? `NPC关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 96 })}`
+      : "",
     normalizedJourneyPrompt ? `用户要求：${truncateContextText(normalizedJourneyPrompt, 90)}` : "",
     targetHoliday?.name || targetHoliday?.promptHint
       ? `日期节奏：${targetHoliday?.name || "普通日"} ${truncateContextText(targetHoliday?.promptHint || "", 72)}`
@@ -59745,6 +59923,9 @@ const buildJourneyA3PlainTextContext = ({
     summaryArchive.length ? `自动总结：${summaryArchive.join("；")}` : "",
     recentMessages.length ? `最近聊天：${recentMessages.join("；")}` : "",
     `行程条数：建议 ${preferredEntryCount} 条，前端完整保留，不要少写`,
+    fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
+    fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
+    fortuneRoll?.mainEventType?.npcHints ? `主事件优先NPC：${fortuneRoll.mainEventType.npcHints}` : "",
     `生活轨迹：${journeyCanWriteEventLine ? `本日概率命中，行程后追加 事件||总标题||进行中||运势||天数 和 ${LIFE_MONITOR_DAILY_NODE_MIN}-${LIFE_MONITOR_DAILY_NODE_MAX} 个 HH:MM 节点；第一节点靠近 ${lifeNodeClockHint}` : "本日概率未命中，行程后不要写生活轨迹"}`,
     `概率：每日${Number(lifeFateSettings?.eventTriggerChance || 0)}%，本次有效${Number(fortuneRoll?.effectiveTriggerChance || 0)}%，运势${fortuneRoll?.tierLabel || "平稳"}`,
     Array.isArray(fortuneRoll?.storyHooks) && fortuneRoll.storyHooks.length
@@ -59781,12 +59962,22 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     .slice(0, ACTIVE_GOAL_CAPS.short + ACTIVE_GOAL_CAPS.long)
     .map((item) => String(item?.title || "").trim())
     .filter(Boolean);
-  const npcNames = (role?.npcs || [])
-    .slice(0, 4)
-    .map((item) => String(item?.name || "").trim())
-    .filter(Boolean);
-  const timeSeeds = buildJourneyTimelineOnlyTextTimeSeeds(role, preferredEntryCount);
   const normalizedJourneyPrompt = normalizeJourneyGenerationPrompt(journeyPrompt, 72);
+  const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: [
+      normalizedJourneyPrompt,
+      targetDateLabel,
+      ...(fortuneRoll?.storyHooks || []),
+      fortuneRoll?.mainEventType?.label || "",
+      fortuneRoll?.mainEventType?.directive || "",
+    ].join(" "),
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 120,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
+  const timeSeeds = buildJourneyTimelineOnlyTextTimeSeeds(role, preferredEntryCount);
   const journeyRoleContext = await buildChatFullRoleContextAsync(role, {
     userInput: `${targetDateLabel} ${normalizedJourneyPrompt || ""} ${allowedPlaces.join(" ")} ${journeyGoalTitles.join(" ")}`.trim(),
     now: new Date(`${normalizedTargetDate}T12:00:00`),
@@ -59798,7 +59989,6 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     normalizedTargetDate === formatJourneyDayKey(journeyGenerationNow)
       ? `${String(journeyGenerationNow.getHours()).padStart(2, "0")}:${String(journeyGenerationNow.getMinutes()).padStart(2, "0")}`
       : "当天行程里最容易出事的合理时间点";
-  const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
   const journeyCanWriteEventLine =
     Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
     Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
@@ -59812,6 +60002,8 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     goalTitles: journeyGoalTitles,
     placeOptions: allowedPlaces,
     npcNames,
+    npcDetails,
+    mainEventType: fortuneRoll?.mainEventType || null,
     wakeTime: role?.settings?.sleepEnd || "10:00",
     sleepTime: role?.settings?.sleepStart || "03:00",
     mealTimes: [
@@ -59845,6 +60037,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     activeShortGoals,
     activeLongGoals,
     npcNames,
+    npcDetails,
     timeSeeds,
     preferredEntryCount,
     targetHoliday,
@@ -59861,12 +60054,18 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
 - 必须简体中文，不能写日文、英文段落、代码块、表格、字段名或开场白。
 - 行程输出 ${preferredEntryCount} 行左右，按时间正序，不重叠；前端会完整保留，不要故意少写。
 - 地点只能从参考上下文“可用地点”里选；角色、城市、NPC、昨天余波都以参考上下文为准。
+- 先锁定“今日主事件类型”，再写行程；行程不是流水账，要给这个主事件留出至少 1 个自然发生的时段。
+- NPC 面板里的人物即使没写进世界书，也必须视为可用真实关系；如果今日主事件类型或 NPC 关系适合，就在详情里自然写 @NPC名，并把 npcNames 保存下来。
+- 今日主事件类型：${fortuneRoll?.mainEventType?.label || "普通日常偏折"}
+- 主事件执行：${fortuneRoll?.mainEventType?.directive || "先决定一个真实生活事件，再让行程围绕它自然变化"}
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 90 }) || "暂无"}
 - 至少包含起床/早餐、白天主线、晚餐、晚饭后的具体安排；晚饭后不能写“收尾/放松/推进”这种空标题。
 - 目标行可选，只在已有目标确实需要变化时写：短期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明 或 长期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明；不要每天硬凑新目标。
 ${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：生活轨迹
 - 生活轨迹总标题行必须是：事件||事件总标题||进行中||运势等级||影响天数1到7
 - 再写 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个同主题节点：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
 - 生活轨迹必须是现实生活突发事件，优先手机、钥匙、外卖、排队、路人、朋友、天气、错拿物品、小额好运、社交误会；工作只能当背景，不能写成工作进度。
+- 生活轨迹必须承接今日主事件类型，优先使用 NPC 面板人物、家庭/朋友/同事/公众身份/都市现场，而不是连续写快递配件、咖啡渍、工作素材这种单一小物件。
 - 每个节点围绕同一个事件总标题推进，有起因、转折和余波；正文用第三人称，不能用“我”。` : "- 本日概率未命中生活轨迹，只输出行程和必要目标行；不要写生活轨迹、事件或占位。"}
 写完最后一行立刻停止。`
 
@@ -63455,6 +63654,59 @@ const LIFE_FATE_SYNTHETIC_EVENT_PREFIXES = Object.freeze({
   bad: ["突然掉链子的时刻", "被一条消息带偏的一段", "坏运气扎堆的节点"],
 });
 
+const LIFE_FATE_MAIN_EVENT_TYPES = Object.freeze([
+  {
+    key: "npc-social",
+    label: "NPC搅局/朋友同事临时卷入",
+    themes: ["relationship", "invitation", "fun", "rescue", "feedback", "misunderstanding"],
+    needsNpc: true,
+    directive:
+      "先从 NPC 面板选一个真实人物，让 TA 用一句消息、一次邀约、一个误会或一次临时求助打断原日程；行程和生活轨迹都要让这个人物留下后续。",
+  },
+  {
+    key: "family-drama",
+    label: "家庭抓马/亲属消息打断",
+    themes: ["relationship", "misunderstanding", "aftershock", "timing"],
+    directive:
+      "优先写父母、亲戚或长辈式消息造成的荒诞打断，例如相亲介绍、家庭甩锅、旧账翻出；重点是角色如何毒舌应付和留下余波，不写成家庭伦理大戏。",
+  },
+  {
+    key: "public-identity",
+    label: "公众身份尴尬/粉丝路人误会",
+    themes: ["fun", "misunderstanding", "feedback", "surprise", "relationship"],
+    directive:
+      "利用角色的公众身份制造现实尴尬：被认出、被误会、评论区或路人突然插话；事件要小而有现场感，不写塌房级大危机。",
+  },
+  {
+    key: "urban-absurd",
+    label: "抽象都市现场/小店邻里荒诞",
+    themes: ["fun", "neighborhood", "surprise", "animal", "daily", "gift"],
+    directive:
+      "从便利店、咖啡店、楼下、电梯、街角活动、小动物或奇怪店员里长出荒诞但可信的小现场，让普通出门变成能讲给别人听的段子。",
+  },
+  {
+    key: "errand-mishap",
+    label: "跑腿办事乌龙/物件连锁",
+    themes: ["device", "money", "timing", "misunderstanding", "daily"],
+    directive:
+      "用钥匙、手机、快递、排队、付款、错拿物品或天气反转制造连锁麻烦；不能只停在物件坏了，要牵出人物反应和后续处理。",
+  },
+  {
+    key: "work-rescue",
+    label: "工作救场但人际优先",
+    themes: ["rescue", "feedback", "device", "timing"],
+    directive:
+      "工作只能作为引线，真正的戏要落到人际救场、临时换人、同事插科打诨或客户/朋友误会；不要写成项目进度簿。",
+  },
+  {
+    key: "memory-object",
+    label: "旧物触发/关系余波",
+    themes: ["daily", "relationship", "aftershock", "surprise"],
+    directive:
+      "让一件旧物、旧照片、旧唱片、旧聊天记录或熟人一句话触发关系余波；要写现实处理，不要写成纯回忆散文。",
+  },
+]);
+
 const getLifeFateTierDef = (key = "steady") => LIFE_FORTUNE_TIER_MAP[String(key || "steady").trim()] || LIFE_FORTUNE_TIER_MAP.steady;
 
 const buildDeterministicHash = (seed = "") => {
@@ -63467,6 +63719,59 @@ const buildDeterministicHash = (seed = "") => {
 };
 
 const buildDeterministicUnit = (seed = "") => buildDeterministicHash(seed) / 0x7fffffff;
+
+const buildLifeFateMainEventType = ({
+  role = null,
+  targetDateKey = formatDateKey(),
+  tierKey = "steady",
+  storyThemes = [],
+  storyHooks = [],
+} = {}) => {
+  const npcDetails = buildNpcContextEntries(role, {
+    userInput: [targetDateKey, tierKey, ...storyThemes, ...storyHooks].filter(Boolean).join(" "),
+    limit: 4,
+    relationLimit: 48,
+    summaryLimit: 90,
+  });
+  const npcNames = getNpcContextNames(npcDetails, 4);
+  const npcHints = buildNpcContextInlineText(npcDetails, {
+    itemLimit: 4,
+    relationLimit: 34,
+    summaryLimit: 64,
+  });
+  const normalizedThemes = normalizeReferenceItems(storyThemes, 8);
+  const tierPreference = {
+    koi: ["npc-social", "urban-absurd", "public-identity"],
+    radiant: ["npc-social", "urban-absurd", "memory-object"],
+    spark: ["urban-absurd", "npc-social", "public-identity"],
+    steady: ["npc-social", "urban-absurd", "errand-mishap"],
+    drizzle: ["errand-mishap", "npc-social", "family-drama"],
+    storm: ["family-drama", "npc-social", "errand-mishap"],
+    catastrophe: ["family-drama", "memory-object", "public-identity"],
+  }[tierKey] || [];
+  const seed = [targetDateKey, tierKey, String(role?.id || ""), String(role?.profile?.name || role?.profile?.note || "")].join("|");
+  const candidates = LIFE_FATE_MAIN_EVENT_TYPES.filter((item) => !item.needsNpc || npcNames.length);
+  const selected =
+    candidates
+      .map((item) => {
+        const themeScore = normalizedThemes.some((theme) => item.themes.includes(theme)) ? 42 : 0;
+        const tierScore = Math.max(0, 24 - Math.max(0, tierPreference.indexOf(item.key)) * 8);
+        const npcScore = item.needsNpc && npcNames.length ? 20 : npcNames.length && ["family-drama", "work-rescue"].includes(item.key) ? 6 : 0;
+        const jitter = Math.round(buildDeterministicUnit(`${seed}|${item.key}`) * 18);
+        return {
+          ...item,
+          score: themeScore + tierScore + npcScore + jitter,
+        };
+      })
+      .sort((left, right) => right.score - left.score)[0] || LIFE_FATE_MAIN_EVENT_TYPES[3];
+  return {
+    key: selected.key,
+    label: selected.label,
+    directive: selected.directive,
+    npcNames,
+    npcHints,
+  };
+};
 
 const pickWeightedLifeFateTierKey = (weights = {}, seed = "") => {
   const entries = LIFE_FORTUNE_TIER_DEFS.map((item) => [item.key, Math.max(0, Number(weights?.[item.key] || 0))]);
@@ -63603,6 +63908,13 @@ const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
   const selectedHookEntries = pickDeterministicLifeFateHooksDetailed(tierKey, `${seedBase}|hooks`, selectedHookCount);
   const storyHooks = selectedHookEntries.map((entry) => entry.text);
   const storyThemes = normalizeReferenceItems(selectedHookEntries.map((entry) => entry.theme), selectedHookCount);
+  const mainEventType = buildLifeFateMainEventType({
+    role,
+    targetDateKey: normalizedDateKey,
+    tierKey,
+    storyThemes,
+    storyHooks,
+  });
   const effectiveTriggerChance = getLifeFateEffectiveTriggerChance(settings, tierKey);
   const eventTriggered =
     effectiveTriggerChance > 0 &&
@@ -63621,6 +63933,7 @@ const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
     tone: tierDef.tone,
     storyHooks,
     storyThemes,
+    mainEventType,
     eventTriggered,
     triggerChance: Number(settings.eventTriggerChance || 0),
     effectiveTriggerChance,
@@ -63651,6 +63964,9 @@ const buildLifeFatePromptBlock = (role, targetDateKey = formatDateKey()) => {
 - 今日按档位折算后的事件触发强度: ${Number(roll.effectiveTriggerChance || 0)}%
 - 今日生活变化强度: ${Number(roll.variationScore || 0)}/100
 - 今日至少要写出的记忆点数量: ${Number(roll.requiredConcreteMoments || 1)}
+- 今日主事件类型: ${roll.mainEventType?.label || "日常偏折"}
+- 今日主事件执行: ${roll.mainEventType?.directive || "先决定一个真实生活事件，再让行程围绕它自然变化"}
+- 今日优先联动 NPC: ${roll.mainEventType?.npcNames?.join(" / ") || "可从 NPC 面板或上下文自然选择"}
 - 今日戏剧执行要求: ${roll.dramaDirective}
 - 今日优先题材方向: ${Array.isArray(roll.storyThemes) && roll.storyThemes.length ? roll.storyThemes.join(" / ") : "日常变化"}
 - 今日是否触发生活轨迹: ${roll.eventTriggered ? "是 你必须生成一条可归档进往期事件簿的完整生活轨迹事件线" : "否 今天不生成生活轨迹，不要写平稳日常占位"}
@@ -64459,6 +64775,17 @@ const decorateJourneyDataWithLinkedState = (role, journeyData, syntheticNow = ne
         requiredConcreteMoments: Number(fortuneRoll.requiredConcreteMoments || 1),
         dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
         storyHooks: Array.isArray(fortuneRoll.storyHooks) ? [...fortuneRoll.storyHooks] : [],
+        storyThemes: Array.isArray(fortuneRoll.storyThemes) ? [...fortuneRoll.storyThemes] : [],
+        mainEventType:
+          fortuneRoll.mainEventType && typeof fortuneRoll.mainEventType === "object"
+            ? {
+                key: String(fortuneRoll.mainEventType.key || "").trim(),
+                label: String(fortuneRoll.mainEventType.label || "").trim(),
+                directive: String(fortuneRoll.mainEventType.directive || "").trim(),
+                npcNames: Array.isArray(fortuneRoll.mainEventType.npcNames) ? [...fortuneRoll.mainEventType.npcNames] : [],
+                npcHints: String(fortuneRoll.mainEventType.npcHints || "").trim(),
+              }
+            : null,
       },
     },
     eventPreview: safeEventPreview,
@@ -64682,7 +65009,13 @@ const requestLifeMonitorPlainTextData = async ({
   const roleName = liveRole?.profile?.note || liveRole?.profile?.name || "角色";
   const currentPlace = getRoleCurrentPlace(liveRole, cutoffDate) || liveRole?.profile?.location || "当前地点";
   const referenceCity = liveRole?.profile?.realCityReference || liveRole?.profile?.location || "";
-  const npcNames = (liveRole?.npcs || []).slice(0, 4).map((item) => String(item?.name || "").trim()).filter(Boolean);
+  const npcDetails = buildNpcContextEntries(liveRole, {
+    userInput: `${targetDateLabel} ${cutoffClock} ${currentPlace}`,
+    limit: NPC_CONTEXT_DEFAULT_LIMIT,
+    relationLimit: 56,
+    summaryLimit: 120,
+  });
+  const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
   const rawExistingEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
   const existingEvent = forceRegenerate || isLifeMonitorEventWorkDominant(rawExistingEvent) ? null : rawExistingEvent;
   const fateAllowsEvent =
@@ -64707,6 +65040,13 @@ const requestLifeMonitorPlainTextData = async ({
     goalTitles: [],
     forceFreshEveryday: forceRegenerate,
   });
+  const mainEventTypeDirective = [
+    fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
+    fortuneRoll?.mainEventType?.directive ? `执行方式：${fortuneRoll.mainEventType.directive}` : "",
+    fortuneRoll?.mainEventType?.npcHints ? `优先联动NPC：${fortuneRoll.mainEventType.npcHints}` : "",
+  ]
+    .filter(Boolean)
+    .join("；");
   const lifeMonitorUserInput = forceRegenerate
     ? [
         targetDateLabel,
@@ -64759,6 +65099,8 @@ const requestLifeMonitorPlainTextData = async ({
     referenceCity,
     goals: [],
     npcNames,
+    npcDetails,
+    mainEventType: fortuneRoll?.mainEventType || null,
     journeyAnchors: journeyAnchorText,
     dailyNodeCount,
     remainingNodeCount,
@@ -64796,6 +65138,7 @@ const requestLifeMonitorPlainTextData = async ({
     journeyAnchorText,
     goalTitles: [],
     npcNames,
+    npcDetails,
     sameDayMonitorTimeline,
     existingEvent,
     lifeFateSettings,
@@ -64818,6 +65161,8 @@ const requestLifeMonitorPlainTextData = async ({
 - 每个节点都必须围绕同一个事件总标题推进，写起因、转折、余波，不要散成多个无关小故事
 - 正文必须现实向、抓马、有现场细节，必须用第三人称写角色，不能用“我”
 - 主事件优先来自手机没电、付款卡住、叫号乌龙、错拿物品、店员误会、路人搭话、天气反转、钥匙门禁、排队插曲、小额好运、临时邀约、外卖咖啡奶茶出错、邻里互动、宠物插曲
+- ${mainEventTypeDirective || "今日主事件类型：现实日常偏折；先决定事件类型再写节点"}
+- NPC 面板人物即使没写进世界书，也必须视为真实关系；如果主事件适合，优先让一个可用 NPC 用消息、邀约、误会或求助打断当天安排。
 - 不要把工作、方案、视觉、设计、项目、灵感、Demo、宣发、采样、创意园、工作室写成主线；工作最多只能一句背景带过
 - 行程只是锚点，不能照搬行程标题和详情
 - 如果参考上下文里出现工作地点，也必须把冲突改写成非工作生活事件
@@ -64853,6 +65198,8 @@ const requestLifeMonitorPlainTextData = async ({
 - 禁止写“完成、收尾、归档、放松、状态稳定、工作推进、生活推进”这类无聊状态词
 - 风格参考时间簿：要有具体时间、人物/地点、突发小事、荒诞但现实的细节、短标签；可以抓马、好笑、倒霉、暧昧误会，但必须现实可信
 - 抓马要落到生活细节里：排队叫错名、门禁失灵、手机没电、咖啡洒到资料边角、设备突然抽风、NPC突然出现、临时救场、暧昧误会、旧记忆被物件触发都可以；但必须写清楚起因、冲突、角色怎么处理和留下什么后续
+- 先按“今日主事件类型”定总标题和冲突来源，再写节点；不要先照抄行程再随便补一个小事故。
+- 如果 NPC 面板里有家庭、朋友、同事、助理、前合作对象、邻居或店员类人物，生活轨迹要优先从这些真实关系里挑人联动，不能只使用世界书里的少数 NPC。
 - 禁止只写“获得灵感/心情变化/状态转好”，灵感必须来自一个看得见的物件、一句误会的话或一次临场事故，并写出它影响了后面的哪个选择
 - 所有轨迹和事件明细都会写进角色聊天上下文，必须像角色亲身经历的真实事实，不要写成给用户看的设定扩写；之后用户问起时角色要能自然承认和复述
 - 突发事件必须结合概率设置：${String(fortuneRoll?.tierLabel || "平稳")} / 触发=${requiresArchiveEvent ? "是" : "否"} / 概率=${Number(lifeFateSettings?.eventTriggerChance || 0)}% / 有效概率=${Number(fortuneRoll?.effectiveTriggerChance || 0)}%
@@ -64862,7 +65209,9 @@ const requestLifeMonitorPlainTextData = async ({
 - ${existingEvent ? `若已有同一事件，第一行总标题必须严格沿用这个标题，不要换新标题：${String(existingEvent.title || "").trim()}` : "若没有已有事件，第一行要新建一个有标题的生活轨迹事件线"}
 - ${existingEvent ? "若已有事件已经持续，新的节点必须写成续写转折或余波，不要重新开一个完全无关的小故事" : "新事件必须从现实日常打破平衡开始，后续节点围绕同一个主题展开"}
 - 当前角色固定「${roleName}」，当前位置「${currentPlace}」，参考城市「${referenceCity}」
- - 可用人物：${npcNames.join(" / ") || "暂无"}
+- 可用人物：${npcNames.join(" / ") || "暂无"}
+- NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 90 }) || "暂无"}
+- ${mainEventTypeDirective || "今日主事件类型：现实日常偏折"}
 - 今日行程锚点：${journeyAnchorText}
 - 运势线索：${(fortuneRoll?.storyHooks || []).slice(0, 4).join(" / ") || fortuneRoll?.tierBlurb || "平稳日常"}
 - 你会收到下方纯文本参考上下文。写之前先锁定：角色姓名、人设、说话风格、长期记忆、总结记忆、世界书、NPC关系、地图地点、当天行程和最近聊天都以参考上下文为准
@@ -65067,6 +65416,8 @@ const generateLifeMonitorFromApi = async ({
             requiredConcreteMoments: 0,
             dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
             storyHooks: fortuneRoll.storyHooks,
+            storyThemes: fortuneRoll.storyThemes,
+            mainEventType: fortuneRoll.mainEventType || null,
           },
         };
         nextRole.runtime = {
@@ -65199,6 +65550,8 @@ const generateLifeMonitorFromApi = async ({
           requiredConcreteMoments: Number(fortuneRoll.requiredConcreteMoments || 1),
           dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
           storyHooks: fortuneRoll.storyHooks,
+          storyThemes: fortuneRoll.storyThemes,
+          mainEventType: fortuneRoll.mainEventType || null,
         },
         timeline: mergeMonitorTimelineEntries(
           forceRegenerate
