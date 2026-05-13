@@ -25763,7 +25763,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.13-token-request-log-02";
+const APP_BUILD_VERSION_LABEL = "v2026.05.13-timeout-runaway-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -25798,6 +25798,8 @@ const normalizeTokenConsoleRequestLogs = (entries = []) =>
         taskKind: String(entry.taskKind || "").trim(),
         latencyMs: Math.max(0, Math.round(Number(entry.latencyMs || 0) || 0)),
         totalTokens: Math.max(0, Math.round(Number(entry.totalTokens || 0) || 0)),
+        completionTokens: Math.max(0, Math.round(Number(entry.completionTokens || 0) || 0)),
+        reasoningTokens: Math.max(0, Math.round(Number(entry.reasoningTokens || 0) || 0)),
         estimatedPromptTokens: Math.max(0, Math.round(Number(entry.estimatedPromptTokens || 0) || 0)),
         contextChars: Math.max(0, Math.round(Number(entry.contextChars || 0) || 0)),
         imageCount: Math.max(0, Math.round(Number(entry.imageCount || 0) || 0)),
@@ -33020,6 +33022,8 @@ const renderTokenRequestLogItem = (entry) => {
     entry.status ? `HTTP ${entry.status}` : "",
     entry.latencyMs ? formatTokenLatency(entry.latencyMs) : "",
     entry.totalTokens ? `${formatTokenValue(entry.totalTokens, "0")} tokens` : "",
+    entry.completionTokens ? `输出 ${formatTokenValue(entry.completionTokens, "0")}` : "",
+    entry.reasoningTokens ? `推理 ${formatTokenValue(entry.reasoningTokens, "0")}` : "",
     entry.estimatedPromptTokens && !entry.totalTokens ? `估算 ${formatTokenValue(entry.estimatedPromptTokens, "0")}` : "",
     entry.imageCount ? `图片 ${entry.imageCount}` : "",
     entry.transportMode,
@@ -36056,6 +36060,9 @@ const MODEL_OUTPUT_TOKEN_BUDGET = 65536;
 const CHAT_REPLY_OUTPUT_TOKEN_BUDGET = 3200;
 const JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET = 5000;
 const LIFE_MONITOR_MODEL_OUTPUT_TOKEN_BUDGET = 5000;
+const CHAT_REPLY_STOP_SENTINEL = "<<<END_CHAT_REPLY>>>";
+const CHAT_REPLY_RUNAWAY_COMPLETION_TOKENS = 12000;
+const CHAT_REPLY_RUNAWAY_REASONING_TOKENS = 12000;
 
 const MINIMAX_VOICE_DEFAULTS = Object.freeze({
   url: "https://api.minimaxi.com/v1",
@@ -40825,16 +40832,23 @@ const shouldOmitMaxTokensForConfig = (config = {}) => {
   const normalizedModel = normalizeApiConfigModel(config?.model);
   return (normalizedUrl === PANDA_API_URL || PANDA_LEGACY_URLS.has(normalizedUrl)) && PANDA_GEMINI3_MODELS.has(normalizedModel);
 };
-const getOpenAiCompatibleExtraRequestOptions = (config = {}) => {
-  if (shouldOmitMaxTokensForConfig(config)) {
+const OPENAI_COMPATIBLE_CHAT_STOP_TASKS = new Set([
+  MODEL_REQUEST_TASK_KIND.CHAT_REWRITE_PLAIN,
+  MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN,
+  MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
+]);
+const shouldUseChatReplyStopSentinel = (requestStrategy = null) =>
+  OPENAI_COMPATIBLE_CHAT_STOP_TASKS.has(normalizeModelRequestTaskKind(requestStrategy?.taskKind));
+const getOpenAiCompatibleExtraRequestOptions = (config = {}, requestStrategy = null) => {
+  if (shouldOmitMaxTokensForConfig(config) && shouldUseChatReplyStopSentinel(requestStrategy)) {
     return {
-      google: {
-        thinking_budget: 0,
-      },
+      reasoning_effort: "minimal",
     };
   }
   return {};
 };
+const getChatReplyPromptSentinelTraceLabels = (requestStrategy = null) =>
+  shouldUseChatReplyStopSentinel(requestStrategy) ? ["prompt-sentinel"] : [];
 const shouldDisableJsonResponseFormat = (config = {}) => /dzzi\.ai/i.test(String(config?.url || "").trim());
 
 const parseJsonLikeResponse = async (response) => {
@@ -40872,6 +40886,12 @@ const buildApiErrorMessage = (data = {}, fallback = "模型请求失败", rawTex
 
   return message;
 };
+
+const stripModelStopSentinel = (value = "") =>
+  String(value || "")
+    .replaceAll(CHAT_REPLY_STOP_SENTINEL, "")
+    .replace(/\u0000/g, "")
+    .trim();
 
 const attachModelMetaToError = (error, meta = null, extras = {}) => {
   const normalizedError = error instanceof Error ? error : new Error(String(error || "模型请求失败"));
@@ -44999,6 +45019,14 @@ const requestModelJsonWithConfig = async ({
   const promptBreakdown = buildPromptBreakdown(finalSystemPrompt, contextPayload);
   const effectivePreferredVariantMode = requestStrategy.preferredVariantMode;
   const effectiveSingleVariant = requestStrategy.singleVariant;
+  const openAiCompatibleRequestOptions = {
+    ...getOpenAiCompatibleExtraRequestOptions(config, requestStrategy),
+  };
+  const describeOpenAiCompatibleRequestOptions = () =>
+    [
+      openAiCompatibleRequestOptions.reasoning_effort ? `reasoning_effort=${openAiCompatibleRequestOptions.reasoning_effort}` : "",
+      ...getChatReplyPromptSentinelTraceLabels(requestStrategy),
+    ].filter(Boolean);
   let lastPreflightMeta = buildModelRequestPreflightMeta({
     config,
     startedAtMs: Date.now(),
@@ -45097,6 +45125,26 @@ const requestModelJsonWithConfig = async ({
   if (type === "anthropic") {
     const endpoint = ensureEndpoint(config.url, "/messages");
     const startedAtMs = Date.now();
+    lastPreflightMeta = buildModelRequestPreflightMeta({
+      config,
+      endpoint,
+      variantMode: "anthropic",
+      startedAtMs,
+      contextText: context,
+      systemPromptText: finalSystemPrompt,
+      imageCount: imageAttachments.length,
+      promptBreakdown,
+      modelRequestStrategy: requestStrategy,
+    });
+    emitModelRequestTrace(requestTrace, {
+      phase: "request",
+      ok: null,
+      status: 0,
+      endpoint,
+      variantMode: "anthropic",
+      meta: lastPreflightMeta,
+      message: "发送 Anthropic 模型请求",
+    });
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -45128,11 +45176,13 @@ const requestModelJsonWithConfig = async ({
         modelRequestStrategy: requestStrategy,
       });
       emitModelRequestTrace(requestTrace, {
+        phase: response.ok ? "response" : "error",
         ok: response.ok,
         status: response.status,
         endpoint,
         variantMode: "anthropic",
         meta,
+        ...(response.ok ? {} : { errorMessage: buildApiErrorMessage(data, "Anthropic 请求失败", rawText) }),
       });
       recordModelRequestHealth({
         config,
@@ -45199,6 +45249,15 @@ const requestModelJsonWithConfig = async ({
         promptBreakdown,
         modelRequestStrategy: requestStrategy,
       });
+      emitModelRequestTrace(requestTrace, {
+        phase: "request",
+        ok: null,
+        status: 0,
+        endpoint,
+        variantMode: variant.mode,
+        meta: lastPreflightMeta,
+        message: ["发送 OpenAI-compatible 模型请求", ...describeOpenAiCompatibleRequestOptions()].join(" · "),
+      });
       try {
         const response = await fetch(endpoint, {
           method: "POST",
@@ -45208,13 +45267,13 @@ const requestModelJsonWithConfig = async ({
           },
           signal,
           body: JSON.stringify({
-          model: config.model,
-          temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
-          ...(allowStrictJsonResponseFormat ? { response_format: { type: "json_object" } } : {}),
-          ...getOpenAiCompatibleExtraRequestOptions(config),
-          messages: variant.messages,
-        }),
-      });
+            model: config.model,
+            temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
+            ...(allowStrictJsonResponseFormat ? { response_format: { type: "json_object" } } : {}),
+            ...openAiCompatibleRequestOptions,
+            messages: variant.messages,
+          }),
+        });
         const { data, rawText } = await parseJsonLikeResponse(response);
         const meta = buildModelResponseMeta({
           data,
@@ -45321,7 +45380,7 @@ const requestModelJsonWithConfig = async ({
 };
 
 const extractModelTextContent = (data = {}) => {
-  const normalizeCandidate = (value) => normalizeApiText(value);
+  const normalizeCandidate = (value) => stripModelStopSentinel(normalizeApiText(value));
   const candidates = [];
   const pushCandidate = (value) => {
     const normalized = normalizeCandidate(value);
@@ -45374,7 +45433,7 @@ const extractModelTextContent = (data = {}) => {
   pushCandidate(data?.candidates?.[0]?.output);
   pushCandidate(data?.candidates?.[0]?.content?.text);
   pushCandidate(data?.rawText);
-  return candidates.find(Boolean) || "";
+  return stripModelStopSentinel(candidates.find(Boolean) || "");
 };
 
 const canUseVideoSessionSpeechAutoSubmit = (session = state.videoSession) =>
@@ -45465,6 +45524,15 @@ const requestModelTextWithConfig = async ({
   });
   const effectivePreferredVariantMode = requestStrategy.preferredVariantMode;
   const effectiveSingleVariant = requestStrategy.singleVariant;
+  const openAiCompatibleRequestOptions = {
+    ...getOpenAiCompatibleExtraRequestOptions(config, requestStrategy),
+  };
+  const describeOpenAiCompatibleRequestOptions = () =>
+    [
+      openAiCompatibleRequestOptions.reasoning_effort ? `reasoning_effort=${openAiCompatibleRequestOptions.reasoning_effort}` : "",
+      ...getChatReplyPromptSentinelTraceLabels(requestStrategy),
+    ].filter(Boolean);
+  const describeAnthropicRequestOptions = () => getChatReplyPromptSentinelTraceLabels(requestStrategy);
 
   const buildOpenAiImageContent = (prefixText = "") =>
     imageAttachments.length
@@ -45604,15 +45672,15 @@ const requestModelTextWithConfig = async ({
       promptBreakdown,
       modelRequestStrategy: requestStrategy,
     });
-    emitModelRequestTrace(requestTrace, {
-      phase: "request",
-      ok: null,
-      status: 0,
-      endpoint,
-      variantMode: "anthropic",
-      meta: lastPreflightMeta,
-      message: "发送 Anthropic 模型请求",
-    });
+      emitModelRequestTrace(requestTrace, {
+        phase: "request",
+        ok: null,
+        status: 0,
+        endpoint,
+        variantMode: "anthropic",
+        meta: lastPreflightMeta,
+        message: ["发送 Anthropic 模型请求", ...describeAnthropicRequestOptions()].join(" · "),
+      });
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -45757,7 +45825,7 @@ const requestModelTextWithConfig = async ({
         endpoint,
         variantMode: variant.mode,
         meta: lastPreflightMeta,
-        message: "发送 OpenAI-compatible 模型请求",
+        message: ["发送 OpenAI-compatible 模型请求", ...describeOpenAiCompatibleRequestOptions()].join(" · "),
       });
       try {
         const response = await fetch(endpoint, {
@@ -45767,13 +45835,13 @@ const requestModelTextWithConfig = async ({
             Authorization: `Bearer ${config.key}`,
           },
           signal,
-        body: JSON.stringify({
-          model: config.model,
-          temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
-          ...getOpenAiCompatibleExtraRequestOptions(config),
-          messages: variant.messages,
-        }),
-      });
+          body: JSON.stringify({
+            model: config.model,
+            temperature: clampValue(Number(temperatureOverride ?? state.appConfig?.temperature ?? 0.5), 0, 1),
+            ...openAiCompatibleRequestOptions,
+            messages: variant.messages,
+          }),
+        });
         const { data, rawText } = await parseJsonLikeResponse(response);
         const meta = buildModelResponseMeta({
           data,
@@ -45855,6 +45923,25 @@ const requestModelTextWithConfig = async ({
             errorMessage: "模型没有返回可用文本",
           });
           lastError = attachModelMetaToError(new Error("模型没有返回可用文本"), meta, {
+            rawResponseText: rawText,
+          });
+          continue;
+        }
+        if (
+          shouldUseChatReplyStopSentinel(requestStrategy) &&
+          (meta.completionTokens >= CHAT_REPLY_RUNAWAY_COMPLETION_TOKENS || meta.reasoningTokens >= CHAT_REPLY_RUNAWAY_REASONING_TOKENS)
+        ) {
+          emitModelRequestTrace(requestTrace, {
+            phase: "validation",
+            level: "warn",
+            ok: false,
+            status: response.status,
+            endpoint,
+            variantMode: variant.mode,
+            meta,
+            errorMessage: "聊天输出或推理 token 异常偏高，疑似模型未按结束标记停止",
+          });
+          lastError = attachModelMetaToError(new Error("聊天输出异常偏长，已拦截本轮结果"), meta, {
             rawResponseText: rawText,
           });
           continue;
@@ -49807,6 +49894,7 @@ ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你�
 ${quoteInstruction}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
+写完最后一条消息后必须单独输出 ${CHAT_REPLY_STOP_SENTINEL} 并立刻停止；不要继续补充、解释、翻译、重复上下文或再生成第二轮
 直接输出协议文本`,
     payload: {
       task: "把偏短或半截的聊天草稿重写成完整自然的 3 到 6 条聊天回复",
@@ -49936,6 +50024,7 @@ ${explicitVoiceTargetText ? `这轮用户明确指定了要你念的原句 你�
 ${quoteInstruction}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
+写完最后一条消息后必须单独输出 ${CHAT_REPLY_STOP_SENTINEL} 并立刻停止；不要继续补充、解释、翻译、重复上下文或再生成第二轮
 直接输出协议文本`,
     payload: {
       task: "当结构化回复不稳定时 用纯文本格式生成同一轮聊天回复",
@@ -50033,6 +50122,7 @@ ${timelineRestGuard}
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
 ${buildBlockedTermsPrompt(role)}
 ${dailyLifeMemoryPrompt}
+写完最后一条消息后必须单独输出 ${CHAT_REPLY_STOP_SENTINEL} 并立刻停止；不要继续补充、解释、翻译、重复上下文或再生成第二轮
 直接输出协议文本。`,
     payload: {
       task: normalizedMode === "offline" ? "用纯文本格式补救离线消息" : "用纯文本格式补救主动消息",
@@ -67556,7 +67646,9 @@ const requestAndAppendAiReply = async (
     return true;
   } catch (error) {
     if (isAbortRequestError(error)) {
-      const abortedMessage = replyTimedOut ? "生成回复超时" : "已中断生成回复";
+      const abortedMessage = replyTimedOut
+        ? "生成回复超时，前端已取消等待；若中转站未中止请求，后台可能仍在继续生成/计费"
+        : "已中断生成回复";
       const fallbackMeta = error?.modelMeta || null;
       appendPrimaryChatRequestLog({
         level: replyTimedOut ? "error" : "warn",
