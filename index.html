@@ -10368,6 +10368,20 @@ body {
   word-break: break-word;
 }
 
+.token-request-log-code {
+  margin: 2px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(8, 14, 24, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(238, 242, 247, 0.78);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 10.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .token-request-log-empty {
   display: grid;
   place-items: center;
@@ -12935,6 +12949,28 @@ html.chat-composer-focused .ref-chat-composer {
 .chat-screen.bubble-theme-custom .modern-chat-body {
   padding: 12px 10px var(--chat-overlay-reserve) !important;
   background: #ededed !important;
+}
+
+.chat-screen.bubble-theme-default.has-chat-background .modern-chat-body,
+.chat-screen.bubble-theme-qq.has-chat-background .modern-chat-body,
+.chat-screen.bubble-theme-wechat.has-chat-background .modern-chat-body,
+.chat-screen.bubble-theme-custom.has-chat-background .modern-chat-body,
+.chat-screen.bubble-theme-default.has-chat-background .ref-chat-body,
+.chat-screen.bubble-theme-qq.has-chat-background .ref-chat-body,
+.chat-screen.bubble-theme-wechat.has-chat-background .ref-chat-body,
+.chat-screen.bubble-theme-custom.has-chat-background .ref-chat-body {
+  background: transparent !important;
+}
+
+.chat-screen.bubble-theme-default.has-chat-background .clean-chat-header,
+.chat-screen.bubble-theme-qq.has-chat-background .clean-chat-header,
+.chat-screen.bubble-theme-wechat.has-chat-background .clean-chat-header,
+.chat-screen.bubble-theme-custom.has-chat-background .clean-chat-header,
+.chat-screen.bubble-theme-default.has-chat-background .ref-chat-header,
+.chat-screen.bubble-theme-qq.has-chat-background .ref-chat-header,
+.chat-screen.bubble-theme-wechat.has-chat-background .ref-chat-header,
+.chat-screen.bubble-theme-custom.has-chat-background .ref-chat-header {
+  background: transparent !important;
 }
 
 .chat-screen.bubble-theme-wechat .chat-group-row,
@@ -21629,6 +21665,13 @@ body {
   }
 }
 
+.chat-screen.has-chat-background .ref-chat-body,
+.chat-screen.has-chat-background .modern-chat-body,
+.chat-screen.has-chat-background .clean-chat-header,
+.chat-screen.has-chat-background .ref-chat-header {
+  background: transparent !important;
+}
+
     </style>
   </head>
   <body>
@@ -25763,7 +25806,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.13-timeout-runaway-01";
+const APP_BUILD_VERSION_LABEL = "v2026.05.16-openai-chat-route-01";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -25789,19 +25832,23 @@ const normalizeTokenConsoleRequestLogs = (entries = []) =>
       return {
         timestamp: String(entry.timestamp || "").trim(),
         level: level === "error" || level === "warn" || level === "log" ? level : "log",
+        phase: String(entry.phase || "").trim() || "log",
         source: String(entry.source || "").trim() || "callAI",
         message: normalizeTokenConsoleErrorMessage(entry.message || entry.errorMessage || ""),
         status: Math.max(0, Math.round(Number(entry.status || 0) || 0)),
+        ok: entry.ok === true ? true : entry.ok === false ? false : null,
         endpoint: String(entry.endpoint || "").trim(),
         model: String(entry.model || "").trim(),
         transportMode: String(entry.transportMode || "").trim(),
         taskKind: String(entry.taskKind || "").trim(),
         latencyMs: Math.max(0, Math.round(Number(entry.latencyMs || 0) || 0)),
+        promptTokens: Math.max(0, Math.round(Number(entry.promptTokens || 0) || 0)),
         totalTokens: Math.max(0, Math.round(Number(entry.totalTokens || 0) || 0)),
         completionTokens: Math.max(0, Math.round(Number(entry.completionTokens || 0) || 0)),
         reasoningTokens: Math.max(0, Math.round(Number(entry.reasoningTokens || 0) || 0)),
         estimatedPromptTokens: Math.max(0, Math.round(Number(entry.estimatedPromptTokens || 0) || 0)),
         contextChars: Math.max(0, Math.round(Number(entry.contextChars || 0) || 0)),
+        systemPromptChars: Math.max(0, Math.round(Number(entry.systemPromptChars || 0) || 0)),
         imageCount: Math.max(0, Math.round(Number(entry.imageCount || 0) || 0)),
       };
     })
@@ -29255,7 +29302,7 @@ const renderBubbleThemePreview = (role, state = {}) => {
         <span>${escapeHtml(getChatBubbleThemeLabel(getChatBubbleTheme(role)))}</span>
       </div>
       <div class="bubble-preview-stage">
-        <div class="chat-screen bubble-preview-scene bubble-theme-${escapeHtml(skin)}" data-chat-role-id="${escapeHtml(role.id || "preview-role")}" style="${previewSceneStyle}">
+        <div class="chat-screen bubble-preview-scene bubble-theme-${escapeHtml(skin)} ${role?.chats?.backgroundImage ? "has-chat-background" : ""}" data-chat-role-id="${escapeHtml(role.id || "preview-role")}" style="${previewSceneStyle}">
           <div class="chat-body ref-chat-body modern-chat-body bubble-preview-feed">
             ${previewFeed}
           </div>
@@ -33017,19 +33064,56 @@ const getTokenRequestLogLevelLabel = (level = "") => {
   return "LOG";
 };
 
+const getTokenRequestOptionValue = (entry = {}, key = "") => {
+  const pattern = new RegExp(`${key}\\s*=\\s*([^\\s·,;，；]+)`, "i");
+  const match = String(entry?.message || "").match(pattern);
+  return match?.[1] || "";
+};
+
+const buildTokenRequestCodeSummary = (entry = {}) => {
+  const reasoningEffort = getTokenRequestOptionValue(entry, "reasoning_effort");
+  const transportMode = String(entry?.transportMode || "").trim();
+  const isOpenAiCompatible = /openai|gemini/i.test(transportMode) || /\/chat\/completions/i.test(String(entry?.endpoint || ""));
+  return {
+    phase: entry.phase || "log",
+    source: entry.source || "callAI",
+    endpoint: entry.endpoint || "",
+    model: entry.model || "",
+    transportMode,
+    taskKind: entry.taskKind || "",
+    httpStatus: entry.status || 0,
+    latencyMs: entry.latencyMs || 0,
+    promptTokens: entry.promptTokens || 0,
+    completionTokens: entry.completionTokens || 0,
+    reasoningTokens: entry.reasoningTokens || 0,
+    estimatedPromptTokens: entry.estimatedPromptTokens || 0,
+    contextChars: entry.contextChars || 0,
+    systemPromptChars: entry.systemPromptChars || 0,
+    imageCount: entry.imageCount || 0,
+    reasoning_effort: reasoningEffort || "not sent",
+    max_tokens: isOpenAiCompatible ? "not sent" : "unknown",
+    max_completion_tokens: isOpenAiCompatible ? "not sent" : "unknown",
+    promptSentinel: /prompt-sentinel/i.test(String(entry.message || "")),
+  };
+};
+
 const renderTokenRequestLogItem = (entry) => {
   const metaParts = [
     entry.status ? `HTTP ${entry.status}` : "",
     entry.latencyMs ? formatTokenLatency(entry.latencyMs) : "",
+    entry.promptTokens ? `输入 ${formatTokenValue(entry.promptTokens, "0")}` : "",
     entry.totalTokens ? `${formatTokenValue(entry.totalTokens, "0")} tokens` : "",
     entry.completionTokens ? `输出 ${formatTokenValue(entry.completionTokens, "0")}` : "",
     entry.reasoningTokens ? `推理 ${formatTokenValue(entry.reasoningTokens, "0")}` : "",
     entry.estimatedPromptTokens && !entry.totalTokens ? `估算 ${formatTokenValue(entry.estimatedPromptTokens, "0")}` : "",
+    entry.contextChars ? `上下文 ${formatTokenValue(entry.contextChars, "0")} 字` : "",
+    entry.systemPromptChars ? `规则 ${formatTokenValue(entry.systemPromptChars, "0")} 字` : "",
     entry.imageCount ? `图片 ${entry.imageCount}` : "",
     entry.transportMode,
     entry.taskKind,
   ].filter(Boolean);
   const detailParts = [entry.model, entry.endpoint].filter(Boolean);
+  const codeSummary = buildTokenRequestCodeSummary(entry);
   return `
     <article class="token-request-log-item is-${escapeHtml(entry.level)}">
       <div class="token-request-log-line">
@@ -33044,6 +33128,7 @@ const renderTokenRequestLogItem = (entry) => {
           : ""
       }
       ${detailParts.length ? `<p>${escapeHtml(detailParts.join(" · "))}</p>` : ""}
+      <pre class="token-request-log-code"><code>request = ${escapeHtml(JSON.stringify(codeSummary, null, 2))}</code></pre>
     </article>
   `;
 };
@@ -33070,9 +33155,9 @@ const renderTokenRequestLogs = (state = {}, snapshot = {}) => {
     ]);
   }
   const warningCount = requestLogs.filter((entry) => entry.level === "warn" || entry.level === "error").length;
-  const showAll = state?.tokenRequestLogFilter === "all";
+  const showAll = state?.tokenRequestLogFilter !== "issues";
   const visibleLogs = (showAll ? requestLogs : requestLogs.filter((entry) => entry.level === "warn" || entry.level === "error")).slice().reverse();
-  const filterLabel = showAll ? "显示全部 log / warn / error" : "仅显示 warn / error（警告与错误）";
+  const filterLabel = showAll ? "显示全部 log / warn / error，请求代码摘要已脱敏" : "仅显示 warn / error（警告与错误）";
   return `
     <section class="sheet-card token-console-card token-request-log-card">
       ${renderSheetSectionHead({
@@ -35655,7 +35740,7 @@ const createTransientState = () => ({
   settingsPresetCollapsed: true,
   settingsNotificationsCollapsed: true,
   tokenBreakdownCollapsed: true,
-  tokenRequestLogFilter: "issues",
+  tokenRequestLogFilter: "all",
   journeyRoutineCollapsed: true,
   globalFeatureStatus: createInitialGlobalFeatureStatus(),
   systemChromeStatus: createInitialSystemChromeStatus(),
@@ -40760,12 +40845,17 @@ const resolveModelRequestStrategy = (
   const family = getModelRequestFamily(config);
   const healthRecord = getModelRequestHealthRecord(config);
   const degradeLevel = resolveModelRequestDegradeLevel(healthRecord, normalizedTaskKind, { imageCount });
-  const contextLevel = getModelRequestContextLevel(degradeLevel);
-  const maxImages = resolveModelRequestMaxImages(degradeLevel, imageCount);
+  const forceStandardOpenAiChat =
+    normalizedTaskKind === MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN ||
+    normalizedTaskKind === MODEL_REQUEST_TASK_KIND.CHAT_REWRITE_PLAIN;
+  const contextLevel = forceStandardOpenAiChat ? "rich" : getModelRequestContextLevel(degradeLevel);
+  const maxImages = forceStandardOpenAiChat ? Math.max(0, Math.round(Number(imageCount || 0) || 0)) : resolveModelRequestMaxImages(degradeLevel, imageCount);
   const explicitVariantMode = String(preferredVariantMode || "").trim();
   let resolvedVariantMode = explicitVariantMode;
   if (!resolvedVariantMode) {
-    if (family === "gemini") {
+    if (forceStandardOpenAiChat) {
+      resolvedVariantMode = "openai-standard";
+    } else if (family === "gemini") {
       resolvedVariantMode = degradeLevel >= 2 && normalizedOutputMode === "text"
         ? "openai-fallback"
         : GEMINI_OPENAI_FALLBACK_TASKS.has(normalizedTaskKind)
@@ -40839,14 +40929,7 @@ const OPENAI_COMPATIBLE_CHAT_STOP_TASKS = new Set([
 ]);
 const shouldUseChatReplyStopSentinel = (requestStrategy = null) =>
   OPENAI_COMPATIBLE_CHAT_STOP_TASKS.has(normalizeModelRequestTaskKind(requestStrategy?.taskKind));
-const getOpenAiCompatibleExtraRequestOptions = (config = {}, requestStrategy = null) => {
-  if (shouldOmitMaxTokensForConfig(config) && shouldUseChatReplyStopSentinel(requestStrategy)) {
-    return {
-      reasoning_effort: "minimal",
-    };
-  }
-  return {};
-};
+const getOpenAiCompatibleExtraRequestOptions = (config = {}, requestStrategy = null) => ({});
 const getChatReplyPromptSentinelTraceLabels = (requestStrategy = null) =>
   shouldUseChatReplyStopSentinel(requestStrategy) ? ["prompt-sentinel"] : [];
 const shouldDisableJsonResponseFormat = (config = {}) => /dzzi\.ai/i.test(String(config?.url || "").trim());
@@ -45072,6 +45155,16 @@ const requestModelJsonWithConfig = async ({
       ].join("\n"),
     );
 
+  const standardOpenAiVariant = {
+    mode: "openai-standard",
+    messages: [
+      { role: "system", content: finalSystemPrompt },
+      {
+        role: "user",
+        content: buildOpenAiImageContent("以下是本轮 JSON 任务上下文 如果同时附带了图片 你必须先识别图片内容再回答\n"),
+      },
+    ],
+  };
   const defaultMessageVariants = geminiMode
     ? [
         {
@@ -45085,26 +45178,12 @@ const requestModelJsonWithConfig = async ({
         },
         {
           mode: "openai-fallback",
-          messages: [
-            { role: "system", content: finalSystemPrompt },
-            {
-              role: "user",
-              content: buildOpenAiImageContent("以下是本轮 JSON 任务上下文 如果同时附带了图片 你必须先识别图片内容再回答\n"),
-            },
-          ],
+          messages: standardOpenAiVariant.messages,
         },
+        standardOpenAiVariant,
       ]
     : [
-        {
-          mode: "openai-standard",
-          messages: [
-            { role: "system", content: finalSystemPrompt },
-            {
-              role: "user",
-              content: buildOpenAiImageContent("以下是本轮 JSON 任务上下文 如果同时附带了图片 你必须先识别图片内容再回答\n"),
-            },
-          ],
-        },
+        standardOpenAiVariant,
       ];
   const normalizedPreferredVariantMode = String(effectivePreferredVariantMode || "").trim();
   const messageVariants = (() => {
@@ -45608,6 +45687,16 @@ const requestModelTextWithConfig = async ({
     ? "以下是本轮纯文本参考上下文，不是输出格式，不要复述，不要改写成 JSON、Markdown、表格、代码块、payload 或 plainTextContext；最终答案只能是纯文本或标签文本\n"
     : "以下是本轮文本任务上下文 如果同时附带了图片 你必须先识别图片内容再回答\n";
 
+  const standardOpenAiVariant = {
+    mode: "openai-standard",
+    messages: [
+      { role: "system", content: finalSystemPrompt },
+      {
+        role: "user",
+        content: buildOpenAiImageContent(textContextPrefix),
+      },
+    ],
+  };
   const defaultMessageVariants = geminiMode
     ? [
         {
@@ -45621,26 +45710,12 @@ const requestModelTextWithConfig = async ({
         },
         {
           mode: "openai-fallback",
-          messages: [
-            { role: "system", content: finalSystemPrompt },
-            {
-              role: "user",
-              content: buildOpenAiImageContent(textContextPrefix),
-            },
-          ],
+          messages: standardOpenAiVariant.messages,
         },
+        standardOpenAiVariant,
       ]
     : [
-        {
-          mode: "openai-standard",
-          messages: [
-            { role: "system", content: finalSystemPrompt },
-            {
-              role: "user",
-              content: buildOpenAiImageContent(textContextPrefix),
-            },
-          ],
-        },
+        standardOpenAiVariant,
       ];
   const normalizedPreferredVariantMode = String(effectivePreferredVariantMode || "").trim();
   const messageVariants = (() => {
