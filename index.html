@@ -25797,7 +25797,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.16-main-chat-timeout-fix";
+const APP_BUILD_VERSION_LABEL = "v2026.05.16-main-chat-retry-fix";
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -67496,6 +67496,37 @@ const resolveFollowUpPrompt = (role) => {
   return `继续上一轮对话 保持自然真人聊天感 自然往下接话 ${topicText || "最近对话"}`;
 };
 
+const getLatestUserMessageForRetry = (role) =>
+  [...(role?.chats?.messages || [])].reverse().find((message) => message?.role === "user") || null;
+
+const resolveRetryInputForUserMessage = (role, message, fallbackContent = "") => {
+  const normalizedFallback = String(fallbackContent || "").trim();
+  if (normalizedFallback) return normalizedFallback;
+  if (!message || message.role !== "user") return "";
+  if (typeof message.content === "string" && message.content.trim()) return message.content.trim();
+  if (isVisualMessage(message)) return "继续回复我刚发的图片 先识别图片再自然接话";
+  if (message.type === "sticker") return `继续回复我刚发的表情包 ${message.content?.description || ""}`.trim();
+  return resolveFollowUpPrompt(role);
+};
+
+const queueRetryForUserMessage = (roleId = "", messageId = "", fallbackContent = "") => {
+  const role = getRoleById(state, roleId);
+  if (!role) return false;
+  const normalizedMessageId = String(messageId || "").trim();
+  const targetMessage = normalizedMessageId ? findMessageById(role, normalizedMessageId) : getLatestUserMessageForRetry(role);
+  if (!targetMessage || targetMessage.role !== "user") return false;
+  const retryInput = resolveRetryInputForUserMessage(role, targetMessage, fallbackContent);
+  if (!String(retryInput || "").trim()) return false;
+  pendingAiReply = {
+    roleId: role.id,
+    messageId: targetMessage.id || normalizedMessageId,
+    content: retryInput,
+    mode: "reply",
+    at: Date.now(),
+  };
+  return true;
+};
+
 const rerollConversationFromMessage = async (roleId, messageId) => {
   const role = getRoleById(state, roleId);
   if (!role || !messageId) return false;
@@ -67754,6 +67785,7 @@ const requestAndAppendAiReply = async (
         errorMessage: abortedMessage,
         requestLogs: primaryChatRequestLogs,
       });
+      queueRetryForUserMessage(roleId, normalizedSourceMessageId, normalizedInput);
       setToast(abortedMessage);
       return false;
     }
@@ -67772,6 +67804,7 @@ const requestAndAppendAiReply = async (
       errorMessage: error?.message || "主 API 调用失败",
       requestLogs: primaryChatRequestLogs,
     });
+    queueRetryForUserMessage(roleId, normalizedSourceMessageId, normalizedInput);
     setToast(error.message || "主 API 调用失败，未生成回复");
     return false;
   } finally {
@@ -67788,23 +67821,7 @@ const requestAndAppendAiReply = async (
 };
 
 const queueRetryForLatestUserMessage = (roleId = "") => {
-  const role = getRoleById(state, roleId);
-  if (!role) return false;
-  const lastUserMessage = [...(role.chats?.messages || [])].reverse().find((message) => message?.role === "user");
-  if (!lastUserMessage) return false;
-  const retryInput =
-    typeof lastUserMessage.content === "string" && lastUserMessage.content.trim()
-      ? lastUserMessage.content.trim()
-      : resolveFollowUpPrompt(role);
-  if (!String(retryInput || "").trim()) return false;
-  pendingAiReply = {
-    roleId: role.id,
-    messageId: lastUserMessage.id,
-    content: retryInput,
-    mode: "reply",
-    at: Date.now(),
-  };
-  return true;
+  return queueRetryForUserMessage(roleId);
 };
 
 const cancelActiveChatReplyGeneration = (roleId = "") => {
@@ -72727,7 +72744,7 @@ const triggerPendingAiReply = () => {
   pendingAiReply = null;
   markChatFeedForAutoScroll();
   void requestAndAppendAiReply(role.id, pending.content, {
-    roundStartedAtMs: pending.at || Date.now(),
+    roundStartedAtMs: Date.now(),
     sourceMessageId: pending.messageId || "",
   });
   return true;
@@ -73740,6 +73757,18 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "send-message") {
     if (button.dataset.sendMode === "direct-ai") {
+      const role = getActiveChatRole() || getCurrentRole();
+      const input = document.getElementById("composer-input");
+      const currentValue = String(input?.value ?? role?.chats?.draft ?? "").trim();
+      if (
+        role &&
+        pendingAiReply &&
+        pendingAiReply.roleId === role.id &&
+        (!currentValue || pendingAiReply.mode === "follow-up" || currentValue === pendingAiReply.content)
+      ) {
+        handleComposerPrimaryAction();
+        return;
+      }
       handleSendMessage({ triggerAi: true });
       return;
     }
