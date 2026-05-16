@@ -10281,7 +10281,7 @@ body {
 
 .token-request-log-console {
   display: grid;
-  gap: 0;
+  gap: 14px;
   min-height: 210px;
   max-height: min(54vh, 520px);
   overflow: auto;
@@ -10292,6 +10292,36 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   color: #eef2f7;
   -webkit-overflow-scrolling: touch;
+}
+
+.token-request-log-round {
+  display: grid;
+  gap: 8px;
+}
+
+.token-request-log-round + .token-request-log-round {
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.token-request-log-round-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0 4px;
+  color: rgba(238, 242, 247, 0.7);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.token-request-log-round-head strong {
+  color: #eef2f7;
+  font-size: 12px;
+}
+
+.token-request-log-round-head span {
+  text-align: right;
 }
 
 .token-request-log-item {
@@ -25797,7 +25827,9 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.16-main-chat-retry-fix";
+const APP_BUILD_VERSION_LABEL = "v2026.05.16-token-console-10-round-logs";
+
+const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -25845,6 +25877,65 @@ const normalizeTokenConsoleRequestLogs = (entries = []) =>
     })
     .filter((entry) => entry?.message || entry?.source)
     .slice(-20);
+
+const getTokenConsoleSnapshotRoundKey = (snapshot = {}) => {
+  if (!snapshot || typeof snapshot !== "object") return "";
+  const startLog = Array.isArray(snapshot.requestLogs)
+    ? snapshot.requestLogs.find((entry) => String(entry?.phase || "").trim().toLowerCase() === "start")
+    : null;
+  return String(snapshot.roundStartedAt || snapshot.startedAt || startLog?.timestamp || snapshot.timestamp || "").trim();
+};
+
+const getTokenConsoleSnapshotRequestLogs = (snapshot = {}) => {
+  let requestLogs = normalizeTokenConsoleRequestLogs(snapshot?.requestLogs || []);
+  const clearedAtMs = snapshot?.requestLogsClearedAt ? new Date(snapshot.requestLogsClearedAt).getTime() : 0;
+  const snapshotAtMs = new Date(snapshot?.timestamp || getTokenConsoleSnapshotRoundKey(snapshot) || "").getTime();
+  if (!requestLogs.length && snapshot?.timestamp && snapshot?.errorMessage && (!clearedAtMs || snapshotAtMs > clearedAtMs)) {
+    requestLogs = normalizeTokenConsoleRequestLogs([
+      {
+        timestamp: snapshot.timestamp,
+        level: snapshot.status === "cancelled" ? "warn" : "error",
+        source: "ChatReply",
+        message: `上次调用失败：${snapshot.errorMessage}`,
+        model: snapshot.model || "",
+        endpoint: snapshot.endpoint || "",
+        transportMode: snapshot.transportMode || "",
+        latencyMs: snapshot.wallClockMs || snapshot.latencyMs || 0,
+        totalTokens: snapshot.totalTokens || 0,
+        estimatedPromptTokens: snapshot.estimatedPromptTokens || 0,
+        imageCount: snapshot.imageCount || 0,
+      },
+    ]);
+  }
+  return requestLogs;
+};
+
+const normalizeTokenConsolePrimaryChatHistory = (role, fallbackSnapshot = {}) => {
+  const rawHistory = Array.isArray(role?.usage?.primaryChatHistory) ? role.usage.primaryChatHistory : [];
+  const seen = new Set();
+  const snapshots = [];
+  const pushSnapshot = (snapshot) => {
+    if (!snapshot || typeof snapshot !== "object") return;
+    const requestLogs = getTokenConsoleSnapshotRequestLogs(snapshot);
+    const roundKey = getTokenConsoleSnapshotRoundKey(snapshot);
+    const timestamp = String(snapshot.timestamp || roundKey || "").trim();
+    if (!timestamp && !requestLogs.length) return;
+    const dedupeKey = roundKey || timestamp || `${snapshots.length}`;
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+    snapshots.push({
+      ...snapshot,
+      timestamp,
+      roundKey,
+      requestLogs,
+    });
+  };
+  rawHistory.forEach(pushSnapshot);
+  pushSnapshot(fallbackSnapshot);
+  return snapshots
+    .sort((left, right) => new Date(right.roundKey || right.timestamp || 0).getTime() - new Date(left.roundKey || left.timestamp || 0).getTime())
+    .slice(0, TOKEN_REQUEST_LOG_HISTORY_LIMIT);
+};
 
 const nlToBr = (value = "") => escapeHtml(value).replaceAll("\n", "<br />");
 
@@ -26719,6 +26810,16 @@ const getTokenModeLabel = (mode = "") => {
   if (mode === "proactive") return "主动消息";
   if (mode === "offline") return "离线消息";
   return "聊天回复";
+};
+
+const getPrimaryChatStatusLabel = (status = "") => {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "running") return "进行中";
+  if (normalized === "success") return "成功";
+  if (normalized === "timeout") return "超时";
+  if (normalized === "cancelled") return "已取消";
+  if (normalized === "error") return "失败";
+  return normalized || "未记录";
 };
 
 const SECONDARY_FEATURE_LABELS = {
@@ -33124,37 +33225,40 @@ const renderTokenRequestLogItem = (entry) => {
   `;
 };
 
-const renderTokenRequestLogs = (state = {}, snapshot = {}) => {
-  let requestLogs = normalizeTokenConsoleRequestLogs(snapshot?.requestLogs || []);
-  const clearedAtMs = snapshot?.requestLogsClearedAt ? new Date(snapshot.requestLogsClearedAt).getTime() : 0;
-  const snapshotAtMs = snapshot?.timestamp ? new Date(snapshot.timestamp).getTime() : 0;
-  if (!requestLogs.length && snapshot?.timestamp && snapshot?.errorMessage && (!clearedAtMs || snapshotAtMs > clearedAtMs)) {
-    requestLogs = normalizeTokenConsoleRequestLogs([
-      {
-        timestamp: snapshot.timestamp,
-        level: snapshot.status === "cancelled" ? "warn" : "error",
-        source: "ChatReply",
-        message: `上次调用失败：${snapshot.errorMessage}`,
-        model: snapshot.model || "",
-        endpoint: snapshot.endpoint || "",
-        transportMode: snapshot.transportMode || "",
-        latencyMs: snapshot.wallClockMs || snapshot.latencyMs || 0,
-        totalTokens: snapshot.totalTokens || 0,
-        estimatedPromptTokens: snapshot.estimatedPromptTokens || 0,
-        imageCount: snapshot.imageCount || 0,
-      },
-    ]);
-  }
+const renderTokenRequestLogRound = (snapshot, roundIndex, showAll) => {
+  const requestLogs = Array.isArray(snapshot?.requestLogs) ? snapshot.requestLogs : [];
+  const visibleLogs = showAll ? requestLogs : requestLogs.filter((entry) => entry.level === "warn" || entry.level === "error");
+  if (!visibleLogs.length) return "";
+  const statusLabel = getPrimaryChatStatusLabel(snapshot?.status || "");
+  const timeLabel = formatTokenConsoleTime(snapshot?.roundKey || snapshot?.timestamp || "");
+  const tokenText = Number(snapshot?.totalTokens || 0) > 0 ? ` · ${formatTokenValue(snapshot.totalTokens, "0")} tokens` : "";
+  return `
+    <div class="token-request-log-round">
+      <div class="token-request-log-round-head">
+        <strong>最近第 ${roundIndex + 1} 轮</strong>
+        <span>${escapeHtml([timeLabel, statusLabel].filter(Boolean).join(" · "))}${escapeHtml(tokenText)}</span>
+      </div>
+      ${visibleLogs.slice().reverse().map((entry) => renderTokenRequestLogItem(entry)).join("")}
+    </div>
+  `;
+};
+
+const renderTokenRequestLogs = (state = {}, role = {}, snapshot = {}) => {
+  const historySnapshots = normalizeTokenConsolePrimaryChatHistory(role, snapshot);
+  const requestLogs = historySnapshots.flatMap((item) => item.requestLogs || []);
   const warningCount = requestLogs.filter((entry) => entry.level === "warn" || entry.level === "error").length;
   const showAll = state?.tokenRequestLogFilter !== "issues";
-  const visibleLogs = (showAll ? requestLogs : requestLogs.filter((entry) => entry.level === "warn" || entry.level === "error")).slice().reverse();
+  const visibleRoundHtml = historySnapshots
+    .map((item, index) => renderTokenRequestLogRound(item, index, showAll))
+    .filter(Boolean)
+    .join("");
   const filterLabel = showAll ? "显示全部 log / warn / error，请求代码摘要已脱敏" : "仅显示 warn / error（警告与错误）";
   return `
     <section class="sheet-card token-console-card token-request-log-card">
       ${renderSheetSectionHead({
         kicker: "请求日志",
-        title: requestLogs.length ? "最近一轮代码日志" : "还没有代码日志",
-        badge: requestLogs.length ? `${warningCount} 条警告/错误` : "",
+        title: requestLogs.length ? "最近 10 轮代码日志" : "还没有代码日志",
+        badge: requestLogs.length ? `${historySnapshots.length} 轮 · ${warningCount} 条警告/错误` : "",
       })}
       <div class="token-request-log-toolbar">
         <span>${escapeHtml(filterLabel)}</span>
@@ -33166,11 +33270,11 @@ const renderTokenRequestLogs = (state = {}, snapshot = {}) => {
       </div>
       <div class="token-request-log-console">
         ${
-          visibleLogs.length
-            ? visibleLogs.map((entry) => renderTokenRequestLogItem(entry)).join("")
+          visibleRoundHtml
+            ? visibleRoundHtml
             : requestLogs.length
               ? `<div class="token-request-log-empty">当前没有 warn / error，点“查看全部”可以看完整请求记录。</div>`
-              : `<div class="token-request-log-empty">下一次主聊天生成后，这里会显示每一轮请求、返回、超时和失败原因。</div>`
+              : `<div class="token-request-log-empty">下一次主聊天生成后，这里会保留最近 10 轮请求、返回、超时和失败原因。</div>`
         }
       </div>
     </section>
@@ -33180,7 +33284,7 @@ const renderTokenRequestLogs = (state = {}, snapshot = {}) => {
 const renderTokenConsoleSheet = (state, role) => {
   const snapshot = role?.usage?.lastPrimaryChat || {};
   const secondaryUsage = role?.usage?.secondary || {};
-  const hasSnapshot = Boolean(snapshot?.timestamp || snapshot?.status === "error");
+  const hasSnapshot = Boolean(snapshot?.timestamp || snapshot?.status === "error" || snapshot?.status === "running");
   const secondaryTasks = Array.isArray(secondaryUsage?.lastTasks) ? secondaryUsage.lastTasks : [];
   const hasSecondaryStats = SECONDARY_GROUPS.some((group) => getSecondaryGroupUsage(secondaryUsage, group.features).calls > 0);
   const promptNote =
@@ -33223,6 +33327,7 @@ const renderTokenConsoleSheet = (state, role) => {
               </div>
               <div class="token-console-list">
                 <div class="token-console-row"><span>消息类型</span><strong>${escapeHtml(getTokenModeLabel(snapshot.mode))}</strong></div>
+                <div class="token-console-row"><span>状态</span><strong>${escapeHtml(getPrimaryChatStatusLabel(snapshot.status))}</strong></div>
                 <div class="token-console-row"><span>模型</span><strong>${escapeHtml(snapshot.model || "未记录")}</strong></div>
                 <div class="token-console-row"><span>请求时间</span><strong>${escapeHtml(formatTokenConsoleTime(snapshot.timestamp))}</strong></div>
                 <div class="token-console-row"><span>模型耗时</span><strong>${escapeHtml(formatTokenLatency(snapshot.latencyMs))}</strong></div>
@@ -33242,8 +33347,8 @@ const renderTokenConsoleSheet = (state, role) => {
                   : ""
               }
               ${
-                snapshot.status === "error" && snapshot.errorMessage
-                  ? `<p class="sheet-note token-console-error">上次调用失败：${escapeHtml(normalizeTokenConsoleErrorMessage(snapshot.errorMessage))}</p>`
+                ["error", "timeout", "cancelled", "running"].includes(String(snapshot.status || "").trim()) && snapshot.errorMessage
+                  ? `<p class="sheet-note token-console-error">${escapeHtml(normalizeTokenConsoleErrorMessage(snapshot.errorMessage))}</p>`
                   : ""
               }
             `
@@ -33296,7 +33401,7 @@ const renderTokenConsoleSheet = (state, role) => {
         <p>主 API 和副 API 可以并行调用。聊天回复、主动消息、离线消息走主 API，地图、行程、朋友圈、生活轨迹、总结走副 API</p>
         <p>页面累计：约 ${formatTokenValue(role?.usage?.tokensToday, "0")} tokens</p>
       </section>
-      ${renderTokenRequestLogs(state, snapshot)}
+      ${renderTokenRequestLogs(state, role, snapshot)}
     `,
     "token-console-wrap",
   );
@@ -35572,7 +35677,7 @@ const VIDEO_SESSION_RECENT_CHAT_DETAIL_LIMIT = 12;
 const VIDEO_SESSION_WORLDBOOK_DETAIL_LIMIT = 8;
 const VIDEO_SESSION_NPC_DETAIL_LIMIT = 6;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
-const CHAT_REPLY_TIMEOUT_MS = 300_000;
+const CHAT_REPLY_TIMEOUT_MS = 120_000;
 const CHAT_REPLY_QUERY_EMBEDDING_TIMEOUT_MS = 3000;
 const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
 const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
@@ -36592,6 +36697,10 @@ let longPressTimer = null;
 let pendingAiReply = null;
 const chatReplyAbortControllers = new Map();
 const chatReplySourceMessageIds = new Map();
+const chatReplyStartedAtMs = new Map();
+const chatReplyLastInputs = new Map();
+const chatReplyRequestTokens = new Map();
+const chatReplyForcedTimeoutControllers = new WeakSet();
 let videoSessionRuntime = {
   stream: null,
   captureVideo: null,
@@ -44450,6 +44559,12 @@ const clearChatReplyState = (roleId = "", { abort = false, clearPending = true, 
   if (clearBusy && state.chatReplyBusyRoleId === normalizedRoleId) {
     state.chatReplyBusyRoleId = null;
   }
+  if (clearBusy) {
+    chatReplyAbortControllers.delete(normalizedRoleId);
+    chatReplyStartedAtMs.delete(normalizedRoleId);
+    chatReplyLastInputs.delete(normalizedRoleId);
+    chatReplyRequestTokens.delete(normalizedRoleId);
+  }
   return true;
 };
 
@@ -47619,6 +47734,7 @@ const SECONDARY_USAGE_FEATURE_LABELS = Object.freeze({
 });
 
 const PRIMARY_CHAT_REQUEST_LOG_LIMIT = 20;
+const PRIMARY_CHAT_HISTORY_LIMIT = 10;
 const PRIMARY_CHAT_REQUEST_LOG_MESSAGE_LIMIT = 360;
 
 const normalizePrimaryChatRequestLogLevel = (entry = {}) => {
@@ -47731,6 +47847,70 @@ const formatPrimaryChatRequestLogsForClipboard = (entries = []) =>
     })
     .join("\n");
 
+const getPrimaryChatSnapshotRoundKey = (snapshot = {}) => {
+  if (!snapshot || typeof snapshot !== "object") return "";
+  const startLog = Array.isArray(snapshot.requestLogs)
+    ? snapshot.requestLogs.find((entry) => String(entry?.phase || "").trim().toLowerCase() === "start")
+    : null;
+  return String(snapshot.roundStartedAt || snapshot.startedAt || startLog?.timestamp || snapshot.timestamp || "").trim();
+};
+
+const normalizePrimaryChatUsageSnapshot = (snapshot = {}) => {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const timestamp = String(snapshot.timestamp || snapshot.roundStartedAt || "").trim();
+  if (!timestamp && String(snapshot.status || "").trim() !== "running") return null;
+  return {
+    ...snapshot,
+    timestamp,
+    roundStartedAt: String(snapshot.roundStartedAt || snapshot.startedAt || timestamp || "").trim(),
+    requestLogs: normalizePrimaryChatRequestLogs(snapshot.requestLogs || []),
+  };
+};
+
+const normalizePrimaryChatUsageHistory = (history = [], fallbackSnapshot = null) => {
+  const seen = new Set();
+  const list = [];
+  const pushSnapshot = (snapshot) => {
+    const normalized = normalizePrimaryChatUsageSnapshot(snapshot);
+    if (!normalized) return;
+    const key = getPrimaryChatSnapshotRoundKey(normalized);
+    if (key && seen.has(key)) return;
+    if (key) seen.add(key);
+    list.push(normalized);
+  };
+  (Array.isArray(history) ? history : []).forEach(pushSnapshot);
+  pushSnapshot(fallbackSnapshot);
+  return list
+    .sort((left, right) => new Date(getPrimaryChatSnapshotRoundKey(right) || right.timestamp || 0).getTime() - new Date(getPrimaryChatSnapshotRoundKey(left) || left.timestamp || 0).getTime())
+    .slice(0, PRIMARY_CHAT_HISTORY_LIMIT);
+};
+
+const upsertPrimaryChatUsageHistory = (history = [], snapshot = {}) => {
+  const normalizedSnapshot = normalizePrimaryChatUsageSnapshot(snapshot);
+  if (!normalizedSnapshot) return normalizePrimaryChatUsageHistory(history);
+  const snapshotKey = getPrimaryChatSnapshotRoundKey(normalizedSnapshot);
+  const previous = normalizePrimaryChatUsageHistory(history).filter((item) => {
+    if (!snapshotKey) return item !== normalizedSnapshot;
+    return getPrimaryChatSnapshotRoundKey(item) !== snapshotKey;
+  });
+  return [normalizedSnapshot, ...previous].slice(0, PRIMARY_CHAT_HISTORY_LIMIT);
+};
+
+const getPrimaryChatHistorySnapshots = (role) =>
+  normalizePrimaryChatUsageHistory(role?.usage?.primaryChatHistory || [], role?.usage?.lastPrimaryChat || null);
+
+const formatPrimaryChatHistoryRequestLogsForClipboard = (role) =>
+  getPrimaryChatHistorySnapshots(role)
+    .map((snapshot, index) => {
+      const body = formatPrimaryChatRequestLogsForClipboard(snapshot.requestLogs || []);
+      if (!body) return "";
+      const statusText = String(snapshot.status || "").trim() || "unknown";
+      const timeText = formatPrimaryChatRequestLogTime(getPrimaryChatSnapshotRoundKey(snapshot) || snapshot.timestamp || "");
+      return [`# 最近第 ${index + 1} 轮 ${statusText} ${timeText}`, body].join("\n");
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
 const writeTextToClipboard = async (text = "") => {
   const safeText = String(text || "");
   if (!safeText) return false;
@@ -47765,12 +47945,14 @@ const persistPrimaryChatUsageSnapshot = (
     const promptTokens = Math.max(0, Number(meta?.promptTokens ?? 0) || 0);
     const completionTokens = Math.max(0, Number(meta?.completionTokens ?? 0) || 0);
     const normalizedStatus = String(status || "success").trim() || "success";
-    nextRole.usage.lastPrimaryChat = {
+    const normalizedRequestLogs = normalizePrimaryChatRequestLogs(requestLogs);
+    const lastPrimaryChat = {
       ...(nextRole.usage?.lastPrimaryChat || {}),
       mode: String(mode || "").trim(),
       status: normalizedStatus,
       timedOut: normalizedStatus === "timeout" || Boolean(meta?.timedOut),
       timestamp: meta?.timestamp || new Date().toISOString(),
+      roundStartedAt: getPrimaryChatSnapshotRoundKey({ requestLogs: normalizedRequestLogs, timestamp: meta?.timestamp || "" }),
       model: String(meta?.model || "").trim(),
       endpoint: String(meta?.endpoint || "").trim(),
       transportMode: String(meta?.transportMode || "").trim(),
@@ -47798,11 +47980,34 @@ const persistPrimaryChatUsageSnapshot = (
             }))
             .filter((item) => item.label && item.chars > 0)
         : [],
-      requestLogs: normalizePrimaryChatRequestLogs(requestLogs),
+      requestLogs: normalizedRequestLogs,
       errorMessage: String(errorMessage || "").trim(),
     };
+    nextRole.usage.lastPrimaryChat = lastPrimaryChat;
+    nextRole.usage.primaryChatHistory = upsertPrimaryChatUsageHistory(nextRole.usage?.primaryChatHistory || [], lastPrimaryChat);
     return nextRole;
   });
+};
+
+const persistPrimaryChatRunningSnapshot = (roleId, { roundStartedAtMs = Date.now(), requestLogs = [], inputLength = 0 } = {}) => {
+  if (!roleId) return;
+  updateRole(roleId, (nextRole) => {
+    const normalizedRequestLogs = normalizePrimaryChatRequestLogs(requestLogs);
+    const lastPrimaryChat = {
+      ...(nextRole.usage?.lastPrimaryChat || {}),
+      mode: "reply",
+      status: "running",
+      timedOut: false,
+      timestamp: new Date(roundStartedAtMs).toISOString(),
+      roundStartedAt: new Date(roundStartedAtMs).toISOString(),
+      wallClockMs: Math.max(0, Date.now() - roundStartedAtMs),
+      requestLogs: normalizedRequestLogs,
+      errorMessage: `主聊天请求进行中，用户输入 ${Math.max(0, Number(inputLength || 0) || 0)} 字`,
+    };
+    nextRole.usage.lastPrimaryChat = lastPrimaryChat;
+    nextRole.usage.primaryChatHistory = upsertPrimaryChatUsageHistory(nextRole.usage?.primaryChatHistory || [], lastPrimaryChat);
+    return nextRole;
+  }, { paintNow: false });
 };
 
 const persistSecondaryTaskUsageSnapshot = (roleId, { feature = "", status = "success", meta = null, errorMessage = "" } = {}) => {
@@ -50324,6 +50529,13 @@ const MAX_OFFLINE_CATCH_UP_ROUNDS = 12;
 const isRoleBusyGenerating = (roleId) =>
   state.chatReplyBusyRoleId === roleId ||
   toBusyList(state.apiGenerationBusy).some((token) => String(token || "").startsWith("auto:") && String(token || "").endsWith(`:${roleId}`));
+
+const isRoleChatReplyBusy = (roleId = "") => String(state.chatReplyBusyRoleId || "") === String(roleId || "").trim();
+
+const makeChatReplyRequestToken = () => `chat-reply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const isCurrentChatReplyRequest = (roleId = "", requestToken = "") =>
+  Boolean(requestToken) && chatReplyRequestTokens.get(String(roleId || "").trim()) === requestToken;
 
 const parseValidTimestamp = (value) => {
   const parsed = new Date(value || "");
@@ -67591,6 +67803,14 @@ const requestAndAppendAiReply = async (
   const normalizedInput = String(userInput || "").trim();
   if (!role || !normalizedInput) return false;
   if (isRoleBusyGenerating(roleId)) {
+    if (!recoverStaleChatReplyGeneration(roleId, { queueRetry: false, toast: false }) || isRoleBusyGenerating(roleId)) {
+      setToast("正在生成回复");
+      return false;
+    }
+    setToast("上次生成已超时，正在重新生成");
+  }
+
+  if (isRoleBusyGenerating(roleId)) {
     setToast("正在生成回复");
     return false;
   }
@@ -67601,7 +67821,11 @@ const requestAndAppendAiReply = async (
   }
 
   const abortController = new AbortController();
+  const requestToken = makeChatReplyRequestToken();
   chatReplyAbortControllers.set(roleId, abortController);
+  chatReplyRequestTokens.set(roleId, requestToken);
+  chatReplyStartedAtMs.set(roleId, roundStartedAtMs);
+  chatReplyLastInputs.set(roleId, normalizedInput);
   const normalizedSourceMessageId = String(sourceMessageId || getCurrentTurnUserMessageId(role) || "").trim();
   const primaryChatRequestLogs = [];
   const appendPrimaryChatRequestLog = (entry = {}) => {
@@ -67614,6 +67838,11 @@ const requestAndAppendAiReply = async (
     source: "ChatReply",
     message: `开始生成主聊天回复，用户输入 ${normalizedInput.length} 字`,
   });
+  persistPrimaryChatRunningSnapshot(roleId, {
+    roundStartedAtMs,
+    requestLogs: primaryChatRequestLogs,
+    inputLength: normalizedInput.length,
+  });
   if (normalizedSourceMessageId) {
     chatReplySourceMessageIds.set(roleId, normalizedSourceMessageId);
   } else {
@@ -67622,6 +67851,7 @@ const requestAndAppendAiReply = async (
   let replyTimedOut = false;
   const replyTimeoutId = window.setTimeout(() => {
     replyTimedOut = true;
+    chatReplyForcedTimeoutControllers.add(abortController);
     if (!abortController.signal.aborted) {
       abortController.abort();
     }
@@ -67669,6 +67899,11 @@ const requestAndAppendAiReply = async (
       phase: "context",
       source: "Weather",
       message: "天气上下文已检查",
+    });
+    persistPrimaryChatRunningSnapshot(roleId, {
+      roundStartedAtMs,
+      requestLogs: primaryChatRequestLogs,
+      inputLength: normalizedInput.length,
     });
     throwIfReplyAborted();
     if (!STRICT_SINGLE_AI_REQUEST_PER_ENTRY) {
@@ -67729,6 +67964,10 @@ const requestAndAppendAiReply = async (
       throw createAbortRequestError("已中断生成回复");
     }
 
+    if (!isCurrentChatReplyRequest(roleId, requestToken)) {
+      return false;
+    }
+
     await appendMessagesSequentially(roleId, replyBatch.messages, {
       statusText: replyBatch.statusText,
       lastApiAt: replyBatch.lastApiAt,
@@ -67751,42 +67990,49 @@ const requestAndAppendAiReply = async (
     markChatFeedForAutoScroll();
     return true;
   } catch (error) {
+    if (!isCurrentChatReplyRequest(roleId, requestToken)) {
+      return false;
+    }
     if (isAbortRequestError(error)) {
       const abortedMessage = replyTimedOut
         ? "生成回复超时，前端已取消等待；若中转站未中止请求，后台可能仍在继续生成/计费"
         : "已中断生成回复";
+      const abortWasForcedTimeout = replyTimedOut || chatReplyForcedTimeoutControllers.has(abortController);
+      const displayedAbortMessage = abortWasForcedTimeout
+        ? "生成回复超时，前端已取消等待；若中转站未中止请求，后台可能仍在继续生成/计费"
+        : abortedMessage;
       const fallbackMeta = error?.modelMeta || null;
       appendPrimaryChatRequestLog({
-        level: replyTimedOut ? "error" : "warn",
-        phase: replyTimedOut ? "timeout" : "cancelled",
+        level: abortWasForcedTimeout ? "error" : "warn",
+        phase: abortWasForcedTimeout ? "timeout" : "cancelled",
         source: "ChatReply",
-        message: abortedMessage,
+        message: displayedAbortMessage,
         meta: fallbackMeta,
-        latencyMs: replyTimedOut ? CHAT_REPLY_TIMEOUT_MS : Math.max(0, Date.now() - roundStartedAtMs),
+        latencyMs: abortWasForcedTimeout ? Math.max(CHAT_REPLY_TIMEOUT_MS, Date.now() - roundStartedAtMs) : Math.max(0, Date.now() - roundStartedAtMs),
       });
       persistPrimaryChatUsageSnapshot(roleId, {
         mode: "reply",
-        status: replyTimedOut ? "timeout" : "cancelled",
+        status: abortWasForcedTimeout ? "timeout" : "cancelled",
         meta: withRoundWallClockMeta(
           fallbackMeta
             ? {
                 ...fallbackMeta,
-                latencyMs: replyTimedOut
-                  ? Math.max(Number(fallbackMeta.latencyMs || 0), CHAT_REPLY_TIMEOUT_MS)
+                latencyMs: abortWasForcedTimeout
+                  ? Math.max(Number(fallbackMeta.latencyMs || 0), CHAT_REPLY_TIMEOUT_MS, Date.now() - roundStartedAtMs)
                   : Number(fallbackMeta.latencyMs || 0),
-                timedOut: replyTimedOut,
+                timedOut: abortWasForcedTimeout,
               }
-            : replyTimedOut
-              ? { timedOut: true, latencyMs: CHAT_REPLY_TIMEOUT_MS }
+            : abortWasForcedTimeout
+              ? { timedOut: true, latencyMs: Math.max(CHAT_REPLY_TIMEOUT_MS, Date.now() - roundStartedAtMs) }
               : null,
           roundStartedAtMs,
           Date.now(),
         ),
-        errorMessage: abortedMessage,
+        errorMessage: displayedAbortMessage,
         requestLogs: primaryChatRequestLogs,
       });
       queueRetryForUserMessage(roleId, normalizedSourceMessageId, normalizedInput);
-      setToast(abortedMessage);
+      setToast(displayedAbortMessage);
       return false;
     }
     appendPrimaryChatRequestLog({
@@ -67809,19 +68055,51 @@ const requestAndAppendAiReply = async (
     return false;
   } finally {
     window.clearTimeout(replyTimeoutId);
-    if (chatReplyAbortControllers.get(roleId) === abortController) {
+    if (isCurrentChatReplyRequest(roleId, requestToken) && chatReplyAbortControllers.get(roleId) === abortController) {
       chatReplyAbortControllers.delete(roleId);
+      chatReplyRequestTokens.delete(roleId);
+      chatReplyStartedAtMs.delete(roleId);
+      chatReplyLastInputs.delete(roleId);
+      chatReplySourceMessageIds.delete(roleId);
       if (state.chatReplyBusyRoleId === roleId) {
         state.chatReplyBusyRoleId = null;
       }
       paint();
     }
-    chatReplySourceMessageIds.delete(roleId);
   }
 };
 
 const queueRetryForLatestUserMessage = (roleId = "") => {
   return queueRetryForUserMessage(roleId);
+};
+
+const recoverStaleChatReplyGeneration = (roleId = "", { queueRetry = true, toast = true } = {}) => {
+  const normalizedRoleId = String(roleId || state.chatReplyBusyRoleId || "").trim();
+  if (!normalizedRoleId || state.chatReplyBusyRoleId !== normalizedRoleId) return false;
+  const startedAtMs = Number(chatReplyStartedAtMs.get(normalizedRoleId) || 0);
+  if (!startedAtMs || Date.now() - startedAtMs < CHAT_REPLY_TIMEOUT_MS + 1000) return false;
+  const controller = chatReplyAbortControllers.get(normalizedRoleId);
+  if (controller && !controller.signal?.aborted) {
+    chatReplyForcedTimeoutControllers.add(controller);
+    controller.abort();
+  }
+  state.chatReplyBusyRoleId = null;
+  chatReplyAbortControllers.delete(normalizedRoleId);
+  chatReplyRequestTokens.delete(normalizedRoleId);
+  const sourceMessageId = chatReplySourceMessageIds.get(normalizedRoleId) || "";
+  const lastInput = chatReplyLastInputs.get(normalizedRoleId) || "";
+  chatReplyStartedAtMs.delete(normalizedRoleId);
+  chatReplyLastInputs.delete(normalizedRoleId);
+  if (queueRetry) {
+    queueRetryForUserMessage(
+      normalizedRoleId,
+      sourceMessageId,
+      lastInput,
+    );
+  }
+  paint();
+  if (toast) setToast("上次生成已超时，已准备重试");
+  return true;
 };
 
 const cancelActiveChatReplyGeneration = (roleId = "") => {
@@ -72756,6 +73034,19 @@ const handleComposerPrimaryAction = () => {
 
   const input = document.getElementById("composer-input");
   const currentValue = String(input?.value ?? role.chats.draft ?? "").trim();
+  if (isRoleChatReplyBusy(role.id)) {
+    const recoveredStaleReply = recoverStaleChatReplyGeneration(role.id, {
+      queueRetry: !currentValue,
+      toast: false,
+    });
+    if (!recoveredStaleReply && isRoleBusyGenerating(role.id)) {
+      return;
+    }
+    if (!currentValue && recoveredStaleReply) {
+      triggerPendingAiReply();
+      return;
+    }
+  }
   if (isRoleBusyGenerating(role.id)) {
     return;
   }
@@ -73760,6 +74051,17 @@ eventRoot.addEventListener("click", async (event) => {
       const role = getActiveChatRole() || getCurrentRole();
       const input = document.getElementById("composer-input");
       const currentValue = String(input?.value ?? role?.chats?.draft ?? "").trim();
+      if (role && isRoleChatReplyBusy(role.id)) {
+        const recoveredStaleReply = recoverStaleChatReplyGeneration(role.id, {
+          queueRetry: !currentValue,
+          toast: false,
+        });
+        if (!recoveredStaleReply) return;
+        if (!currentValue) {
+          triggerPendingAiReply();
+          return;
+        }
+      }
       if (
         role &&
         pendingAiReply &&
@@ -75576,21 +75878,29 @@ eventRoot.addEventListener("click", async (event) => {
       return;
     }
     updateRole(role.id, (nextRole) => {
+      const clearedAt = new Date().toISOString();
       nextRole.usage.lastPrimaryChat = {
         ...(nextRole.usage?.lastPrimaryChat || {}),
         requestLogs: [],
-        requestLogsClearedAt: new Date().toISOString(),
+        requestLogsClearedAt: clearedAt,
       };
+      nextRole.usage.primaryChatHistory = normalizePrimaryChatUsageHistory(nextRole.usage?.primaryChatHistory || [], nextRole.usage.lastPrimaryChat)
+        .map((snapshot) => ({
+          ...snapshot,
+          requestLogs: [],
+          requestLogsClearedAt: clearedAt,
+        }))
+        .slice(0, PRIMARY_CHAT_HISTORY_LIMIT);
       return nextRole;
     });
-    setToast("已清空请求日志");
+    setToast("已清空最近 10 轮请求日志");
     paint();
     return;
   }
 
   if (action === "copy-token-request-logs") {
     const role = getActiveChatRole() || getCurrentRole();
-    const text = formatPrimaryChatRequestLogsForClipboard(role?.usage?.lastPrimaryChat?.requestLogs || []);
+    const text = formatPrimaryChatHistoryRequestLogsForClipboard(role);
     if (!text) {
       setToast("还没有可复制的请求日志");
       return;
