@@ -25827,7 +25827,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.16-token-console-10-round-logs";
+const APP_BUILD_VERSION_LABEL = "v2026.05.16-main-chat-api-failover-fix";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -35277,6 +35277,18 @@ const imageInput = ensureHiddenFileInput("image-input", "image/*");
 const soundInput = ensureHiddenFileInput("sound-input", "audio/*");
 
 const STRICT_SINGLE_AI_REQUEST_PER_ENTRY = true;
+const PRIMARY_CHAT_FAILOVER_MAX_ATTEMPTS = 3;
+const PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS = 35_000;
+const PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_MS = 45_000;
+const PRIMARY_CHAT_UNHEALTHY_ATTEMPT_TIMEOUT_MS = 28_000;
+const PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_STEP_MS = 6_000;
+const PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_STEP_MS = 7_000;
+const PRIMARY_CHAT_MIN_ATTEMPT_TIMEOUT_MS = 22_000;
+const PRIMARY_CHAT_FAILOVER_URLS = [
+  "https://api520.pro/v1",
+  "https://api521.pro/v1",
+  "https://www.api521.pro/v1",
+];
 
 const STICKER_CLASSIFY_BUSY_TOKEN = "sticker-classify";
 const isVideoSessionFileOrigin = () => String(globalThis?.location?.protocol || "").trim().toLowerCase() === "file:";
@@ -36227,6 +36239,7 @@ const PANDA_API_URL = "";
 const PANDA_MODEL = "\u718a\u732b-A-3-gemini-3-flash-preview";
 const PANDA_PRESET_NAME = "\u718a\u732b";
 const PANDA_LEGACY_URLS = new Set();
+const PANDA_NO_TOKEN_CAP_URLS = new Set(["https://api520.pro/v1", "https://api521.pro/v1", "https://www.api521.pro/v1"]);
 const PANDA_GEMINI3_MODELS = new Set(["\u718a\u732b-A-3-gemini-3-flash-preview", "gemini-3-flash-preview"]);
 const PANDA_LEGACY_KEYS = new Set();
 const DZZI_LEGACY_KEYS = new Set();
@@ -37706,7 +37719,11 @@ const recordModelRequestHealth = ({
 const isDzziApiConfig = (config = {}) => Boolean(DZZI_API_URL) && normalizeApiConfigUrl(config?.url) === DZZI_API_URL;
 const isPandaApiConfig = (config = {}) => {
   const normalizedUrl = normalizeApiConfigUrl(config?.url);
-  return (Boolean(PANDA_API_URL) && normalizedUrl === PANDA_API_URL) || PANDA_LEGACY_URLS.has(normalizedUrl);
+  return (
+    (Boolean(PANDA_API_URL) && normalizedUrl === PANDA_API_URL) ||
+    PANDA_LEGACY_URLS.has(normalizedUrl) ||
+    PRIMARY_CHAT_FAILOVER_URLS.map((item) => normalizeApiConfigUrl(item)).includes(normalizedUrl)
+  );
 };
 const shouldUpgradeDzziModel = (model = "") => {
   const normalized = normalizeApiConfigModel(model);
@@ -41016,7 +41033,11 @@ const limitModelRequestImageAttachments = (imageAttachments = [], strategy = nul
 const shouldOmitMaxTokensForConfig = (config = {}) => {
   const normalizedUrl = normalizeApiConfigUrl(config?.url);
   const normalizedModel = normalizeApiConfigModel(config?.model);
-  return (normalizedUrl === PANDA_API_URL || PANDA_LEGACY_URLS.has(normalizedUrl)) && PANDA_GEMINI3_MODELS.has(normalizedModel);
+  return (
+    normalizedUrl === PANDA_API_URL ||
+    PANDA_LEGACY_URLS.has(normalizedUrl) ||
+    PANDA_NO_TOKEN_CAP_URLS.has(normalizedUrl)
+  ) && PANDA_GEMINI3_MODELS.has(normalizedModel);
 };
 const OPENAI_COMPATIBLE_CHAT_STOP_TASKS = new Set([
   MODEL_REQUEST_TASK_KIND.CHAT_REWRITE_PLAIN,
@@ -44245,6 +44266,139 @@ const getPrimaryApiConfig = () => ({
   type: normalizeApiProviderType(state.appConfig?.primary?.type || PRIMARY_API_DEFAULTS.type),
 });
 
+const normalizeApiConfigForCandidate = (config = {}) => {
+  if (!config || typeof config !== "object") return null;
+  const normalized = {
+    ...config,
+    type: normalizeApiProviderType(config.type || "openai"),
+    url: normalizeApiConfigUrl(config.url || ""),
+    model: normalizeApiConfigModel(config.model || ""),
+    key: normalizeApiConfigKey(config.key || ""),
+  };
+  return hasCompleteApiConfig(normalized) ? normalized : null;
+};
+
+const getPrimaryChatFailoverUrlVariants = (config = {}) => {
+  const normalizedUrl = normalizeApiConfigUrl(config?.url || "");
+  if (!normalizedUrl || !isPandaApiConfig(config)) return [];
+  return PRIMARY_CHAT_FAILOVER_URLS
+    .map((url) => normalizeApiConfigUrl(url))
+    .filter(Boolean)
+    .map((url) => ({ ...config, url }));
+};
+
+const collectPrimaryChatApiCandidates = () => {
+  const primaryConfig = getPrimaryApiConfig();
+  const primaryUrl = normalizeApiConfigUrl(primaryConfig?.url || "");
+  const rawConfigs = [
+    primaryConfig,
+    ...(Array.isArray(state.appConfig?.secondary) ? state.appConfig.secondary : []),
+    state.appConfig?.planner,
+    state.appConfig?.memory,
+    ...getPresetEntries().flatMap((entry) => [
+      entry?.primary,
+      ...(Array.isArray(entry?.secondary) ? entry.secondary : []),
+      entry?.planner,
+      entry?.memory,
+    ]),
+    ...getPrimaryChatFailoverUrlVariants(primaryConfig),
+  ];
+  const primaryModel = normalizeApiConfigModel(primaryConfig?.model || "");
+  const seen = new Set();
+  const candidates = [];
+  rawConfigs.forEach((rawConfig) => {
+    const config = normalizeApiConfigForCandidate(rawConfig);
+    if (!config) return;
+    if (primaryModel && normalizeApiConfigModel(config.model) !== primaryModel) return;
+    const key = [config.type, normalizeApiConfigUrl(config.url), normalizeApiConfigModel(config.model), normalizeApiConfigKey(config.key).slice(0, 16)].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push(config);
+  });
+  return candidates
+    .map((config, index) => {
+      const record = getModelRequestHealthRecord(config);
+      const summary = summarizeModelRequestRecentHealth(record, MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN);
+      const task = getTaskModelRequestHealthRecord(record, MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN);
+      const timeoutPenalty = summary.lastStatus === "timeout" ? 120 : summary.timeouts * 45;
+      const failurePenalty = summary.failures * 18 + Math.max(0, Number(task?.failure || 0) || 0) * 3;
+      const slowPenalty = Math.round(Math.max(summary.averageLatencyMs || 0, Number(task?.averageLatencyMs || 0) || 0) / 1000);
+      const primaryPenalty = normalizeApiConfigUrl(config.url) === primaryUrl ? 4 : 0;
+      return {
+        config,
+        score: timeoutPenalty + failurePenalty + slowPenalty + primaryPenalty,
+        index,
+      };
+    })
+    .sort((left, right) => left.score - right.score || left.index - right.index)
+    .map((item) => item.config)
+    .slice(0, PRIMARY_CHAT_FAILOVER_MAX_ATTEMPTS);
+};
+
+const getPrimaryChatAttemptTimeoutMs = (config = {}, imageCount = 0, attemptIndex = 0) => {
+  const record = getModelRequestHealthRecord(config);
+  const summary = summarizeModelRequestRecentHealth(record, MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN);
+  if (summary.lastStatus === "timeout" || summary.timeouts >= 2 || summary.averageLatencyMs >= MODEL_REQUEST_HEALTH_HARD_SLOW_MS) {
+    return PRIMARY_CHAT_UNHEALTHY_ATTEMPT_TIMEOUT_MS;
+  }
+  const baseTimeoutMs = Number(imageCount || 0) > 0 ? PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_MS : PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS;
+  const stepMs = Number(imageCount || 0) > 0 ? PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_STEP_MS : PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_STEP_MS;
+  return Math.max(PRIMARY_CHAT_MIN_ATTEMPT_TIMEOUT_MS, baseTimeoutMs - Math.max(0, Number(attemptIndex || 0) || 0) * stepMs);
+};
+
+const isPrimaryChatRetryableError = (error) => {
+  if (!error) return true;
+  if (isAbortRequestError(error)) return true;
+  return shouldRetryWithAlternateApiConfig(error);
+};
+
+const withPrimaryChatAttemptTimeout = async (runner, {
+  parentSignal = null,
+  timeoutMs = PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS,
+  onTimeout = null,
+} = {}) => {
+  const timeoutController = new AbortController();
+  const linked = createLinkedAbortController(parentSignal, timeoutController.signal);
+  const safeTimeoutMs = Math.max(1000, Number(timeoutMs || PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS) || PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS);
+  let settled = false;
+  let timer = 0;
+  try {
+    return await new Promise((resolve, reject) => {
+      const finalize = (handler, value) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        handler(value);
+      };
+      timer = window.setTimeout(() => {
+        if (typeof onTimeout === "function") onTimeout();
+        timeoutController.abort();
+        finalize(reject, createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回，自动切换下一条通道`));
+      }, safeTimeoutMs);
+      Promise.resolve()
+        .then(() => runner(linked.controller.signal))
+        .then(
+          (value) => finalize(resolve, value),
+          (error) => {
+            if (timeoutController.signal.aborted && !parentSignal?.aborted) {
+              finalize(reject, createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回，自动切换下一条通道`));
+              return;
+            }
+            finalize(reject, error);
+          },
+        );
+    });
+  } catch (error) {
+    if (timeoutController.signal.aborted && !parentSignal?.aborted) {
+      throw createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回，自动切换下一条通道`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+    linked.dispose();
+  }
+};
+
 const isApiRequestsEnabled = () => state.appConfig?.apiEnabled !== false;
 
 const buildApiDisabledMessage = (label = "API 调用") => `${String(label || "API 调用").trim() || "API 调用"}已关闭，请先在设置里开启`;
@@ -46537,6 +46691,9 @@ const requestPrimaryModelText = async ({
   payload,
   includeMeta = false,
   rejectFinishReasonLength = false,
+  primaryConfigOverride = null,
+  primaryFallbackConfig = null,
+  fallbackLane = "",
   temperatureOverride = null,
   preferredVariantMode = "",
   singleVariant = false,
@@ -46546,15 +46703,15 @@ const requestPrimaryModelText = async ({
   signal = null,
 }) =>
   requestModelTextWithConfigFallback({
-    primaryConfig: getPrimaryApiConfig(),
+    primaryConfig: primaryConfigOverride || getPrimaryApiConfig(),
     primaryMissingMessage: "请先在设置里填好主 API 地址 模型和 API Key",
-    fallbackConfig: null,
+    fallbackConfig: primaryFallbackConfig,
     fallbackMissingMessage: "请先在设置里填好主 API 地址 模型和 API Key",
     systemPrompt,
     payload,
     includeMeta,
     rejectFinishReasonLength,
-    fallbackLane: "",
+    fallbackLane,
     temperatureOverride,
     preferredVariantMode,
     singleVariant,
@@ -49841,26 +49998,43 @@ const stripChatProtocolCodeFence = (value = "") => {
   return text;
 };
 
-const normalizeChatProtocolWrappedValue = (value) => {
+const normalizeChatProtocolWrappedValue = (value, depth = 0) => {
+  if (depth > 6) return "";
   if (Array.isArray(value)) {
     return value
-      .map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object") {
-          return sanitizeChatLine(item.content || item.text || item.message || item.description || "");
-        }
-        return "";
-      })
+      .map((item) => normalizeChatProtocolWrappedValue(item, depth + 1))
       .filter(Boolean)
       .join("\n");
   }
   if (typeof value === "string") return value;
   if (value && typeof value === "object") {
-    return normalizeChatProtocolWrappedValue(
-      value.messages || value.items || value.lines || value.plainTextContext || value.text || value.content || value.message || "",
-    );
+    const role = String(value.role || "").trim().toLowerCase();
+    if (["user", "system"].includes(role) && !value.type && !value.items && !value.messages && !value.lines) {
+      return "";
+    }
+    const nestedText = [value.items, value.messages, value.lines, value.replies, value.segments]
+      .map((item) => normalizeChatProtocolWrappedValue(item, depth + 1))
+      .map((item) => String(item || "").trim())
+      .find(Boolean);
+    if (nestedText) return nestedText;
+    return [value.content, value.text, value.message, value.description, value.reply, value.output]
+      .map((item) => normalizeChatProtocolWrappedValue(item, depth + 1))
+      .map((item) => sanitizeChatLine(item))
+      .filter(Boolean)
+      .join("\n");
   }
   return "";
+};
+
+const getWrappedPlainTextContextOutputCandidate = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  return normalizeChatProtocolWrappedValue({
+    items: value.items,
+    messages: value.messages,
+    lines: value.lines,
+    replies: value.replies,
+    segments: value.segments,
+  });
 };
 
 const unwrapPlainTextProtocolModelOutput = (rawText = "") => {
@@ -49875,13 +50049,17 @@ const unwrapPlainTextProtocolModelOutput = (rawText = "") => {
     payload.replyText,
     payload.responseText,
     payload.outputText,
+    payload.answerText,
+    payload.finalText,
     payload.text,
     payload.content,
     payload.message,
     payload.messages,
     payload.items,
     payload.lines,
-    payload.plainTextContext,
+    payload.replies,
+    payload.segments,
+    getWrappedPlainTextContextOutputCandidate(payload.plainTextContext),
   ];
   for (const candidate of candidates) {
     const normalized = normalizeChatProtocolWrappedValue(candidate).trim();
@@ -50233,10 +50411,12 @@ const requestPrimaryChatReplyTextFallback = async (
     stickerCatalog = [],
     quoteCandidates = [],
     requestTrace = null,
+    primaryConfigOverride = null,
+    attemptLabel = "",
     signal = null,
   } = {},
 ) => {
-  const primaryConfig = getPrimaryApiConfig();
+  const primaryConfig = primaryConfigOverride || getPrimaryApiConfig();
   const requestStrategy = resolveModelRequestStrategy(primaryConfig, {
     taskKind: MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN,
     contextFormat: "plain-text",
@@ -50266,6 +50446,22 @@ const requestPrimaryChatReplyTextFallback = async (
   });
   const quoteInstruction = getRoleQuoteCandidateInstruction(quoteCandidates);
   const isGeminiSingleUserRequest = shouldUseGeminiCompatibleMode(primaryConfig) && requestStrategy.preferredVariantMode === "gemini-compatible";
+  if (attemptLabel) {
+    emitModelRequestTrace(requestTrace, {
+      phase: "failover",
+      level: "warn",
+      source: "ChatReply",
+      message: `主聊天自动尝试候选通道 ${attemptLabel}`,
+      meta: buildModelRequestPreflightMeta({
+        config: primaryConfig,
+        startedAtMs: Date.now(),
+        contextText: plainTextContext,
+        systemPromptText: "主聊天纯文本协议",
+        imageCount: normalizedImageAttachments.length,
+        modelRequestStrategy: requestStrategy,
+      }),
+    });
+  }
   const response = await requestPrimaryModelText({
     systemPrompt: `你现在只负责生成聊天协议文本
 不要输出 JSON 不要解释 不要标题 不要编号 不要项目符号
@@ -50326,6 +50522,7 @@ ${dailyLifeMemoryPrompt}
     temperatureOverride: 0.35,
     taskKind: MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN,
     modelRequestStrategy: requestStrategy,
+    primaryConfigOverride: primaryConfig,
     requestTrace,
     signal,
   });
@@ -50495,30 +50692,100 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
     throw attachModelMetaToError(new Error(displayError), candidate?.meta || errorMeta || lastKnownModelMeta || null);
   };
 
-  try {
-    const textFirstResponse = await requestPrimaryChatReplyTextFallback(role, userInput, {
-      referenceCatalog,
-      requiredWorldbookTitles,
-      forceImageReply,
-      explicitStickerRequested,
-      forceVoiceReply,
-      explicitVoiceTargetText,
-      imageAttachments,
-      stickerCatalog: stickers,
-      quoteCandidates,
-      requestTrace,
-      signal,
-    });
-    return await finalizeProtocolCandidate(textFirstResponse);
-  } catch (error) {
-    rememberModelMeta(error?.modelMeta || null);
-    const recovered = recoverChatResponseFromModelError(role, error, { referenceCatalog });
-    if (!recovered) throw error;
-    rememberModelMeta(recovered?.meta || null);
-    return await finalizeProtocolCandidate(recovered, {
-      errorMeta: recovered?.meta || error?.modelMeta || lastKnownModelMeta || null,
-    });
+  const candidates = collectPrimaryChatApiCandidates();
+  const usableCandidates = candidates.length ? candidates : [getPrimaryApiConfig()].map((item) => normalizeApiConfigForCandidate(item)).filter(Boolean);
+  let lastError = null;
+  for (let index = 0; index < usableCandidates.length; index += 1) {
+    if (signal?.aborted) throw createAbortRequestError("已中断生成回复");
+    const candidateConfig = usableCandidates[index];
+    const attemptTimeoutMs = getPrimaryChatAttemptTimeoutMs(candidateConfig, imageAttachments.length, index);
+    const attemptLabel = `${index + 1}/${usableCandidates.length} ${normalizeApiConfigUrl(candidateConfig.url)}`;
+    const attemptStartedAtMs = Date.now();
+    try {
+      const textFirstResponse = await withPrimaryChatAttemptTimeout(
+        (attemptSignal) => requestPrimaryChatReplyTextFallback(role, userInput, {
+          referenceCatalog,
+          requiredWorldbookTitles,
+          forceImageReply,
+          explicitStickerRequested,
+          forceVoiceReply,
+          explicitVoiceTargetText,
+          imageAttachments,
+          stickerCatalog: stickers,
+          quoteCandidates,
+          requestTrace,
+          primaryConfigOverride: candidateConfig,
+          attemptLabel,
+          signal: attemptSignal,
+        }),
+        {
+          parentSignal: signal,
+          timeoutMs: attemptTimeoutMs,
+          onTimeout: () => emitModelRequestTrace(requestTrace, {
+            phase: "timeout",
+            level: "warn",
+            source: "ChatReply",
+            message: `主聊天候选通道 ${attemptLabel} ${Math.round(attemptTimeoutMs / 1000)} 秒未返回，自动切换下一条`,
+            endpoint: normalizeApiConfigUrl(candidateConfig.url),
+            model: normalizeApiConfigModel(candidateConfig.model),
+            transportMode: shouldUseGeminiCompatibleMode(candidateConfig) ? "gemini-compatible" : "openai-standard",
+            latencyMs: attemptTimeoutMs,
+            imageCount: imageAttachments.length,
+          }),
+        },
+      );
+      const finalized = await finalizeProtocolCandidate(textFirstResponse);
+      if (index > 0 && finalized?.meta) {
+        finalized.meta = {
+          ...finalized.meta,
+          apiLane: `primary-chat-failover-${index + 1}`,
+          failoverAttempt: index + 1,
+          failoverTotal: usableCandidates.length,
+        };
+      }
+      emitModelRequestTrace(requestTrace, {
+        phase: index > 0 ? "failover-success" : "success",
+        level: "log",
+        source: "ChatReply",
+        message: index > 0
+          ? `主聊天候选通道 ${attemptLabel} 已成功返回`
+          : `主聊天候选通道 ${attemptLabel} 已返回`,
+        endpoint: normalizeApiConfigUrl(candidateConfig.url),
+        model: normalizeApiConfigModel(candidateConfig.model),
+        transportMode: shouldUseGeminiCompatibleMode(candidateConfig) ? "gemini-compatible" : "openai-standard",
+        meta: finalized?.meta || null,
+      });
+      return finalized;
+    } catch (error) {
+      rememberModelMeta(error?.modelMeta || null);
+      const measuredLatencyMs = Math.max(0, Date.now() - attemptStartedAtMs);
+      const recovered = recoverChatResponseFromModelError(role, error, { referenceCatalog });
+      if (recovered) {
+        rememberModelMeta(recovered?.meta || null);
+        return await finalizeProtocolCandidate(recovered, {
+          errorMeta: recovered?.meta || error?.modelMeta || lastKnownModelMeta || null,
+        });
+      }
+      lastError = error;
+      emitModelRequestTrace(requestTrace, {
+        phase: "failover",
+        level: "warn",
+        source: "ChatReply",
+        message: `主聊天候选通道 ${attemptLabel} 失败：${error?.message || "请求失败"}`,
+        endpoint: normalizeApiConfigUrl(candidateConfig.url),
+        model: normalizeApiConfigModel(candidateConfig.model),
+        transportMode: shouldUseGeminiCompatibleMode(candidateConfig) ? "gemini-compatible" : "openai-standard",
+        latencyMs: measuredLatencyMs || attemptTimeoutMs,
+        imageCount: imageAttachments.length,
+        meta: error?.modelMeta || null,
+      });
+      if (signal?.aborted) throw error;
+      if (!isPrimaryChatRetryableError(error) || index >= usableCandidates.length - 1) {
+        throw error;
+      }
+    }
   }
+  throw lastError || new Error("主聊天 API 没有可用通道");
 };
 
 const getAutonomousBusyToken = (mode, roleId) => `auto:${mode}:${roleId}`;
@@ -67828,8 +68095,16 @@ const requestAndAppendAiReply = async (
   chatReplyLastInputs.set(roleId, normalizedInput);
   const normalizedSourceMessageId = String(sourceMessageId || getCurrentTurnUserMessageId(role) || "").trim();
   const primaryChatRequestLogs = [];
+  let primaryChatTracePersistReady = false;
   const appendPrimaryChatRequestLog = (entry = {}) => {
     pushPrimaryChatRequestLogEntry(primaryChatRequestLogs, entry);
+    if (primaryChatTracePersistReady && isCurrentChatReplyRequest(roleId, requestToken)) {
+      persistPrimaryChatRunningSnapshot(roleId, {
+        roundStartedAtMs,
+        requestLogs: primaryChatRequestLogs,
+        inputLength: normalizedInput.length,
+      });
+    }
   };
   appendPrimaryChatRequestLog({
     timestamp: new Date(roundStartedAtMs).toISOString(),
@@ -67843,6 +68118,7 @@ const requestAndAppendAiReply = async (
     requestLogs: primaryChatRequestLogs,
     inputLength: normalizedInput.length,
   });
+  primaryChatTracePersistReady = true;
   if (normalizedSourceMessageId) {
     chatReplySourceMessageIds.set(roleId, normalizedSourceMessageId);
   } else {
