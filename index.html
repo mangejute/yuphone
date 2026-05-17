@@ -23414,6 +23414,14 @@ const ensureDefaultPandaApiConfig = (config = {}) => ({
     ...(config?.primary || {}),
     preset: "\u718a\u732b",
   },
+  chatFallback: {
+    ...(config?.chatFallback || {}),
+    enabled: config?.chatFallback?.enabled === true,
+    type: String(config?.chatFallback?.type || "openai").trim() || "openai",
+    url: String(config?.chatFallback?.url || "").trim(),
+    model: String(config?.chatFallback?.model || "").trim(),
+    key: String(config?.chatFallback?.key || "").trim(),
+  },
   secondary: (Array.isArray(config?.secondary) ? config.secondary : []).map((item, index) => ({
     ...(item || {}),
     preset: index === 0 ? "\u718a\u732b" : String(item?.preset || "").trim(),
@@ -23479,6 +23487,13 @@ const createDefaultApiConfig = () => ensureDefaultPandaApiConfig({
     model: "",
     key: "",
     preset: "默认对话",
+  },
+  chatFallback: {
+    enabled: false,
+    type: "openai",
+    url: "",
+    model: "",
+    key: "",
   },
   secondary: [
     {
@@ -24296,6 +24311,17 @@ const mergeState = (incoming = {}) => {
           repairKnownText(incoming.appConfig?.primary?.preset) ||
           incoming.appConfig?.primary?.preset ||
           fallback.appConfig.primary.preset,
+      },
+      chatFallback: {
+        ...fallback.appConfig.chatFallback,
+        ...((incoming.appConfig?.chatFallback && typeof incoming.appConfig.chatFallback === "object")
+          ? incoming.appConfig.chatFallback
+          : {}),
+        enabled: incoming.appConfig?.chatFallback?.enabled === true,
+        type: String(incoming.appConfig?.chatFallback?.type || fallback.appConfig.chatFallback?.type || "openai").trim() || "openai",
+        url: String(incoming.appConfig?.chatFallback?.url || fallback.appConfig.chatFallback?.url || "").trim(),
+        model: String(incoming.appConfig?.chatFallback?.model || fallback.appConfig.chatFallback?.model || "").trim(),
+        key: String(incoming.appConfig?.chatFallback?.key || fallback.appConfig.chatFallback?.key || "").trim(),
       },
       secondary:
         normalizeArray(incoming.appConfig?.secondary).length > 0
@@ -25412,7 +25438,6 @@ const getRoleCurrentPlace = (role, now = new Date(), { ignoreExplicit = false } 
 const getRoleById = (state, roleId) =>
   state.roles.find((role) => role.id === roleId) || state.roles[0];
 
-
 </script>
 <script data-inline-source="simulator.js">
 
@@ -25827,7 +25852,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.16-main-chat-api-failover-fix";
+const APP_BUILD_VERSION_LABEL = "v2026.05.17-chat-fallback-45s-fix";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -28043,6 +28068,7 @@ const renderPresetSection = (config, state) =>
       ${renderApiAvailabilityBanner(config.apiEnabled !== false, { withSwitch: true })}
       ${renderPresetCard(config, state)}
       ${renderApiSection(config, state)}
+      ${renderChatFallbackApiCard(config.chatFallback || {}, state)}
       ${config.secondary.map((api, index) => renderSubApiCard(api, index, state)).join("")}
       ${renderPlannerApiCard(config.planner || {}, state)}
       ${renderMemoryApiCard(config.memory || {}, state)}
@@ -28151,6 +28177,59 @@ const renderApiSection = (config, state) => `
       <input class="soft-input" data-config="primary.key" type="password" value="${escapeHtml(config.primary.key)}" placeholder="sk-..." />
       ${config.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起主 API 请求。</div>' : ""}
     </div>
+  </section>
+`;
+
+const renderChatFallbackApiCard = (api = {}, state = {}) => `
+  <section class="setting-card setting-subpanel card-enter">
+    <div class="subapi-head">
+      <div>
+        <h3>主聊天兜底 API</h3>
+        <p>主模型超过 45 秒还没返回时，自动切到这里；这里最多等 3 分钟。</p>
+      </div>
+      <label class="switch mini">
+        <input type="checkbox" data-config="chatFallback.enabled" ${api.enabled ? "checked" : ""} />
+        <span></span>
+      </label>
+    </div>
+
+    <div class="setting-label">接口类型</div>
+    <select class="soft-input" data-config="chatFallback.type">
+      <option value="openai" ${(api.type || "openai") === "openai" ? "selected" : ""}>OpenAI 格式</option>
+      <option value="anthropic" ${api.type === "anthropic" ? "selected" : ""}>Anthropic</option>
+    </select>
+
+    <div class="setting-label">接口地址</div>
+    <input class="soft-input" data-config="chatFallback.url" value="${escapeHtml(api.url || "")}" placeholder="例如 https://api520.pro/v1" />
+
+    <div class="setting-label">API Key</div>
+    <input class="soft-input" data-config="chatFallback.key" type="password" value="${escapeHtml(api.key || "")}" placeholder="sk-..." />
+
+    <div class="setting-label">模型</div>
+    <div class="inline-row">
+      <input class="soft-input" data-config="chatFallback.model" value="${escapeHtml(api.model || "")}" />
+      <button class="tiny-btn" type="button" data-action="fetch-models" data-api-lane="chatFallback" ${state.appConfig?.apiEnabled === false ? "disabled" : ""}>${hasBusyToken(state.modelFetchBusy, "chatFallback") ? "拉取中" : "拉取"}</button>
+    </div>
+    ${
+      state.availableModels?.length && state.modelPickerOpen && state.modelPickerTarget === "chatFallback"
+        ? `
+          <div class="setting-mini-note">已拉取 ${state.availableModels.length} 个模型，点一下就会直接切换</div>
+          <div class="model-option-list" data-scroll-key="chat-fallback-model-list">
+            ${state.availableModels
+              .map(
+                (model) => `
+                  <button class="model-option-btn ${api.model === model ? "active" : ""}" type="button" data-action="select-model" data-model-id="${escapeHtml(model)}" data-api-lane="chatFallback" data-model-target="chatFallback">
+                    <span>${escapeHtml(model)}</span>
+                  </button>
+                `,
+              )
+              .join("")}
+          </div>
+        `
+        : ""
+    }
+    <div class="setting-mini-note">只给普通主聊天使用，不会被行程、记忆、朋友圈或总结任务借用。</div>
+    ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起兜底请求。</div>' : ""}
   </section>
 `;
 
@@ -32777,7 +32856,7 @@ const renderIosApiSettingsPage = (state) => {
   const apiEnabled = config.apiEnabled !== false;
   const body = `
     ${renderIosApiAvailabilityRow(apiEnabled)}
-    ${renderIosCardListSection("预设与主 API", `${renderPresetCard(config, state)}${renderApiSection(config, state)}`)}
+    ${renderIosCardListSection("预设与主 API", `${renderPresetCard(config, state)}${renderApiSection(config, state)}${renderChatFallbackApiCard(config.chatFallback || {}, state)}`)}
     ${renderIosCardListSection("副 API", `${config.secondary.map((api, index) => renderSubApiCard(api, index, state)).join("")}${renderPlannerApiCard(config.planner || {}, state)}${renderMemoryApiCard(config.memory || {}, state)}`)}
     ${renderIosSection("视频语音识别", renderTencentAsrSection(config.tencentAsr || {}, apiEnabled))}
     ${renderIosSection("回复参数", renderReplyTuningSection(config))}
@@ -35277,18 +35356,9 @@ const imageInput = ensureHiddenFileInput("image-input", "image/*");
 const soundInput = ensureHiddenFileInput("sound-input", "audio/*");
 
 const STRICT_SINGLE_AI_REQUEST_PER_ENTRY = true;
-const PRIMARY_CHAT_FAILOVER_MAX_ATTEMPTS = 3;
-const PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS = 35_000;
-const PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_MS = 45_000;
-const PRIMARY_CHAT_UNHEALTHY_ATTEMPT_TIMEOUT_MS = 28_000;
-const PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_STEP_MS = 6_000;
-const PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_STEP_MS = 7_000;
-const PRIMARY_CHAT_MIN_ATTEMPT_TIMEOUT_MS = 22_000;
-const PRIMARY_CHAT_FAILOVER_URLS = [
-  "https://api520.pro/v1",
-  "https://api521.pro/v1",
-  "https://www.api521.pro/v1",
-];
+const PRIMARY_CHAT_MAIN_ATTEMPT_TIMEOUT_MS = 45_000;
+const PRIMARY_CHAT_FALLBACK_ATTEMPT_TIMEOUT_MS = 180_000;
+const PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS = 180_000;
 
 const STICKER_CLASSIFY_BUSY_TOKEN = "sticker-classify";
 const isVideoSessionFileOrigin = () => String(globalThis?.location?.protocol || "").trim().toLowerCase() === "file:";
@@ -35689,7 +35759,7 @@ const VIDEO_SESSION_RECENT_CHAT_DETAIL_LIMIT = 12;
 const VIDEO_SESSION_WORLDBOOK_DETAIL_LIMIT = 8;
 const VIDEO_SESSION_NPC_DETAIL_LIMIT = 6;
 const VIDEO_SESSION_MAX_MESSAGES = 1;
-const CHAT_REPLY_TIMEOUT_MS = 120_000;
+const CHAT_REPLY_TIMEOUT_MS = 240_000;
 const CHAT_REPLY_QUERY_EMBEDDING_TIMEOUT_MS = 3000;
 const VIDEO_SESSION_FRAME_CAPTURE_MAX_SIDE = 480;
 const VIDEO_SESSION_FRAME_CAPTURE_QUALITY = 0.62;
@@ -36183,6 +36253,14 @@ const PRIMARY_API_DEFAULTS = Object.freeze({
   preset: "\u718a\u732b",
 });
 
+const CHAT_FALLBACK_API_DEFAULTS = Object.freeze({
+  enabled: false,
+  type: "openai",
+  url: "",
+  model: "",
+  key: "",
+});
+
 const SECONDARY_API_DEFAULTS = Object.freeze({
   id: "api-secondary-default",
   name: "\u526f API",
@@ -36623,6 +36701,15 @@ const normalizeSessionState = () => {
     ...(state.appConfig?.primary || {}),
     type: normalizeApiProviderType(state.appConfig?.primary?.type || PRIMARY_API_DEFAULTS.type),
   };
+  const chatFallbackConfig = {
+    ...CHAT_FALLBACK_API_DEFAULTS,
+    ...(state.appConfig?.chatFallback || {}),
+    enabled: state.appConfig?.chatFallback?.enabled === true,
+    type: normalizeApiProviderType(state.appConfig?.chatFallback?.type || CHAT_FALLBACK_API_DEFAULTS.type),
+    url: String(state.appConfig?.chatFallback?.url || "").trim().replace(/\/+$/, ""),
+    model: String(state.appConfig?.chatFallback?.model || "").trim(),
+    key: String(state.appConfig?.chatFallback?.key || "").trim(),
+  };
   const secondarySource = Array.isArray(state.appConfig?.secondary) ? state.appConfig.secondary[0] || {} : {};
   const secondaryConfig = normalizeSecondaryApiConfig(primaryConfig, secondarySource);
   const plannerConfig = normalizePlannerApiConfig(secondaryConfig, state.appConfig?.planner || {});
@@ -36646,6 +36733,7 @@ const normalizeSessionState = () => {
     ...(state.appConfig || {}),
     apiEnabled: state.appConfig?.apiEnabled !== false,
     primary: primaryConfig,
+    chatFallback: chatFallbackConfig,
     secondary: [{ ...secondaryConfig, preset: normalizedPrimaryPreset }],
     planner: { ...plannerConfig, preset: normalizedPrimaryPreset },
     memory: { ...memoryConfig, preset: normalizedPrimaryPreset },
@@ -37722,7 +37810,7 @@ const isPandaApiConfig = (config = {}) => {
   return (
     (Boolean(PANDA_API_URL) && normalizedUrl === PANDA_API_URL) ||
     PANDA_LEGACY_URLS.has(normalizedUrl) ||
-    PRIMARY_CHAT_FAILOVER_URLS.map((item) => normalizeApiConfigUrl(item)).includes(normalizedUrl)
+    PANDA_NO_TOKEN_CAP_URLS.has(normalizedUrl)
   );
 };
 const shouldUpgradeDzziModel = (model = "") => {
@@ -41114,6 +41202,21 @@ const createAbortRequestError = (message = "请求已取消") => {
   return error;
 };
 
+const createPrimaryChatAttemptTimeoutError = (timeoutMs = PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS) => {
+  const safeTimeoutMs = Math.max(1000, Number(timeoutMs) || PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS);
+  const error = createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回`);
+  error.timedOut = true;
+  error.chatAttemptTimedOut = true;
+  error.modelMeta = {
+    timedOut: true,
+    latencyMs: safeTimeoutMs,
+  };
+  return error;
+};
+
+const isPrimaryChatAttemptTimeoutError = (error) =>
+  Boolean(error?.chatAttemptTimedOut || error?.timedOut || error?.modelMeta?.timedOut === true);
+
 const isAbortRequestError = (error) =>
   Boolean(
     error?.name === "AbortError" ||
@@ -42768,11 +42871,27 @@ const buildRoleGenerationContextAsync = async (
 ) => {
   const query = String(options?.userInput || "").trim();
   let queryEmbedding = null;
+  const requestTrace = typeof options?.requestTrace === "function" ? options.requestTrace : null;
   if (query && hasLivingMemoryEmbeddingConfig()) {
+    const startedAtMs = Date.now();
     try {
       queryEmbedding = await requestLivingMemoryEmbeddingVector(query, { signal: options?.signal || null });
+      emitModelRequestTrace(requestTrace, {
+        phase: queryEmbedding?.length ? "context" : "context-fallback",
+        level: "log",
+        source: "LivingMemory",
+        message: queryEmbedding?.length ? "生活记忆向量召回已完成" : "生活记忆向量为空，已使用关键词召回",
+        latencyMs: Math.max(0, Date.now() - startedAtMs),
+      });
     } catch (error) {
       console.warn("[living-memory] query embedding skipped", error);
+      emitModelRequestTrace(requestTrace, {
+        phase: "context-fallback",
+        level: "warn",
+        source: "LivingMemory",
+        message: `生活记忆向量召回跳过：${error?.message || "向量查询失败"}；已使用关键词召回`,
+        latencyMs: Math.max(0, Date.now() - startedAtMs),
+      });
     }
   }
   return buildRoleGenerationContext(role, {
@@ -43370,6 +43489,7 @@ const buildChatFullRoleContextAsync = (role, options = {}) =>
     ...(options || {}),
     worldbookMode: "all",
     structuredTask: false,
+    requestTrace: options?.requestTrace || null,
   });
 
 const formatJourneyContinuityItem = (item) => ({
@@ -44266,6 +44386,13 @@ const getPrimaryApiConfig = () => ({
   type: normalizeApiProviderType(state.appConfig?.primary?.type || PRIMARY_API_DEFAULTS.type),
 });
 
+const getChatFallbackApiConfig = () => ({
+  ...CHAT_FALLBACK_API_DEFAULTS,
+  ...(state.appConfig?.chatFallback || {}),
+  enabled: state.appConfig?.chatFallback?.enabled === true,
+  type: normalizeApiProviderType(state.appConfig?.chatFallback?.type || CHAT_FALLBACK_API_DEFAULTS.type),
+});
+
 const normalizeApiConfigForCandidate = (config = {}) => {
   if (!config || typeof config !== "object") return null;
   const normalized = {
@@ -44278,72 +44405,33 @@ const normalizeApiConfigForCandidate = (config = {}) => {
   return hasCompleteApiConfig(normalized) ? normalized : null;
 };
 
-const getPrimaryChatFailoverUrlVariants = (config = {}) => {
-  const normalizedUrl = normalizeApiConfigUrl(config?.url || "");
-  if (!normalizedUrl || !isPandaApiConfig(config)) return [];
-  return PRIMARY_CHAT_FAILOVER_URLS
-    .map((url) => normalizeApiConfigUrl(url))
-    .filter(Boolean)
-    .map((url) => ({ ...config, url }));
-};
-
 const collectPrimaryChatApiCandidates = () => {
   const primaryConfig = getPrimaryApiConfig();
-  const primaryUrl = normalizeApiConfigUrl(primaryConfig?.url || "");
+  const fallbackConfig = getChatFallbackApiConfig();
   const rawConfigs = [
-    primaryConfig,
-    ...(Array.isArray(state.appConfig?.secondary) ? state.appConfig.secondary : []),
-    state.appConfig?.planner,
-    state.appConfig?.memory,
-    ...getPresetEntries().flatMap((entry) => [
-      entry?.primary,
-      ...(Array.isArray(entry?.secondary) ? entry.secondary : []),
-      entry?.planner,
-      entry?.memory,
-    ]),
-    ...getPrimaryChatFailoverUrlVariants(primaryConfig),
+    { lane: "primary", label: "主模型", config: primaryConfig },
+    ...(fallbackConfig.enabled ? [{ lane: "fallback", label: "兜底模型", config: fallbackConfig }] : []),
   ];
-  const primaryModel = normalizeApiConfigModel(primaryConfig?.model || "");
   const seen = new Set();
   const candidates = [];
-  rawConfigs.forEach((rawConfig) => {
-    const config = normalizeApiConfigForCandidate(rawConfig);
+  rawConfigs.forEach((entry) => {
+    const config = normalizeApiConfigForCandidate(entry.config);
     if (!config) return;
-    if (primaryModel && normalizeApiConfigModel(config.model) !== primaryModel) return;
     const key = [config.type, normalizeApiConfigUrl(config.url), normalizeApiConfigModel(config.model), normalizeApiConfigKey(config.key).slice(0, 16)].join("|");
     if (seen.has(key)) return;
     seen.add(key);
-    candidates.push(config);
+    candidates.push({
+      lane: entry.lane,
+      label: entry.label,
+      config,
+    });
   });
-  return candidates
-    .map((config, index) => {
-      const record = getModelRequestHealthRecord(config);
-      const summary = summarizeModelRequestRecentHealth(record, MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN);
-      const task = getTaskModelRequestHealthRecord(record, MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN);
-      const timeoutPenalty = summary.lastStatus === "timeout" ? 120 : summary.timeouts * 45;
-      const failurePenalty = summary.failures * 18 + Math.max(0, Number(task?.failure || 0) || 0) * 3;
-      const slowPenalty = Math.round(Math.max(summary.averageLatencyMs || 0, Number(task?.averageLatencyMs || 0) || 0) / 1000);
-      const primaryPenalty = normalizeApiConfigUrl(config.url) === primaryUrl ? 4 : 0;
-      return {
-        config,
-        score: timeoutPenalty + failurePenalty + slowPenalty + primaryPenalty,
-        index,
-      };
-    })
-    .sort((left, right) => left.score - right.score || left.index - right.index)
-    .map((item) => item.config)
-    .slice(0, PRIMARY_CHAT_FAILOVER_MAX_ATTEMPTS);
+  return candidates;
 };
 
-const getPrimaryChatAttemptTimeoutMs = (config = {}, imageCount = 0, attemptIndex = 0) => {
-  const record = getModelRequestHealthRecord(config);
-  const summary = summarizeModelRequestRecentHealth(record, MODEL_REQUEST_TASK_KIND.CHAT_REPLY_PLAIN);
-  if (summary.lastStatus === "timeout" || summary.timeouts >= 2 || summary.averageLatencyMs >= MODEL_REQUEST_HEALTH_HARD_SLOW_MS) {
-    return PRIMARY_CHAT_UNHEALTHY_ATTEMPT_TIMEOUT_MS;
-  }
-  const baseTimeoutMs = Number(imageCount || 0) > 0 ? PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_MS : PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS;
-  const stepMs = Number(imageCount || 0) > 0 ? PRIMARY_CHAT_IMAGE_ATTEMPT_TIMEOUT_STEP_MS : PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_STEP_MS;
-  return Math.max(PRIMARY_CHAT_MIN_ATTEMPT_TIMEOUT_MS, baseTimeoutMs - Math.max(0, Number(attemptIndex || 0) || 0) * stepMs);
+const getPrimaryChatAttemptTimeoutMs = (candidate = {}, totalCandidates = 1) => {
+  if (candidate?.lane === "fallback") return PRIMARY_CHAT_FALLBACK_ATTEMPT_TIMEOUT_MS;
+  return totalCandidates > 1 ? PRIMARY_CHAT_MAIN_ATTEMPT_TIMEOUT_MS : PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS;
 };
 
 const isPrimaryChatRetryableError = (error) => {
@@ -44354,12 +44442,12 @@ const isPrimaryChatRetryableError = (error) => {
 
 const withPrimaryChatAttemptTimeout = async (runner, {
   parentSignal = null,
-  timeoutMs = PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS,
+  timeoutMs = PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS,
   onTimeout = null,
 } = {}) => {
   const timeoutController = new AbortController();
   const linked = createLinkedAbortController(parentSignal, timeoutController.signal);
-  const safeTimeoutMs = Math.max(1000, Number(timeoutMs || PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS) || PRIMARY_CHAT_TEXT_ATTEMPT_TIMEOUT_MS);
+  const safeTimeoutMs = Math.max(1000, Number(timeoutMs || PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS) || PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS);
   let settled = false;
   let timer = 0;
   try {
@@ -44373,7 +44461,7 @@ const withPrimaryChatAttemptTimeout = async (runner, {
       timer = window.setTimeout(() => {
         if (typeof onTimeout === "function") onTimeout();
         timeoutController.abort();
-        finalize(reject, createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回，自动切换下一条通道`));
+        finalize(reject, createPrimaryChatAttemptTimeoutError(safeTimeoutMs));
       }, safeTimeoutMs);
       Promise.resolve()
         .then(() => runner(linked.controller.signal))
@@ -44381,7 +44469,7 @@ const withPrimaryChatAttemptTimeout = async (runner, {
           (value) => finalize(resolve, value),
           (error) => {
             if (timeoutController.signal.aborted && !parentSignal?.aborted) {
-              finalize(reject, createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回，自动切换下一条通道`));
+              finalize(reject, createPrimaryChatAttemptTimeoutError(safeTimeoutMs));
               return;
             }
             finalize(reject, error);
@@ -44390,7 +44478,7 @@ const withPrimaryChatAttemptTimeout = async (runner, {
     });
   } catch (error) {
     if (timeoutController.signal.aborted && !parentSignal?.aborted) {
-      throw createAbortRequestError(`主聊天候选通道 ${Math.round(safeTimeoutMs / 1000)} 秒未返回，自动切换下一条通道`);
+      throw createPrimaryChatAttemptTimeoutError(safeTimeoutMs);
     }
     throw error;
   } finally {
@@ -44602,7 +44690,7 @@ const hasPrimaryApiConfig = () => {
   if (!isApiRequestsEnabled()) return false;
   const config = getPrimaryApiConfig();
   if (config.url && config.model && config.key) return true;
-  const fallbackConfig = getSecondaryApiConfig();
+  const fallbackConfig = getChatFallbackApiConfig();
   return Boolean(fallbackConfig.url && fallbackConfig.model && fallbackConfig.key);
 };
 
@@ -50297,6 +50385,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
     userInput,
     generationMode: "chat",
     signal,
+    requestTrace,
   }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: "把偏短或半截的聊天草稿重写成完整自然的 3 到 6 条聊天回复",
@@ -50435,6 +50524,7 @@ const requestPrimaryChatReplyTextFallback = async (
     userInput,
     generationMode: "chat",
     signal,
+    requestTrace,
   }), requestStrategy.contextLevel);
   const plainTextContext = buildChatPlainTextContext({
     task: "当结构化回复不稳定时 用纯文本格式生成同一轮聊天回复",
@@ -50693,13 +50783,20 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
   };
 
   const candidates = collectPrimaryChatApiCandidates();
-  const usableCandidates = candidates.length ? candidates : [getPrimaryApiConfig()].map((item) => normalizeApiConfigForCandidate(item)).filter(Boolean);
+  const usableCandidates = candidates.length
+    ? candidates
+    : [getPrimaryApiConfig()]
+        .map((item) => normalizeApiConfigForCandidate(item))
+        .filter(Boolean)
+        .map((config) => ({ lane: "primary", label: "主模型", config }));
   let lastError = null;
   for (let index = 0; index < usableCandidates.length; index += 1) {
     if (signal?.aborted) throw createAbortRequestError("已中断生成回复");
-    const candidateConfig = usableCandidates[index];
-    const attemptTimeoutMs = getPrimaryChatAttemptTimeoutMs(candidateConfig, imageAttachments.length, index);
-    const attemptLabel = `${index + 1}/${usableCandidates.length} ${normalizeApiConfigUrl(candidateConfig.url)}`;
+    const candidate = usableCandidates[index];
+    const candidateConfig = candidate?.config || candidate;
+    const candidateName = String(candidate?.label || (candidate?.lane === "fallback" ? "兜底模型" : "主模型")).trim();
+    const attemptTimeoutMs = getPrimaryChatAttemptTimeoutMs(candidate, usableCandidates.length);
+    const attemptLabel = `${index + 1}/${usableCandidates.length} ${candidateName} ${normalizeApiConfigUrl(candidateConfig.url)}`;
     const attemptStartedAtMs = Date.now();
     try {
       const textFirstResponse = await withPrimaryChatAttemptTimeout(
@@ -50725,7 +50822,9 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
             phase: "timeout",
             level: "warn",
             source: "ChatReply",
-            message: `主聊天候选通道 ${attemptLabel} ${Math.round(attemptTimeoutMs / 1000)} 秒未返回，自动切换下一条`,
+            message: index < usableCandidates.length - 1
+              ? `主聊天候选通道 ${attemptLabel} ${Math.round(attemptTimeoutMs / 1000)} 秒未返回，自动切换下一条`
+              : `主聊天候选通道 ${attemptLabel} ${Math.round(attemptTimeoutMs / 1000)} 秒未返回`,
             endpoint: normalizeApiConfigUrl(candidateConfig.url),
             model: normalizeApiConfigModel(candidateConfig.model),
             transportMode: shouldUseGeminiCompatibleMode(candidateConfig) ? "gemini-compatible" : "openai-standard",
@@ -50738,9 +50837,10 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
       if (index > 0 && finalized?.meta) {
         finalized.meta = {
           ...finalized.meta,
-          apiLane: `primary-chat-failover-${index + 1}`,
+          apiLane: candidate?.lane === "fallback" ? "primary-chat-fallback" : `primary-chat-failover-${index + 1}`,
           failoverAttempt: index + 1,
           failoverTotal: usableCandidates.length,
+          failoverLane: candidate?.lane || "primary",
         };
       }
       emitModelRequestTrace(requestTrace, {
@@ -50759,7 +50859,7 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
     } catch (error) {
       rememberModelMeta(error?.modelMeta || null);
       const measuredLatencyMs = Math.max(0, Date.now() - attemptStartedAtMs);
-      const recovered = recoverChatResponseFromModelError(role, error, { referenceCatalog });
+      const recovered = isAbortRequestError(error) ? null : recoverChatResponseFromModelError(role, error, { referenceCatalog });
       if (recovered) {
         rememberModelMeta(recovered?.meta || null);
         return await finalizeProtocolCandidate(recovered, {
@@ -50779,7 +50879,12 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
         imageCount: imageAttachments.length,
         meta: error?.modelMeta || null,
       });
-      if (signal?.aborted) throw error;
+      if (signal?.aborted) {
+        if (index < usableCandidates.length - 1 && isPrimaryChatAttemptTimeoutError(error)) {
+          continue;
+        }
+        throw error;
+      }
       if (!isPrimaryChatRetryableError(error) || index >= usableCandidates.length - 1) {
         throw error;
       }
@@ -68270,21 +68375,27 @@ const requestAndAppendAiReply = async (
       return false;
     }
     if (isAbortRequestError(error)) {
+      const attemptTimedOut = isPrimaryChatAttemptTimeoutError(error);
+      const fallbackMeta = error?.modelMeta || null;
+      const timeoutLatencyMs = Math.max(
+        replyTimedOut || chatReplyForcedTimeoutControllers.has(abortController) ? CHAT_REPLY_TIMEOUT_MS : 0,
+        Number(fallbackMeta?.latencyMs || 0) || 0,
+        Date.now() - roundStartedAtMs,
+      );
       const abortedMessage = replyTimedOut
         ? "生成回复超时，前端已取消等待；若中转站未中止请求，后台可能仍在继续生成/计费"
         : "已中断生成回复";
-      const abortWasForcedTimeout = replyTimedOut || chatReplyForcedTimeoutControllers.has(abortController);
+      const abortWasForcedTimeout = replyTimedOut || chatReplyForcedTimeoutControllers.has(abortController) || attemptTimedOut;
       const displayedAbortMessage = abortWasForcedTimeout
         ? "生成回复超时，前端已取消等待；若中转站未中止请求，后台可能仍在继续生成/计费"
         : abortedMessage;
-      const fallbackMeta = error?.modelMeta || null;
       appendPrimaryChatRequestLog({
         level: abortWasForcedTimeout ? "error" : "warn",
         phase: abortWasForcedTimeout ? "timeout" : "cancelled",
         source: "ChatReply",
         message: displayedAbortMessage,
         meta: fallbackMeta,
-        latencyMs: abortWasForcedTimeout ? Math.max(CHAT_REPLY_TIMEOUT_MS, Date.now() - roundStartedAtMs) : Math.max(0, Date.now() - roundStartedAtMs),
+        latencyMs: abortWasForcedTimeout ? timeoutLatencyMs : Math.max(0, Date.now() - roundStartedAtMs),
       });
       persistPrimaryChatUsageSnapshot(roleId, {
         mode: "reply",
@@ -68294,12 +68405,12 @@ const requestAndAppendAiReply = async (
             ? {
                 ...fallbackMeta,
                 latencyMs: abortWasForcedTimeout
-                  ? Math.max(Number(fallbackMeta.latencyMs || 0), CHAT_REPLY_TIMEOUT_MS, Date.now() - roundStartedAtMs)
+                  ? timeoutLatencyMs
                   : Number(fallbackMeta.latencyMs || 0),
                 timedOut: abortWasForcedTimeout,
               }
             : abortWasForcedTimeout
-              ? { timedOut: true, latencyMs: Math.max(CHAT_REPLY_TIMEOUT_MS, Date.now() - roundStartedAtMs) }
+              ? { timedOut: true, latencyMs: timeoutLatencyMs }
               : null,
           roundStartedAtMs,
           Date.now(),
@@ -73350,6 +73461,20 @@ const handleComposerPrimaryAction = () => {
       return;
     }
 
+    const latestUserMessage = getLatestUserMessageForRetry(role);
+    const latestMessage = role.chats.messages[role.chats.messages.length - 1];
+    if (latestUserMessage && latestMessage?.id === latestUserMessage.id) {
+      pendingAiReply = {
+        roleId: role.id,
+        messageId: latestUserMessage.id || "",
+        content: resolveRetryInputForUserMessage(role, latestUserMessage),
+        mode: "reply",
+        at: Date.now(),
+      };
+      triggerPendingAiReply();
+      return;
+    }
+
     pendingAiReply = {
       roleId: role.id,
       messageId: role.chats.messages[role.chats.messages.length - 1]?.id || "",
@@ -75626,20 +75751,23 @@ eventRoot.addEventListener("click", async (event) => {
     const isSecondary = Number.isInteger(subApiIndex) && subApiIndex >= 0;
     const isPlanner = apiLane === "planner";
     const isMemory = apiLane === "memory";
+    const isChatFallback = apiLane === "chatFallback";
     const config = isMemory
       ? state.appConfig.memory
       : isPlanner
         ? state.appConfig.planner
-        : isSecondary
-          ? state.appConfig.secondary[subApiIndex]
-          : state.appConfig.primary;
+        : isChatFallback
+          ? state.appConfig.chatFallback
+          : isSecondary
+            ? state.appConfig.secondary[subApiIndex]
+            : state.appConfig.primary;
 
     if (!config?.url || !config?.key) {
       setToast("先填好接口地址和 Key");
       return;
     }
 
-    const modelBusyToken = isMemory ? "memory" : isPlanner ? "planner" : isSecondary ? `secondary-${subApiIndex}` : "primary";
+    const modelBusyToken = isMemory ? "memory" : isPlanner ? "planner" : isChatFallback ? "chatFallback" : isSecondary ? `secondary-${subApiIndex}` : "primary";
     addBusyToken("modelFetchBusy", modelBusyToken);
     paint();
 
@@ -75723,6 +75851,8 @@ eventRoot.addEventListener("click", async (event) => {
     const subApiIndex = Number(button.dataset.subapiIndex);
     if (button.dataset.modelTarget === "minimax-voice-model") {
       state.appConfig.minimaxVoice.model = nextModel || state.appConfig.minimaxVoice.model;
+    } else if (apiLane === "chatFallback" && state.appConfig.chatFallback) {
+      state.appConfig.chatFallback.model = nextModel || state.appConfig.chatFallback.model;
     } else if (apiLane === "memory" && state.appConfig.memory) {
       state.appConfig.memory.model = nextModel || state.appConfig.memory.model;
     } else if (apiLane === "planner" && state.appConfig.planner) {
