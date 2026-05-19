@@ -1268,6 +1268,51 @@ select {
   border-radius: 10px;
 }
 
+.image-real.is-lazy {
+  width: min(var(--chat-image-size, 260px), 70vw);
+  min-height: 138px !important;
+  border-radius: 18px !important;
+  background: #f2f4f7 !important;
+  overflow: hidden !important;
+}
+
+.image-lazy-placeholder {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  min-height: 138px;
+  padding: 18px;
+  color: #8b93a1;
+  text-align: center;
+}
+
+.image-lazy-placeholder span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #6b7280;
+}
+
+.image-lazy-placeholder span svg {
+  width: 18px;
+  height: 18px;
+}
+
+.image-lazy-placeholder strong {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.image-lazy-placeholder small {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
 .image-real.is-processing img {
   filter: saturate(0.92) brightness(0.96);
 }
@@ -20354,13 +20399,135 @@ body {
 .ios-settings-form-screen .setting-section,
 .ios-settings-form-screen .setting-card,
 .ios-settings-form-screen .panel-card,
-.ios-settings-data-screen .setting-section {
+.ios-settings-data-screen .setting-section,
+.ios-storage-health-screen .storage-health-summary,
+.ios-storage-health-screen .storage-health-breakdown {
   margin: 0;
   border-radius: 24px;
   background: #ffffff;
   border: 1px solid rgba(214, 219, 229, 0.9);
   box-shadow: 0 10px 24px rgba(62, 79, 110, 0.08);
   overflow: hidden;
+}
+
+.ios-storage-health-screen .ios-subpage-scroll {
+  gap: 14px;
+}
+
+.storage-health-summary,
+.storage-health-breakdown {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.storage-health-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.storage-health-metrics article {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 13px;
+  border-radius: 18px;
+  background: #f7f8fb;
+}
+
+.storage-health-metrics span,
+.storage-usage-row-foot,
+.storage-health-section-head span,
+.storage-health-summary p {
+  color: #7b8493;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.storage-health-metrics strong {
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.storage-health-summary p {
+  margin: 0;
+}
+
+.storage-health-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.storage-health-actions .sheet-action-btn {
+  min-width: 0;
+}
+
+.storage-health-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.storage-health-section-head strong {
+  color: #111827;
+  font-size: 15px;
+}
+
+.storage-usage-list {
+  display: grid;
+  gap: 12px;
+}
+
+.storage-usage-row {
+  display: grid;
+  gap: 8px;
+}
+
+.storage-usage-row-head,
+.storage-usage-row-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.storage-usage-row-head strong {
+  color: #111827;
+  font-size: 13px;
+}
+
+.storage-usage-row-head span {
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.storage-usage-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0f5;
+}
+
+.storage-usage-bar span {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2ec85d, #1f83ff);
+}
+
+.storage-empty-state {
+  padding: 18px;
+  border-radius: 18px;
+  background: #f7f8fb;
+  color: #7b8493;
+  text-align: center;
+  font-size: 13px;
 }
 
 .api-availability-card {
@@ -24415,6 +24582,72 @@ const isInlineImageDataUrl = (value) => typeof value === "string" && value.start
 const isInlineAudioDataUrl = (value) => typeof value === "string" && value.startsWith("data:audio/");
 const createMessageImageAssetKey = (roleId, messageId) => `${MESSAGE_IMAGE_ASSET_PREFIX}${roleId}:${messageId}`;
 const createVoiceCacheAssetKey = (roleId, messageId) => `${VOICE_CACHE_ASSET_PREFIX}${roleId}:${messageId}`;
+const estimateJsonSize = (value) => {
+  if (value == null) return 0;
+  if (typeof value === "string") return value.length + 2;
+  if (typeof value === "number" || typeof value === "boolean") return String(value).length;
+  try {
+    return JSON.stringify(value).length;
+  } catch {
+    return 0;
+  }
+};
+const estimateMessageSize = (message = {}) => {
+  if (!message || typeof message !== "object") return 0;
+  const content = message.content;
+  const contentSize =
+    typeof content === "string"
+      ? content.length
+      : content && typeof content === "object"
+        ? Object.entries(content).reduce((sum, [key, value]) => sum + key.length + estimateJsonSize(value), 0)
+        : estimateJsonSize(content);
+  return (
+    96 +
+    String(message.id || "").length +
+    String(message.role || "").length +
+    String(message.type || "").length +
+    String(message.timestamp || "").length +
+    String(message.quotedMessageId || "").length +
+    contentSize +
+    estimateJsonSize(message.mediaDebug)
+  );
+};
+const getMessageCompletenessRank = (message = {}) => {
+  const content = message?.content && typeof message.content === "object" ? message.content : null;
+  let score = estimateMessageSize(message);
+  if (content?.dataUrl) score += 1_000_000_000 + String(content.dataUrl || "").length;
+  if (content?.assetKey) score += 200_000_000;
+  if (content?.persistedExternally) score += 100_000_000;
+  return score;
+};
+const areMessageListsEquivalentForPersistence = (leftMessages = [], rightMessages = []) => {
+  const left = normalizeArray(leftMessages);
+  const right = normalizeArray(rightMessages);
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    const leftMessage = left[index] || {};
+    const rightMessage = right[index] || {};
+    if (String(leftMessage.id || "") !== String(rightMessage.id || "")) return false;
+    if (String(leftMessage.role || "") !== String(rightMessage.role || "")) return false;
+    if (String(leftMessage.type || "") !== String(rightMessage.type || "")) return false;
+    if (String(leftMessage.timestamp || "") !== String(rightMessage.timestamp || "")) return false;
+    if (String(leftMessage.quotedMessageId || "") !== String(rightMessage.quotedMessageId || "")) return false;
+    const leftContent = leftMessage.content;
+    const rightContent = rightMessage.content;
+    if (typeof leftContent !== typeof rightContent) return false;
+    if (typeof leftContent === "string" || typeof rightContent === "string") {
+      if (String(leftContent || "") !== String(rightContent || "")) return false;
+      continue;
+    }
+    const leftObj = leftContent && typeof leftContent === "object" ? leftContent : {};
+    const rightObj = rightContent && typeof rightContent === "object" ? rightContent : {};
+    const keys = new Set([...Object.keys(leftObj), ...Object.keys(rightObj)]);
+    for (const key of keys) {
+      if (String(leftObj[key] ?? "") !== String(rightObj[key] ?? "")) return false;
+    }
+  }
+  return true;
+};
 const resolveRoleChatRenderLimit = (role = {}) => {
   const rawLimit = Number(role?.settings?.chatRenderLimit || DEFAULT_CHAT_RENDER_LIMIT);
   const safeLimit = Number.isFinite(rawLimit) ? rawLimit : DEFAULT_CHAT_RENDER_LIMIT;
@@ -24457,12 +24690,19 @@ const resolvePersistedMessageMergeKey = (message = {}) => {
   const role = String(message?.role || "").trim();
   const type = String(message?.type || "").trim();
   const timestamp = String(message?.timestamp || message?.createdAt || message?.time || "").trim();
-  const content = typeof message?.content === "string" ? message.content : JSON.stringify(message?.content || {});
+  const content =
+    typeof message?.content === "string"
+      ? message.content
+      : message?.content && typeof message.content === "object"
+        ? [
+            message.content.assetKey || "",
+            message.content.name || "",
+            message.content.description || "",
+            message.content.url || "",
+            message.content.text || "",
+          ].join("|")
+        : "";
   return [role, type, timestamp, content.slice(0, 160)].join("|");
-};
-const getPersistedMessageCompletenessScore = (message = {}) => {
-  const content = message?.content && typeof message.content === "object" ? message.content : null;
-  return JSON.stringify(message || {}).length + (content?.dataUrl ? 1_000_000 : 0);
 };
 const mergePersistedMessageVersions = (currentMessage = {}, fallbackMessage = {}) => {
   const currentContent = currentMessage?.content && typeof currentMessage.content === "object" ? currentMessage.content : null;
@@ -24472,6 +24712,7 @@ const mergePersistedMessageVersions = (currentMessage = {}, fallbackMessage = {}
   const nextContent = { ...currentContent };
   let changed = false;
   ["dataUrl", "assetKey", "persistedExternally"].forEach((key) => {
+    if (key === "dataUrl" && nextContent.assetKey && nextContent.persistedExternally) return;
     if (nextContent[key] || !fallbackContent[key]) return;
     nextContent[key] = fallbackContent[key];
     changed = true;
@@ -24482,6 +24723,20 @@ const mergePersistedMessageVersions = (currentMessage = {}, fallbackMessage = {}
     ...currentMessage,
     content: nextContent,
   };
+};
+const shouldReplacePersistedMessageVersion = (candidateMessage = {}, existingMessage = {}) => {
+  const candidateContent = candidateMessage?.content && typeof candidateMessage.content === "object" ? candidateMessage.content : null;
+  const existingContent = existingMessage?.content && typeof existingMessage.content === "object" ? existingMessage.content : null;
+  if (
+    existingContent?.assetKey &&
+    existingContent?.persistedExternally &&
+    !existingContent?.dataUrl &&
+    candidateContent?.dataUrl &&
+    String(candidateMessage?.id || "") === String(existingMessage?.id || "")
+  ) {
+    return false;
+  }
+  return getMessageCompletenessRank(candidateMessage) > getMessageCompletenessRank(existingMessage);
 };
 const mergePersistedMessageLists = (...messageLists) => {
   const mergedByKey = new Map();
@@ -24566,7 +24821,7 @@ const mergePersistedChatsIntoState = (state = {}, rescueStates = []) => {
       ? role?.chats?.quotedMessageId
       : null;
     const nextSummaryMessageCount = Math.min(Math.max(0, nextLastSummaryMessageCount), mergedMessages.length);
-    const mergedMessagesChanged = JSON.stringify(mergedMessages) !== JSON.stringify(baseMessages);
+    const mergedMessagesChanged = !areMessageListsEquivalentForPersistence(mergedMessages, baseMessages);
     const selectedChanged = JSON.stringify(nextSelectedMessageIds) !== JSON.stringify(normalizeArray(role?.chats?.selectedMessageIds));
     const quotedChanged = nextQuotedMessageId !== (role?.chats?.quotedMessageId || null);
     const summaryChanged = nextSummaryMessageCount !== Math.min(Math.max(0, Number(role?.chats?.lastSummaryMessageCount || 0)), mergedMessages.length);
@@ -24625,7 +24880,7 @@ const mergeChatJournalIntoState = (baseState, journal) => {
       existingMessages.forEach((message) => mergedById.set(message.id, message));
       journalMessages.forEach((message) => {
         const existing = mergedById.get(message.id);
-        if (!existing || JSON.stringify(message).length > JSON.stringify(existing).length) {
+        if (!existing || shouldReplacePersistedMessageVersion(message, existing)) {
           mergedById.set(message.id, message);
         }
       });
@@ -24922,6 +25177,131 @@ const readIndexedDbAssets = async (keys = []) => {
     }
   });
 };
+const hydratePersistedAssetForKey = async (assetKey = "") => {
+  const normalizedKey = String(assetKey || "").trim();
+  if (!normalizedKey) return "";
+  const assets = await readIndexedDbAssets([normalizedKey]);
+  return unwrapPersistedAssetDataUrl(assets.get(normalizedKey));
+};
+const analyzeStateStorageUsage = (state = {}) => {
+  const categories = {
+    chats: { label: "聊天文字", bytes: 0, count: 0 },
+    messageImagesInline: { label: "聊天图片内联", bytes: 0, count: 0 },
+    messageImagesExternal: { label: "聊天图片引用", bytes: 0, count: 0 },
+    voiceCache: { label: "语音缓存", bytes: 0, count: 0 },
+    moments: { label: "朋友圈", bytes: 0, count: 0 },
+    life: { label: "行程与生活记忆", bytes: 0, count: 0 },
+    appearance: { label: "外观资源", bytes: 0, count: 0 },
+    config: { label: "设置与资料", bytes: 0, count: 0 },
+  };
+  const add = (key, value, count = 1) => {
+    if (!categories[key]) return;
+    categories[key].bytes += estimateJsonSize(value);
+    categories[key].count += count;
+  };
+  const roles = normalizeArray(state?.roles);
+  roles.forEach((role) => {
+    normalizeArray(role?.chats?.messages).forEach((message) => {
+      if (["photo", "image"].includes(message?.type) && message?.content && typeof message.content === "object") {
+        const dataUrl = String(message.content.dataUrl || "");
+        if (isInlineImageDataUrl(dataUrl)) {
+          add("messageImagesInline", dataUrl);
+          const { dataUrl: _dataUrl, ...restContent } = message.content;
+          add("chats", { ...message, content: restContent });
+          return;
+        }
+        if (message.content.assetKey || message.content.persistedExternally) {
+          add("messageImagesExternal", message.content);
+          return;
+        }
+      }
+      add("chats", message);
+    });
+    add("moments", role?.moments || [], normalizeArray(role?.moments).length);
+    add(
+      "life",
+      {
+        timeline: role?.timeline,
+        timelineByDate: role?.timelineByDate,
+        timelinesByDate: role?.timelinesByDate,
+        events: role?.events,
+        mapPlaces: role?.mapPlaces,
+        livingMemory: role?.livingMemory,
+        goals: role?.goals,
+        npcs: role?.npcs,
+        worldbook: role?.worldbook,
+      },
+      1,
+    );
+    Object.values(role?.voiceCache || {}).forEach((entry) => add("voiceCache", entry));
+    add("appearance", {
+      avatarImage: role?.profile?.avatarImage,
+      cardImage: role?.profile?.cardImage,
+      backgroundImage: role?.chats?.backgroundImage,
+    });
+    add("config", {
+      profile: role?.profile,
+      settings: role?.settings,
+      usage: role?.usage,
+      status: role?.status,
+    });
+  });
+  add("appearance", {
+    userAvatar: state?.userProfile?.avatarImage,
+    userCover: state?.userProfile?.coverImage,
+    appearance: state?.appConfig?.appearance,
+  });
+  add("config", {
+    appConfig: state?.appConfig,
+    userProfile: {
+      ...(state?.userProfile || {}),
+      avatarImage: "",
+      coverImage: "",
+    },
+    sharedStickers: state?.sharedStickers,
+    sharedStickerGroups: state?.sharedStickerGroups,
+  });
+  const totalBytes = Object.values(categories).reduce((sum, item) => sum + item.bytes, 0);
+  const inlineImageBytes = categories.messageImagesInline.bytes;
+  return {
+    totalBytes,
+    inlineImageBytes,
+    compressibleBytes: inlineImageBytes,
+    categories: Object.entries(categories).map(([key, value]) => ({
+      key,
+      label: value.label,
+      bytes: Math.max(0, Math.round(value.bytes)),
+      count: Math.max(0, Math.round(value.count)),
+      ratio: totalBytes > 0 ? value.bytes / totalBytes : 0,
+    })),
+  };
+};
+const compactStateForMainCache = async (state = {}) => {
+  const { snapshot, assetEntries } = prepareStateForDurableStorage(state);
+  let removedInlineBytes = 0;
+  let compactedImages = 0;
+  const roles = normalizeArray(state?.roles);
+  roles.forEach((role) => {
+    normalizeArray(role?.chats?.messages).forEach((message) => {
+      if (!["photo", "image"].includes(message?.type) || !message?.content || typeof message.content !== "object") return;
+      const dataUrl = String(message.content.dataUrl || "");
+      if (!isInlineImageDataUrl(dataUrl)) return;
+      removedInlineBytes += dataUrl.length;
+      compactedImages += 1;
+    });
+  });
+  if (assetEntries.length > 0) {
+    await writeIndexedDbAssets(assetEntries);
+  }
+  return {
+    state: snapshot,
+    assetEntries,
+    compactedImages,
+    removedInlineBytes,
+    before: analyzeStateStorageUsage(state),
+    after: analyzeStateStorageUsage(snapshot),
+  };
+};
 
 const buildProtectedPersistedPayload = (value) => {
   const parsed = parsePersistedPayload(value);
@@ -25196,8 +25576,13 @@ const loadChatJournalFromIndexedDb = async () => {
     return null;
   }
 };
-const hydratePersistedStateAssets = async (state) => {
-  const keys = collectMissingPersistedAssetKeys(state);
+const hydratePersistedStateAssets = async (state, { images = true, voices = true } = {}) => {
+  const keys = collectMissingPersistedAssetKeys(state).filter((key) => {
+    const text = String(key || "");
+    if (!images && text.startsWith(MESSAGE_IMAGE_ASSET_PREFIX)) return false;
+    if (!voices && text.startsWith(VOICE_CACHE_ASSET_PREFIX)) return false;
+    return true;
+  });
   if (!keys.length) return false;
 
   const assets = await readIndexedDbAssets(keys);
@@ -25232,6 +25617,21 @@ const hydratePersistedStateAssets = async (state) => {
   });
 
   return changed;
+};
+const hydrateMessageAssetDataUrl = async (message = {}) => {
+  if (!message || !["photo", "image"].includes(message?.type) || !message?.content || typeof message.content !== "object") {
+    return "";
+  }
+  const existing = String(message.content.dataUrl || "");
+  if (isInlineImageDataUrl(existing)) return existing;
+  const assetKey = String(message.content.assetKey || "").trim();
+  if (!assetKey) return "";
+  const dataUrl = await hydratePersistedAssetForKey(assetKey);
+  if (isInlineImageDataUrl(dataUrl)) {
+    message.content.dataUrl = dataUrl;
+    return dataUrl;
+  }
+  return "";
 };
 const flushPendingStateBackup = async ({ allowMessageDeletion = false } = {}) => {
   if (indexedDbWriteTimer) {
@@ -25852,7 +26252,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.17-chat-fallback-45s-fix";
+const APP_BUILD_VERSION_LABEL = "v2026.05.20-cache-health-compact";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -25902,6 +26302,13 @@ const normalizeTokenConsoleRequestLogs = (entries = []) =>
     })
     .filter((entry) => entry?.message || entry?.source)
     .slice(-20);
+
+const formatStorageBytes = (bytes = 0) => {
+  const value = Math.max(0, Number(bytes) || 0);
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(value >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
+  if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${Math.round(value)} B`;
+};
 
 const getTokenConsoleSnapshotRoundKey = (snapshot = {}) => {
   if (!snapshot || typeof snapshot !== "object") return "";
@@ -28722,15 +29129,26 @@ const renderMessageContent = (message, role = null, state = {}, { suppressQuote 
   const mediaDebugBadge = renderMessageMediaDebugBadge(message);
 
   if (message.type === "photo" || message.type === "image") {
-    if (typeof message.content === "object" && message.content?.dataUrl) {
+    if (typeof message.content === "object" && (message.content?.dataUrl || message.content?.assetKey)) {
       const transferStatus = String(message.content?.transferStatus || "ready").trim();
       const isProcessing = transferStatus === "processing";
       const isError = transferStatus === "error";
+      const dataUrl = typeof message.content?.dataUrl === "string" ? message.content.dataUrl : "";
+      const assetKey = String(message.content?.assetKey || "").trim();
+      const imageBody = dataUrl
+        ? `<img src="${dataUrl}" alt="${escapeHtml(message.content.name || "图片")}" />`
+        : `
+          <div class="image-lazy-placeholder" data-image-placeholder-note>
+            <span>${icons.photo}</span>
+            <strong>图片已压缩存放</strong>
+            <small>滚动到这里时自动读取</small>
+          </div>
+        `;
       return `
         ${quoteBlock}
         ${mediaDebugBadge}
-        <div class="image-placeholder image-real ${isProcessing ? "is-processing" : ""} ${isError ? "is-error" : ""}" aria-label="${isProcessing ? "图片处理中" : isError ? "图片处理失败" : "聊天图片"}">
-          <img src="${message.content.dataUrl}" alt="${escapeHtml(message.content.name || "图片")}" />
+        <div class="image-placeholder image-real ${dataUrl ? "" : "is-lazy"} ${isProcessing ? "is-processing" : ""} ${isError ? "is-error" : ""}" data-message-id="${escapeHtml(message.id || "")}" ${assetKey ? `data-image-asset-key="${escapeHtml(assetKey)}"` : ""} aria-label="${escapeHtml(isProcessing ? "图片处理中" : isError ? "图片处理失败" : message.content.name || "聊天图片")}">
+          ${imageBody}
           ${isProcessing ? `<span class="image-transfer-indicator" aria-hidden="true"><span class="busy-spinner"></span></span>` : ""}
           ${isError ? `<span class="image-transfer-error">读取失败</span>` : ""}
         </div>
@@ -30946,7 +31364,10 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
           : "";
   const bubbleTag = ["voice", "videoCall"].includes(message.type) ? "div" : "button";
   const bubbleTypeAttr = bubbleTag === "button" ? ' type="button"' : "";
-  const bubbleInteractiveAttr = "";
+  const bubbleInteractiveAttr =
+    (message.type === "photo" || message.type === "image") && (message.content?.dataUrl || message.content?.assetKey)
+      ? ' data-action="open-image-viewer"'
+      : "";
   const chatSkin = getChatBubbleSkin(role);
   const perMessageAvatar = chatSkin === "qq" || chatSkin === "wechat";
   const avatarProfile = isUser ? { avatar: "你", ...(state?.userProfile || {}) } : role?.profile || {};
@@ -32887,9 +33308,93 @@ const renderIosNotificationSettingsPage = (state) => {
   return renderIosSubpageShell("通知与音效", body, "panel-ios-notification-settings", "ios-settings-form-screen");
 };
 
-const renderIosDataSettingsPage = (state) => {
-  void state;
+const renderStorageUsageCategoryList = (snapshot = null) => {
+  const categories = Array.isArray(snapshot?.categories) ? snapshot.categories : [];
+  if (!categories.length) {
+    return `<div class="storage-empty-state">还没有生成体检结果</div>`;
+  }
+  return `
+    <div class="storage-usage-list">
+      ${categories
+        .filter((item) => Number(item?.bytes || 0) > 0 || Number(item?.count || 0) > 0)
+        .sort((left, right) => Number(right.bytes || 0) - Number(left.bytes || 0))
+        .map((item) => {
+          const ratio = Math.max(0, Math.min(100, Number(item.ratio || 0) * 100));
+          return `
+            <article class="storage-usage-row">
+              <div class="storage-usage-row-head">
+                <strong>${escapeHtml(item.label || item.key || "未分类")}</strong>
+                <span>${formatStorageBytes(item.bytes)}</span>
+              </div>
+              <div class="storage-usage-bar" aria-hidden="true"><span style="width:${ratio.toFixed(2)}%"></span></div>
+              <div class="storage-usage-row-foot">
+                <span>${ratio.toFixed(ratio >= 10 ? 0 : 1)}%</span>
+                ${Number(item.count || 0) ? `<span>${Math.round(Number(item.count || 0))} 项</span>` : ""}
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+};
+
+const renderStorageHealthPanel = (state) => {
+  const snapshot = state?.storageUsageSnapshot || null;
+  const busy = Boolean(state?.storageUsageBusy);
+  const total = snapshot ? formatStorageBytes(snapshot.totalBytes) : "未体检";
+  const compressible = snapshot ? formatStorageBytes(snapshot.compressibleBytes) : "未知";
+  const lastCompaction = snapshot?.lastCompaction;
+  const lastNote = lastCompaction
+    ? `上次压缩 ${Math.max(0, Number(lastCompaction.compactedImages || 0))} 张图片，约 ${formatStorageBytes(lastCompaction.removedInlineBytes)}`
+    : "压缩会保留聊天和图片，只把大图从主缓存移到本机资源库";
+
   const body = `
+    <section class="storage-health-summary">
+      <div class="storage-health-metrics">
+        <article>
+          <span>主缓存估算</span>
+          <strong>${escapeHtml(total)}</strong>
+        </article>
+        <article>
+          <span>可压缩图片</span>
+          <strong>${escapeHtml(compressible)}</strong>
+        </article>
+      </div>
+      <p>${escapeHtml(lastNote)}</p>
+      <div class="storage-health-actions">
+        <button class="sheet-action-btn" type="button" data-action="refresh-storage-usage" ${busy ? "disabled" : ""}>重新体检</button>
+        <button class="sheet-action-btn primary" type="button" data-action="compact-main-cache" ${busy ? "disabled" : ""}>${busy ? "处理中..." : "压缩主缓存"}</button>
+      </div>
+    </section>
+    <section class="storage-health-breakdown">
+      <div class="storage-health-section-head">
+        <strong>分类占用</strong>
+        <span>${snapshot?.measuredAt ? escapeHtml(new Date(snapshot.measuredAt).toLocaleString("zh-CN", { hour12: false })) : "未生成"}</span>
+      </div>
+      ${renderStorageUsageCategoryList(snapshot)}
+    </section>
+  `;
+  return renderIosSubpageShell("缓存体检", body, "panel-storage-health", "ios-storage-health-screen");
+};
+
+const renderIosDataSettingsPage = (state) => {
+  const snapshot = state?.storageUsageSnapshot || null;
+  const usageDetail = snapshot?.totalBytes ? `${formatStorageBytes(snapshot.totalBytes)}` : "";
+  const body = `
+    ${renderIosSection(
+      "缓存体检",
+      [
+        renderIosSettingRow({
+          label: "缓存分类与压缩",
+          icon: icons.memoryHeat,
+          tone: "green",
+          detail: usageDetail,
+          subtitle: "查看各类数据占用，并压缩聊天图片主缓存",
+          panel: "storage-health",
+        }),
+      ].join(""),
+    )}
     ${renderIosSection(
       "备份与恢复",
       [
@@ -34864,6 +35369,7 @@ const renderPanelOverlayRefined = (state, role) => {
   if (panel === "ios-voice-settings") return renderIosVoiceSettingsPage(state);
   if (panel === "ios-notification-settings") return renderIosNotificationSettingsPage(state);
   if (panel === "ios-data-settings") return renderIosDataSettingsPage(state);
+  if (panel === "storage-health") return renderStorageHealthPanel(state);
   if (panel === "user-identity") return renderUserIdentityPage(state.userProfile, role);
   if (panel === "export-options") return renderExportOptionsSheet(state);
   if (!role) return "";
@@ -35915,6 +36421,8 @@ const createTransientState = () => ({
   expandedVideoCallMessageIds: [],
   videoCallSummaryBusyMessageIds: [],
   imageViewer: null,
+  storageUsageSnapshot: null,
+  storageUsageBusy: false,
   settingsPresetCollapsed: true,
   settingsNotificationsCollapsed: true,
   tokenBreakdownCollapsed: true,
@@ -36914,14 +37422,63 @@ const resolvePersistentMessageMergeKey = (message = {}) => {
   const role = String(message?.role || "").trim();
   const type = String(message?.type || "").trim();
   const timestamp = String(message?.timestamp || message?.createdAt || message?.time || "").trim();
-  const content = typeof message?.content === "string" ? message.content : JSON.stringify(message?.content || {});
+  const content =
+    typeof message?.content === "string"
+      ? message.content
+      : message?.content && typeof message.content === "object"
+        ? [
+            message.content.assetKey || "",
+            message.content.name || "",
+            message.content.description || "",
+            message.content.url || "",
+            message.content.text || "",
+          ].join("|")
+        : "";
   return [role, type, timestamp, content.slice(0, 120)].join("|");
 };
 
+const estimatePersistentMessageSize = (message = {}) => {
+  if (!message || typeof message !== "object") return 0;
+  const content = message.content;
+  const contentSize =
+    typeof content === "string"
+      ? content.length
+      : content && typeof content === "object"
+        ? Object.entries(content).reduce((sum, [key, value]) => sum + key.length + String(value ?? "").length, 0)
+        : 0;
+  return (
+    96 +
+    String(message.id || "").length +
+    String(message.role || "").length +
+    String(message.type || "").length +
+    String(message.timestamp || "").length +
+    String(message.quotedMessageId || "").length +
+    contentSize
+  );
+};
+
+const getPersistentMessageCompletenessRank = (message = {}) => {
+  const content = message?.content && typeof message.content === "object" ? message.content : null;
+  let score = estimatePersistentMessageSize(message);
+  if (content?.dataUrl) score += 1_000_000_000 + String(content.dataUrl || "").length;
+  if (content?.assetKey) score += 200_000_000;
+  if (content?.persistedExternally) score += 100_000_000;
+  return score;
+};
+
 const isMoreCompletePersistentMessage = (nextMessage = {}, currentMessage = {}) => {
-  const nextScore = JSON.stringify(nextMessage || {}).length + (nextMessage?.content?.dataUrl ? 1_000_000 : 0);
-  const currentScore = JSON.stringify(currentMessage || {}).length + (currentMessage?.content?.dataUrl ? 1_000_000 : 0);
-  return nextScore > currentScore;
+  const nextContent = nextMessage?.content && typeof nextMessage.content === "object" ? nextMessage.content : null;
+  const currentContent = currentMessage?.content && typeof currentMessage.content === "object" ? currentMessage.content : null;
+  if (
+    currentContent?.assetKey &&
+    currentContent?.persistedExternally &&
+    !currentContent?.dataUrl &&
+    nextContent?.dataUrl &&
+    String(nextMessage?.id || "") === String(currentMessage?.id || "")
+  ) {
+    return false;
+  }
+  return getPersistentMessageCompletenessRank(nextMessage) > getPersistentMessageCompletenessRank(currentMessage);
 };
 
 const resolveNewestPersistentStamp = (...values) => {
@@ -37487,6 +38044,8 @@ const serializeState = () => {
     modelFetchBusy,
     chatReplyBusyRoleId,
     exportBusy,
+    storageUsageSnapshot,
+    storageUsageBusy,
     presetDraftName,
     tokenBreakdownCollapsed,
     tokenRequestLogFilter,
@@ -38184,9 +38743,101 @@ if (migrateLegacyApiSettings()) {
 }
 
 const restorePersistedAssets = async () => {
-  const hydrated = await hydratePersistedStateAssets(state);
+  const hydrated = await hydratePersistedStateAssets(state, { images: false, voices: true });
   if (hydrated) {
     paint();
+  }
+};
+
+const formatStorageUsageSize = (bytes = 0) => {
+  const value = Math.max(0, Number(bytes) || 0);
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(value >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
+  if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${Math.round(value)} B`;
+};
+
+const refreshStorageUsageSnapshot = () => {
+  const snapshot = analyzeStateStorageUsage(serializeState());
+  state.storageUsageSnapshot = {
+    ...snapshot,
+    measuredAt: new Date().toISOString(),
+  };
+  return state.storageUsageSnapshot;
+};
+
+const hydrateMessageImageById = async (roleId = "", messageId = "", { paintNow = true } = {}) => {
+  const role = getRoleById(state, roleId);
+  const message = (role?.chats?.messages || []).find((item) => item?.id === messageId);
+  const dataUrl = await hydrateMessageAssetDataUrl(message);
+  if (dataUrl && paintNow) paint();
+  return dataUrl;
+};
+
+const hydrateVisibleChatImages = () => {
+  const activeRoleId = String(state.activeChatRoleId || "").trim();
+  if (!activeRoleId) return;
+  const nodes = [...root.querySelectorAll("[data-image-asset-key][data-message-id]")];
+  if (!nodes.length) return;
+  nodes.slice(0, 8).forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
+    const rect = node.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (rect.bottom < -240 || rect.top > viewportHeight + 240) return;
+    const assetKey = String(node.dataset.imageAssetKey || "").trim();
+    const messageId = String(node.dataset.messageId || "").trim();
+    if (!assetKey || !messageId || node.dataset.imageHydrating === "1") return;
+    node.dataset.imageHydrating = "1";
+    void hydratePersistedAssetForKey(assetKey).then((dataUrl) => {
+      if (!dataUrl) {
+        node.classList.add("is-error");
+        const note = node.querySelector("[data-image-placeholder-note]");
+        if (note) note.textContent = "图片缓存未找到";
+        return;
+      }
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      img.alt = node.getAttribute("aria-label") || "聊天图片";
+      node.replaceChildren(img);
+      const role = getRoleById(state, activeRoleId);
+      const message = (role?.chats?.messages || []).find((item) => item?.id === messageId);
+      if (message?.content && typeof message.content === "object") {
+        message.content.dataUrl = dataUrl;
+      }
+    });
+  });
+};
+
+const compactMainCacheNow = async () => {
+  if (state.storageUsageBusy) return;
+  state.storageUsageBusy = true;
+  refreshStorageUsageSnapshot();
+  paint();
+  try {
+    const result = await compactStateForMainCache(serializeState());
+    state = preserveCurrentNavigationState(buildStateFromPersistent(result.state), state);
+    normalizeSessionState();
+    reconcileSharedStickerMoodAssignments();
+    repairVisibleStickerProtocolMessages();
+    state.storageUsageSnapshot = {
+      ...result.after,
+      measuredAt: new Date().toISOString(),
+      lastCompaction: {
+        compactedImages: result.compactedImages,
+        removedInlineBytes: result.removedInlineBytes,
+      },
+    };
+    state.storageUsageBusy = false;
+    saveState(serializeState());
+    paint();
+    setToast(
+      result.compactedImages
+        ? `已压缩 ${result.compactedImages} 张图片，主缓存减少约 ${formatStorageUsageSize(result.removedInlineBytes)}`
+        : "主缓存已经是轻量状态",
+    );
+  } catch (error) {
+    state.storageUsageBusy = false;
+    paint();
+    setToast(error?.message || "缓存压缩失败");
   }
 };
 
@@ -40091,6 +40742,9 @@ const handleTrackedScroll = (event) => {
   }
   scrollRuntime.lastUserScrollAt = Date.now();
   scrollRuntime.lastScrollKey = key;
+  if (key === "chat-feed") {
+    hydrateVisibleChatImages();
+  }
   if (scrollRuntime.pendingPaint) {
     scheduleDeferredScrollPaint();
   }
@@ -40335,6 +40989,7 @@ const paint = () => {
     hydrateChatSettingsTopRuntime();
     hydrateVideoSessionPanel();
     restoreScrolls();
+    hydrateVisibleChatImages();
     syncComposerTextarea();
     syncRangeProgress();
     syncVideoSessionTimingControls();
@@ -43781,12 +44436,13 @@ const buildJourneyGenerationContextAsync = async (role, userInput = "", targetDa
   return buildJourneyGenerationContext(role, userInput, targetDateKey, { queryEmbedding });
 };
 
-const isVisualMessage = (message) =>
-  ["photo", "image"].includes(message?.type) &&
-  typeof message?.content === "object" &&
-  typeof message.content?.dataUrl === "string" &&
-  message.content.dataUrl.startsWith("data:image/") &&
-  message.content?.transferStatus !== "processing";
+const isVisualMessage = (message) => {
+  if (!["photo", "image"].includes(message?.type) || typeof message?.content !== "object") return false;
+  if (message.content?.transferStatus === "processing") return false;
+  const dataUrl = String(message.content?.dataUrl || "");
+  const assetKey = String(message.content?.assetKey || "").trim();
+  return dataUrl.startsWith("data:image/") || Boolean(assetKey);
+};
 
 const hasPendingVisualMessage = (role) =>
   (Array.isArray(role?.chats?.messages) ? role.chats.messages : []).some(
@@ -43796,7 +44452,19 @@ const hasPendingVisualMessage = (role) =>
       message.content?.transferStatus === "processing",
   );
 
-const getCurrentTurnImageAttachments = (role, limit = 2) => {
+const hasCurrentTurnVisualMessage = (role) => {
+  const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
+  let lastAiIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "ai") {
+      lastAiIndex = index;
+      break;
+    }
+  }
+  return messages.slice(lastAiIndex + 1).some((message) => message.role === "user" && isVisualMessage(message));
+};
+
+const getCurrentTurnImageAttachments = async (role, limit = 2) => {
   const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
   const lastAiIndex = (() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -43809,12 +44477,20 @@ const getCurrentTurnImageAttachments = (role, limit = 2) => {
     .slice(lastAiIndex + 1)
     .filter((message) => message.role === "user" && isVisualMessage(message))
     .slice(-limit)
-    .map((message, index) => ({
-      id: message.id || `image-${index}`,
-      name: message.content?.name || `用户图片${index + 1}`,
-      dataUrl: message.content?.dataUrl,
-      timestamp: message.timestamp,
-    }));
+    .reduce((promise, message, index) =>
+      promise.then(async (items) => {
+        const dataUrl = String(message.content?.dataUrl || "") || (await hydrateMessageAssetDataUrl(message));
+        if (!dataUrl) return items;
+        return [
+          ...items,
+          {
+            id: message.id || `image-${index}`,
+            name: message.content?.name || `用户图片${index + 1}`,
+            dataUrl,
+            timestamp: message.timestamp,
+          },
+        ];
+      }), Promise.resolve([]));
 };
 
 const isRoleQuotableCurrentTurnUserMessage = (message) =>
@@ -50752,7 +51428,7 @@ const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCa
     groupName: String(item.groupName || "").trim(),
     recentlyUsed: recentStickerDescriptions.includes(String(item.description || "").trim()),
   }));
-  const imageAttachments = getCurrentTurnImageAttachments(role);
+  const imageAttachments = await getCurrentTurnImageAttachments(role);
   const triggeredWorldbookEntries = getTriggeredWorldbookEntries(role, userInput);
   const requiredWorldbookTitles = triggeredWorldbookEntries.map((entry) => entry?.title);
   const referenceCatalog = buildRoleReferenceCatalog(role, {
@@ -67974,7 +68650,12 @@ const withRoundWallClockMeta = (meta = null, startedAtMs = Date.now(), completed
 
 const estimateMessageUsage = (message) => {
   if (typeof message.content === "string") return Math.max(8, message.content.length * 2);
-  return Math.max(8, JSON.stringify(message.content || "").length * 2);
+  const content = message.content && typeof message.content === "object" ? message.content : {};
+  const lightweightLength = Object.entries(content).reduce((sum, [key, value]) => {
+    if (key === "dataUrl") return sum + Math.min(String(value || "").length, 400);
+    return sum + key.length + String(value ?? "").length;
+  }, 0);
+  return Math.max(8, lightweightLength * 2);
 };
 
 const getSequentialRevealDelay = (message, index) => {
@@ -67982,7 +68663,7 @@ const getSequentialRevealDelay = (message, index) => {
   if (!message) return 160;
   if (message.type === "sticker" || message.type === "image" || message.type === "photo") return 220;
   if (message.type === "voice") return 260;
-  const length = typeof message.content === "string" ? message.content.length : JSON.stringify(message.content || "").length;
+  const length = typeof message.content === "string" ? message.content.length : estimateMessageUsage(message) / 2;
   return Math.min(360, Math.max(140, 80 + length * 6));
 };
 
@@ -73325,7 +74006,7 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
       setToast("图片还在处理中，等转圈结束再发送");
       return;
     }
-    if (getCurrentTurnImageAttachments(role, 1).length) {
+    if (hasCurrentTurnVisualMessage(role)) {
       pendingAiReply = null;
       void requestAndAppendAiReply(role.id, resolveFollowUpPrompt(role), {
         roundStartedAtMs,
@@ -73452,7 +74133,7 @@ const handleComposerPrimaryAction = () => {
   }
 
   if (!currentValue) {
-    if (getCurrentTurnImageAttachments(role, 1).length) {
+    if (hasCurrentTurnVisualMessage(role)) {
       handleSendMessage({ triggerAi: true });
       return;
     }
@@ -74500,7 +75181,7 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "open-image-viewer") {
     const role = getActiveChatRole() || getCurrentRole();
     const message = (role?.chats?.messages || []).find((item) => item.id === messageId);
-    const dataUrl = message?.content?.dataUrl;
+    const dataUrl = String(message?.content?.dataUrl || "") || (await hydrateMessageImageById(role?.id || "", messageId, { paintNow: false }));
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
     state.imageViewer = {
       src: dataUrl,
@@ -75452,7 +76133,22 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "open-panel") {
     clearTransient();
+    if (button.dataset.panel === "storage-health") {
+      refreshStorageUsageSnapshot();
+    }
     openPanel(button.dataset.panel);
+    return;
+  }
+
+  if (action === "refresh-storage-usage") {
+    refreshStorageUsageSnapshot();
+    paint();
+    setToast("缓存体检已更新");
+    return;
+  }
+
+  if (action === "compact-main-cache") {
+    void compactMainCacheNow();
     return;
   }
 
