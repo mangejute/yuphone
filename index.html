@@ -20412,6 +20412,9 @@ body {
 
 .ios-storage-health-screen .ios-subpage-scroll {
   gap: 14px;
+  align-content: start;
+  grid-auto-rows: max-content;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
 }
 
 .storage-health-summary,
@@ -20419,6 +20422,16 @@ body {
   display: grid;
   gap: 14px;
   padding: 16px;
+}
+
+.ios-storage-health-screen .storage-health-summary,
+.ios-storage-health-screen .storage-health-breakdown {
+  align-self: start;
+}
+
+.ios-storage-health-screen .storage-health-breakdown {
+  min-height: max-content;
+  overflow: visible;
 }
 
 .storage-health-metrics {
@@ -20480,6 +20493,7 @@ body {
 .storage-usage-list {
   display: grid;
   gap: 12px;
+  min-height: max-content;
 }
 
 .storage-usage-row {
@@ -26252,7 +26266,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.20-cache-health-compact";
+const APP_BUILD_VERSION_LABEL = "v2026.05.20-multi-photo-send";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -35862,6 +35876,8 @@ const imageInput = ensureHiddenFileInput("image-input", "image/*");
 const soundInput = ensureHiddenFileInput("sound-input", "audio/*");
 
 const STRICT_SINGLE_AI_REQUEST_PER_ENTRY = true;
+const CHAT_IMAGE_MULTI_SELECT_LIMIT = 9;
+const CHAT_IMAGE_ATTACHMENT_CONTEXT_LIMIT = 9;
 const PRIMARY_CHAT_MAIN_ATTEMPT_TIMEOUT_MS = 45_000;
 const PRIMARY_CHAT_FALLBACK_ATTEMPT_TIMEOUT_MS = 180_000;
 const PRIMARY_CHAT_SINGLE_ATTEMPT_TIMEOUT_MS = 180_000;
@@ -44464,7 +44480,7 @@ const hasCurrentTurnVisualMessage = (role) => {
   return messages.slice(lastAiIndex + 1).some((message) => message.role === "user" && isVisualMessage(message));
 };
 
-const getCurrentTurnImageAttachments = async (role, limit = 2) => {
+const getCurrentTurnImageAttachments = async (role, limit = CHAT_IMAGE_ATTACHMENT_CONTEXT_LIMIT) => {
   const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
   const lastAiIndex = (() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -73577,8 +73593,14 @@ const beginImagePick = (target) => {
   imageInput.value = "";
   if (target?.kind === "chat-camera") {
     imageInput.setAttribute("capture", String(target.captureMode || "environment"));
+    imageInput.removeAttribute("multiple");
   } else {
     imageInput.removeAttribute("capture");
+    if (target?.kind === "chat") {
+      imageInput.setAttribute("multiple", "multiple");
+    } else {
+      imageInput.removeAttribute("multiple");
+    }
   }
   imageInput.click();
 };
@@ -74171,91 +74193,99 @@ const handleComposerPrimaryAction = () => {
 };
 
 const handleImagePick = async (event, target = { kind: "chat" }) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
+  const pickedFiles = Array.from(event.target.files || []);
+  const selectedFiles = pickedFiles.filter((file) => file && String(file.type || "").startsWith("image/"));
+  if (!selectedFiles.length) {
+    imageInput.value = "";
+    if (pickedFiles.length) setToast("请选择图片文件");
+    return;
+  }
   const role = getActiveChatRole() || getCurrentRole();
   if (!role) return;
-
-  let rawDataUrl = "";
-  try {
-    rawDataUrl = await readImageFileAsDataUrl(file);
-  } catch (error) {
-    imageInput.value = "";
-    setToast(error?.message || "图片读取失败");
-    return;
-  }
-  if (!rawDataUrl.startsWith("data:image/")) {
-    imageInput.value = "";
-    setToast("图片读取失败");
-    return;
-  }
+  const files = selectedFiles.slice(0, CHAT_IMAGE_MULTI_SELECT_LIMIT);
+  const skippedCount = Math.max(0, selectedFiles.length - files.length);
+  const isMultiSelect = files.length > 1;
 
   markChatFeedForAutoScroll({ force: true });
   pendingAiReply = null;
-  const pendingMessage = createMessage({
-    role: "user",
-    type: "photo",
-    content: {
-      name: file.name || "图片",
-      dataUrl: rawDataUrl,
-      transferStatus: "processing",
-    },
-  });
+  const pendingItems = files.map((file, index) => ({
+    file,
+    message: createMessage({
+      role: "user",
+      type: "photo",
+      content: {
+        name: file.name || `图片${index + 1}`,
+        dataUrl: "",
+        transferStatus: "processing",
+      },
+    }),
+  }));
   updateRole(role.id, (nextRole) => {
-    nextRole.chats.messages.push(pendingMessage);
-    nextRole.usage.totalMessages += 1;
-    nextRole.usage.tokensToday += 120;
+    nextRole.chats.messages.push(...pendingItems.map((item) => item.message));
+    nextRole.usage.totalMessages += pendingItems.length;
+    nextRole.usage.tokensToday += 120 * pendingItems.length;
     return nextRole;
   });
   queueAutoSummaryCheckForRole(role.id);
-  setToast("图片处理中，转圈结束后再点发送");
+  setToast(isMultiSelect ? `${files.length} 张图片处理中，转圈结束后再点发送` : "图片处理中，转圈结束后再点发送");
 
-  let preparedImage = null;
-  try {
-    preparedImage = await normalizePickedChatImageFile(file, {
-      forceStandardize: String(target?.kind || "").trim() === "chat-camera",
-      rawDataUrl,
-    });
-  } catch (error) {
-    imageInput.value = "";
-    updateRole(role.id, (nextRole) => {
-      const message = nextRole.chats.messages.find((item) => item.id === pendingMessage.id);
-      if (message?.content && typeof message.content === "object") {
-        message.content.transferStatus = "error";
-      }
-      return nextRole;
-    });
-    setToast(error?.message || "图片读取失败");
-    return;
-  }
-  if (!preparedImage?.dataUrl || !String(preparedImage.dataUrl).startsWith("data:image/")) {
-    imageInput.value = "";
-    updateRole(role.id, (nextRole) => {
-      const message = nextRole.chats.messages.find((item) => item.id === pendingMessage.id);
-      if (message?.content && typeof message.content === "object") {
-        message.content.transferStatus = "error";
-      }
-      return nextRole;
-    });
-    setToast("图片读取失败");
-    return;
-  }
+  let readyCount = 0;
+  let normalizedCount = 0;
+  let failedCount = 0;
+  const forceStandardize = String(target?.kind || "").trim() === "chat-camera";
 
-  updateRole(role.id, (nextRole) => {
-    const message = nextRole.chats.messages.find((item) => item.id === pendingMessage.id);
-    if (message?.content && typeof message.content === "object") {
-      message.content.name = preparedImage?.name || file.name;
-      message.content.dataUrl = preparedImage?.dataUrl || "";
-      message.content.transferStatus = "ready";
+  for (const item of pendingItems) {
+    const { file, message: pendingMessage } = item;
+    try {
+      const rawDataUrl = await readImageFileAsDataUrl(file);
+      if (!rawDataUrl.startsWith("data:image/")) {
+        throw new Error("图片读取失败");
+      }
+      const preparedImage = await normalizePickedChatImageFile(file, {
+        forceStandardize,
+        rawDataUrl,
+      });
+      if (!preparedImage?.dataUrl || !String(preparedImage.dataUrl).startsWith("data:image/")) {
+        throw new Error("图片读取失败");
+      }
+
+      readyCount += 1;
+      if (preparedImage?.normalized) normalizedCount += 1;
+      updateRole(role.id, (nextRole) => {
+        const message = nextRole.chats.messages.find((entry) => entry.id === pendingMessage.id);
+        if (message?.content && typeof message.content === "object") {
+          message.content.name = preparedImage?.name || file.name;
+          message.content.dataUrl = preparedImage?.dataUrl || "";
+          message.content.transferStatus = "ready";
+        }
+        return nextRole;
+      });
+    } catch (error) {
+      failedCount += 1;
+      updateRole(role.id, (nextRole) => {
+        const message = nextRole.chats.messages.find((entry) => entry.id === pendingMessage.id);
+        if (message?.content && typeof message.content === "object") {
+          message.content.transferStatus = "error";
+        }
+        return nextRole;
+      });
     }
-    return nextRole;
-  });
+  }
 
-  setToast(
-    preparedImage?.normalized
-      ? "图片已发送，已转成兼容格式"
-      : "图片已发送，可直接点发送或输入一句话让 AI 回复",
-  );
+  const skippedHint = skippedCount ? `，已先处理前 ${CHAT_IMAGE_MULTI_SELECT_LIMIT} 张` : "";
+  if (!readyCount) {
+    setToast(`图片读取失败${skippedHint}`);
+  } else if (failedCount) {
+    setToast(`${readyCount} 张图片已发送，${failedCount} 张读取失败${skippedHint}`);
+  } else if (isMultiSelect) {
+    setToast(`${readyCount} 张图片已发送${normalizedCount ? "，已转成兼容格式" : ""}${skippedHint}，可直接点发送让 AI 回复`);
+  } else {
+    setToast(
+      normalizedCount
+        ? `图片已发送，已转成兼容格式${skippedHint}`
+        : `图片已发送${skippedHint}，可直接点发送或输入一句话让 AI 回复`,
+    );
+  }
   imageInput.value = "";
 };
 
