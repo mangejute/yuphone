@@ -5761,6 +5761,13 @@ body {
   border-radius: 999px;
   background: #e5e7eb;
   outline: none;
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+}
+
+.range-row input[type="range"]:active {
+  cursor: grabbing;
 }
 
 .range-row input[type="range"]::-webkit-slider-runnable-track {
@@ -6894,6 +6901,13 @@ body {
   border-radius: 999px;
   background: #e5e7eb;
   outline: none;
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+}
+
+.goal-editor-progress input[type="range"]:active {
+  cursor: grabbing;
 }
 
 .goal-readonly-progress {
@@ -11632,6 +11646,14 @@ body {
   height: 7px !important;
   border-radius: 999px;
   outline: none;
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+}
+
+.voice-chance-slider:active,
+.clear-chat-range-input:active {
+  cursor: grabbing;
 }
 
 .voice-chance-slider::-webkit-slider-runnable-track,
@@ -11676,6 +11698,34 @@ body {
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 1px 4px rgba(17, 17, 17, 0.14);
+}
+
+input[type="range"] {
+  touch-action: pan-x;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  touch-action: pan-x;
+}
+
+input[type="range"]::-moz-range-thumb {
+  touch-action: pan-x;
+}
+
+.voice-chance-readonly-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.voice-chance-readonly-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #111111;
 }
 
 .clear-chat-range-card {
@@ -26266,7 +26316,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.20-multi-photo-send";
+const APP_BUILD_VERSION_LABEL = "v2026.05.20-natural-range-edit-lock";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -30272,7 +30322,31 @@ const renderChatSettingsFieldCell = (label, inputHtml, withTopBorder = false) =>
   </div>
 `;
 
-const renderRoleVoiceSettingsBody = (role, state) => `
+const renderRoleVoiceChanceControl = ({ label, value, field, editing }) => {
+  const normalizedValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  const progressText = `${normalizedValue}%`;
+  return `
+    <div class="voice-chance-control ${editing ? "is-editing" : "is-readonly"}">
+      <div class="voice-chance-head">
+        <span>${escapeHtml(label)}</span>
+        <strong class="voice-chance-value">${progressText}</strong>
+      </div>
+      ${
+        editing
+          ? `<input class="voice-chance-slider" type="range" min="0" max="100" step="1" value="${normalizedValue}" data-action="update-role-setting" data-role-setting="${escapeHtml(field)}" />`
+          : `<div class="voice-chance-readonly-progress" aria-hidden="true"><span style="width:${normalizedValue}%"></span></div>`
+      }
+      <div class="voice-chance-scale">
+        <span>较少</span>
+        <span>较多</span>
+      </div>
+    </div>
+  `;
+};
+
+const renderRoleVoiceSettingsBody = (role, state) => {
+  const chanceEditing = Boolean(state?.roleVoiceChanceEditing);
+  return `
   <div class="chat-settings-voice-stack">
     <div class="input-row">
       <span>音色 ID</span>
@@ -30301,42 +30375,28 @@ const renderRoleVoiceSettingsBody = (role, state) => `
         `
         : ""
     }
-    <div class="voice-chance-control">
-      <div class="voice-chance-head">
-        <span>语音条频率</span>
-        <strong class="voice-chance-value">${Number(role.settings?.voiceMessageChance ?? 20)}%</strong>
-      </div>
-      <input class="voice-chance-slider" type="range" min="0" max="100" step="1" value="${Number(role.settings?.voiceMessageChance ?? 20)}" data-action="update-role-setting" data-role-setting="voiceMessageChance" />
-      <div class="voice-chance-scale">
-        <span>较少</span>
-        <span>较多</span>
-      </div>
-    </div>
-    <div class="voice-chance-control">
-      <div class="voice-chance-head">
-        <span>图片频率</span>
-        <strong class="voice-chance-value">${Number(role.settings?.imageMessageChance ?? 10)}%</strong>
-      </div>
-      <input class="voice-chance-slider" type="range" min="0" max="100" step="1" value="${Number(role.settings?.imageMessageChance ?? 10)}" data-action="update-role-setting" data-role-setting="imageMessageChance" />
-      <div class="voice-chance-scale">
-        <span>较少</span>
-        <span>较多</span>
-      </div>
-    </div>
-    <div class="voice-chance-control">
-      <div class="voice-chance-head">
-        <span>表情包频率</span>
-        <strong class="voice-chance-value">${Number(role.settings?.stickerMessageChance ?? 20)}%</strong>
-      </div>
-      <input class="voice-chance-slider" type="range" min="0" max="100" step="1" value="${Number(role.settings?.stickerMessageChance ?? 20)}" data-action="update-role-setting" data-role-setting="stickerMessageChance" />
-      <div class="voice-chance-scale">
-        <span>较少</span>
-        <span>较多</span>
-      </div>
-    </div>
+    ${renderRoleVoiceChanceControl({
+      label: "语音条频率",
+      value: role.settings?.voiceMessageChance ?? 20,
+      field: "voiceMessageChance",
+      editing: chanceEditing,
+    })}
+    ${renderRoleVoiceChanceControl({
+      label: "图片频率",
+      value: role.settings?.imageMessageChance ?? 10,
+      field: "imageMessageChance",
+      editing: chanceEditing,
+    })}
+    ${renderRoleVoiceChanceControl({
+      label: "表情包频率",
+      value: role.settings?.stickerMessageChance ?? 20,
+      field: "stickerMessageChance",
+      editing: chanceEditing,
+    })}
     <div class="setting-mini-note">语音条、图片和表情包频率都按“每轮回复”抽一次：20% 就是每轮 20% 概率出现 1 条，0% 完全不发，100% 也最多 1 条；图片会受最近已发图片和冷却间隔限制，表情包只有在你已经导入共享表情包后才会生效</div>
   </div>
 `;
+};
 
 const renderChatSettingsPanel = (state, role) => `
   <div class="overlay-screen panel-overlay">
@@ -30371,6 +30431,7 @@ const renderChatSettingsPanel = (state, role) => `
           title: "角色语音",
           note: "这个角色播放语音时会使用这里的音色和语音条频率",
           extraClass: "ios-role-voice-editor-card",
+          action: `<button class="tiny-header-btn ios-segment-btn" type="button" data-action="toggle-role-voice-chance-edit">${state.roleVoiceChanceEditing ? "完成" : "编辑"}</button>`,
           body: renderRoleVoiceSettingsBody(role, state),
         })}
 
@@ -36400,6 +36461,7 @@ const createTransientState = () => ({
     short: false,
     long: false,
   },
+  roleVoiceChanceEditing: false,
   modalRoleAvatarImage: "",
   momentDraft: "",
   modelPickerOpen: false,
@@ -38036,6 +38098,7 @@ const serializeState = () => {
     journeyEventPreview,
     journeyEditDraft,
     goalEditModes,
+    roleVoiceChanceEditing,
     modalRoleAvatarImage,
     momentDraft,
     modelPickerOpen,
@@ -38075,6 +38138,7 @@ const serializeState = () => {
   void videoSessionReadyCue;
   void navigationSnapshot;
   void goalEditModes;
+  void roleVoiceChanceEditing;
   return {
     ...persistent,
     cacheStamp: String(persistent.cacheStamp || new Date().toISOString()).trim(),
@@ -40322,20 +40386,120 @@ const hydrateChatSettingsTopRuntime = () => {
   mount.appendChild(summaryCard);
 };
 
+const syncSingleRangeProgress = (input) => {
+  if (!(input instanceof HTMLInputElement) || input.type !== "range") return;
+  const min = Number(input.min || 0);
+  const max = Number(input.max || 100);
+  const value = Number(input.value || min);
+  const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
+  input.style.setProperty("--range-progress", `${percent}%`);
+  if (input.dataset.rangeStyle === "hue") {
+    input.style.removeProperty("background");
+    input.style.setProperty("--hue-color", `hsl(${Math.round(value)}, 92%, 62%)`);
+    return;
+  }
+  input.style.background = `linear-gradient(90deg, #111111 0%, #111111 ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`;
+};
+
 const syncRangeProgress = () => {
   root.querySelectorAll('input[type="range"]').forEach((input) => {
-    const min = Number(input.min || 0);
-    const max = Number(input.max || 100);
-    const value = Number(input.value || min);
-    const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
-    input.style.setProperty("--range-progress", `${percent}%`);
-    if (input.dataset.rangeStyle === "hue") {
-      input.style.removeProperty("background");
-      input.style.setProperty("--hue-color", `hsl(${Math.round(value)}, 92%, 62%)`);
-      return;
-    }
-    input.style.background = `linear-gradient(90deg, #111111 0%, #111111 ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`;
+    syncSingleRangeProgress(input);
   });
+};
+
+const getRangeInputCommitValue = (input) => (input?.type === "number" || input?.type === "range" ? Number(input.value) : input?.value);
+
+const updateInlineRangeValueLabel = (input) => {
+  if (!(input instanceof HTMLInputElement) || input.type !== "range") return;
+  const value = Number(input.value || input.min || 0);
+  const unit =
+    input.dataset.rangeUnit ||
+    (input.dataset.roleSetting && /Chance$/u.test(String(input.dataset.roleSetting || "")) ? "%" : "");
+  const displayText = `${Number.isFinite(value) ? Math.round(value) : 0}${unit}`;
+  const row = input.closest(".voice-chance-control, .range-row, .goal-editor-progress, .bubble-color-sliders label, .life-fate-slider-row");
+  const candidates = [
+    row?.querySelector(".voice-chance-value"),
+    row?.querySelector(".bubble-font-range-row strong"),
+    row?.querySelector(".goal-editor-progress strong"),
+    row?.querySelector(".life-fate-slider-head b"),
+  ];
+  candidates.find(Boolean)?.replaceChildren(document.createTextNode(displayText));
+};
+
+const commitRangeSettingChange = (input, { final = false } = {}) => {
+  if (!(input instanceof HTMLInputElement) || input.type !== "range") return false;
+  syncSingleRangeProgress(input);
+  updateInlineRangeValueLabel(input);
+
+  if (input.dataset.config) {
+    updateConfig(input.dataset.config, Number(input.value));
+    if (final) paint();
+    return true;
+  }
+
+  if (input.dataset.chatField) {
+    updateActiveRoleChatField(input.dataset.chatField, Number(input.value));
+    if (final) paint();
+    return true;
+  }
+
+  if (input.dataset.bubbleColorLightness || input.dataset.bubbleColorSaturation) {
+    const field = input.dataset.bubbleColorLightness || input.dataset.bubbleColorSaturation;
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role) return true;
+    const meta = getRoleChatBubbleProfile(role);
+    const currentColors = normalizeChatBubbleColorSet(meta.profile?.colors, meta.skin);
+    const current = field === "roleBubbleColor" ? currentColors.ai : currentColors.user;
+    const hsl = hexToHslApp(current);
+    const nextColor = hslToHexApp(
+      hsl.h,
+      input.dataset.bubbleColorSaturation ? Number(input.value) : hsl.s,
+      input.dataset.bubbleColorLightness ? Number(input.value) : hsl.l,
+    );
+    updateActiveRoleChatField(field, nextColor);
+    return true;
+  }
+
+  if (input.dataset.worldbookId && input.dataset.worldbookField) {
+    updateWorldbookField(input.dataset.worldbookId, input.dataset.worldbookField, Number(input.value));
+    if (final) paint();
+    return true;
+  }
+
+  if (input.dataset.goalId && input.dataset.goalField) {
+    updateGoalField(input.dataset.goalId, input.dataset.goalField, Number(input.value), { paintNow: final });
+    return true;
+  }
+
+  if (input.dataset.videoSetting) {
+    setVideoSessionTimingSetting(input.dataset.videoSetting, input.value);
+    return true;
+  }
+
+  if (input.dataset.clearChatRange != null) {
+    state.clearChatDeleteCount = Number(input.value) || 1;
+    syncClearChatDeletePreview();
+    return true;
+  }
+
+  if (input.dataset.action === "update-role-setting" && input.dataset.roleSetting) {
+    updateRoleSetting(input.dataset.roleSetting, Number(input.value), { paintNow: final });
+    return true;
+  }
+
+  return false;
+};
+
+const findActiveRangeInputFromPointerEvent = (event) => {
+  const direct = event.target?.closest?.('input[type="range"]');
+  if (direct instanceof HTMLInputElement) return direct;
+  const pointerId = String(event.pointerId ?? "");
+  if (pointerId) {
+    const captured = root.querySelector(`input[type="range"][data-range-pointer-id="${escapeAttrSelector(pointerId)}"]`);
+    if (captured instanceof HTMLInputElement) return captured;
+  }
+  const dragging = root.querySelector('input[type="range"][data-dragging-range="1"]');
+  return dragging instanceof HTMLInputElement ? dragging : null;
 };
 
 const syncVideoSessionTimingControls = () => {
@@ -63254,7 +63418,7 @@ const setRoleSettingValueByPath = (settings, path, value) => {
   cursor[keys[keys.length - 1]] = value;
 };
 
-const updateRoleSetting = (field, value) => {
+const updateRoleSetting = (field, value, { paintNow = true } = {}) => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role) return;
   const normalizedField = String(field || "").trim();
@@ -63300,7 +63464,7 @@ const updateRoleSetting = (field, value) => {
       ensureLivingMemoryStore(nextRole).wallet.lastJourneyAutoDateKey = "";
     }
     return nextRole;
-  });
+  }, { paintNow });
 };
 
 const updateRoleMealTime = (index, value) => {
@@ -63843,7 +64007,7 @@ const clearUnreadCount = (role) => {
   role.chats.unreadCount = 0;
 };
 
-const updateGoalField = (goalId, field, value) => {
+const updateGoalField = (goalId, field, value, { paintNow = true } = {}) => {
   const role = getActiveChatRole() || getCurrentRole();
   if (!role) return;
   const goal = (role.goals || []).find((item) => item.id === goalId);
@@ -63860,7 +64024,7 @@ const updateGoalField = (goalId, field, value) => {
   syncRoleGoalsWithTime(role, new Date());
   syncLifeMonitorGoalsWithTime(role, new Date());
   syncPersistentState();
-  if (field === "progress") {
+  if (field === "progress" && paintNow) {
     paint();
   }
 };
@@ -74628,6 +74792,10 @@ eventRoot.addEventListener("input", (event) => {
         : target.type === "number" || target.type === "range"
           ? Number(target.value)
           : target.value;
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     updateConfig(target.dataset.config, value);
     if (target.type === "range" || target.type === "checkbox") {
       paint();
@@ -74734,6 +74902,10 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.chatField) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     const field = target.dataset.chatField;
     const value = target.type === "number" || target.type === "range" ? Number(target.value) : target.value;
     updateActiveRoleChatField(field, value);
@@ -74761,6 +74933,10 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.bubbleColorLightness || target.dataset.bubbleColorSaturation) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     const field = target.dataset.bubbleColorLightness || target.dataset.bubbleColorSaturation;
     const role = getActiveChatRole() || getCurrentRole();
     if (!role) return;
@@ -74783,6 +74959,10 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.worldbookId && target.dataset.worldbookField) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     updateWorldbookField(
       target.dataset.worldbookId,
       target.dataset.worldbookField,
@@ -74809,6 +74989,10 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.goalId && target.dataset.goalField) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     updateGoalField(
       target.dataset.goalId,
       target.dataset.goalField,
@@ -74848,6 +75032,10 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.videoSetting) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     setVideoSessionTimingSetting(target.dataset.videoSetting, target.value);
     return;
   }
@@ -74910,9 +75098,13 @@ eventRoot.addEventListener("input", (event) => {
   }
 
   if (target.dataset.action === "update-role-setting" && target.dataset.roleSetting) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target);
+      return;
+    }
     updateRoleSetting(
       target.dataset.roleSetting,
-      target.type === "number" ? Number(target.value) : target.value,
+      getRangeInputCommitValue(target),
     );
     return;
   }
@@ -74978,9 +75170,13 @@ eventRoot.addEventListener("change", (event) => {
   }
 
   if (target.dataset.action === "update-role-setting" && target.dataset.roleSetting) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target, { final: true });
+      return;
+    }
     updateRoleSetting(
       target.dataset.roleSetting,
-      target.type === "number" ? Number(target.value) : target.value,
+      getRangeInputCommitValue(target),
     );
     if (target.dataset.roleSetting === "summaryTriggerCount") {
       const role = getActiveChatRole() || getCurrentRole();
@@ -75009,6 +75205,10 @@ eventRoot.addEventListener("change", (event) => {
       "userBubbleColor",
     ].includes(target.dataset.chatField)
   ) {
+    if (target.type === "range") {
+      commitRangeSettingChange(target, { final: true });
+      return;
+    }
     updateActiveRoleChatField(
       target.dataset.chatField,
       target.type === "color" ? target.value : Number(target.value),
@@ -75809,6 +76009,13 @@ eventRoot.addEventListener("click", async (event) => {
       ...(state.goalEditModes || {}),
       [nextType]: !Boolean(state.goalEditModes?.[nextType]),
     };
+    syncPersistentState();
+    paint();
+    return;
+  }
+
+  if (action === "toggle-role-voice-chance-edit") {
+    state.roleVoiceChanceEditing = !Boolean(state.roleVoiceChanceEditing);
     syncPersistentState();
     paint();
     return;
@@ -77372,6 +77579,38 @@ eventRoot.addEventListener("keydown", (event) => {
   event.preventDefault();
   handleComposerPrimaryAction();
 });
+
+eventRoot.addEventListener("pointerdown", (event) => {
+  const range = event.target?.closest?.('input[type="range"]');
+  if (!(range instanceof HTMLInputElement)) return;
+  range.dataset.draggingRange = "1";
+  if (event.pointerId != null) {
+    range.dataset.rangePointerId = String(event.pointerId);
+  }
+  if (event.pointerId != null && range.setPointerCapture) {
+    try {
+      range.setPointerCapture(event.pointerId);
+    } catch {
+      // Some embedded browsers do not allow capture on range inputs.
+    }
+  }
+}, { capture: true });
+
+eventRoot.addEventListener("pointerup", (event) => {
+  const range = findActiveRangeInputFromPointerEvent(event);
+  if (!(range instanceof HTMLInputElement)) return;
+  delete range.dataset.draggingRange;
+  delete range.dataset.rangePointerId;
+  commitRangeSettingChange(range, { final: true });
+}, { capture: true });
+
+eventRoot.addEventListener("pointercancel", (event) => {
+  const range = findActiveRangeInputFromPointerEvent(event);
+  if (!(range instanceof HTMLInputElement)) return;
+  delete range.dataset.draggingRange;
+  delete range.dataset.rangePointerId;
+  commitRangeSettingChange(range, { final: true });
+}, { capture: true });
 
 eventRoot.addEventListener("pointerdown", (event) => {
   if (beginVideoSessionHistoryDrawerDrag(event)) {
