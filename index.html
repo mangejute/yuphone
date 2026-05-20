@@ -25205,7 +25205,6 @@ const writeIndexedDbAssets = async (entries = []) => {
     }
   });
 };
-
 const readIndexedDbAssets = async (keys = []) => {
   const normalizedKeys = Array.isArray(keys) ? keys.filter(Boolean) : [];
   if (!normalizedKeys.length) return new Map();
@@ -25246,6 +25245,18 @@ const hydratePersistedAssetForKey = async (assetKey = "") => {
   if (!normalizedKey) return "";
   const assets = await readIndexedDbAssets([normalizedKey]);
   return unwrapPersistedAssetDataUrl(assets.get(normalizedKey));
+};
+
+const getPersistedAssetKindLabel = (kind = "", assetKey = "") => {
+  const normalizedKind = String(kind || "").trim();
+  const normalizedKey = String(assetKey || "").trim();
+  if (normalizedKind === "message-image" || normalizedKey.startsWith(MESSAGE_IMAGE_ASSET_PREFIX)) {
+    return "聊天图片资源库";
+  }
+  if (normalizedKind === "voice-audio" || normalizedKey.startsWith(VOICE_CACHE_ASSET_PREFIX)) {
+    return "语音资源库";
+  }
+  return "本机资源库";
 };
 const analyzeStateStorageUsage = (state = {}) => {
   const categories = {
@@ -25338,6 +25349,57 @@ const analyzeStateStorageUsage = (state = {}) => {
       count: Math.max(0, Math.round(value.count)),
       ratio: totalBytes > 0 ? value.bytes / totalBytes : 0,
     })),
+  };
+};
+const analyzeStateStorageUsageWithAssets = async (state = {}) => {
+  const snapshot = analyzeStateStorageUsage(state);
+  const assetKeys = collectMissingPersistedAssetKeys(state);
+  const assets = await readIndexedDbAssets(assetKeys);
+  const seenAssetKeys = new Set();
+  const assetCategories = {
+    messageImageAssets: { label: "聊天图片资源库", bytes: 0, count: 0 },
+    voiceAssetStore: { label: "语音资源库", bytes: 0, count: 0 },
+    otherAssetStore: { label: "本机资源库", bytes: 0, count: 0 },
+  };
+
+  assetKeys.forEach((assetKey) => {
+    if (seenAssetKeys.has(assetKey)) return;
+    seenAssetKeys.add(assetKey);
+    const asset = assets.get(assetKey);
+    const dataUrl = unwrapPersistedAssetDataUrl(asset);
+    if (!dataUrl) return;
+    const label = getPersistedAssetKindLabel(asset?.kind, assetKey);
+    const categoryKey =
+      label === "聊天图片资源库" ? "messageImageAssets" : label === "语音资源库" ? "voiceAssetStore" : "otherAssetStore";
+    assetCategories[categoryKey].bytes += estimateJsonSize(dataUrl);
+    assetCategories[categoryKey].count += 1;
+  });
+
+  const mainCacheBytes = Math.max(0, Math.round(Number(snapshot.totalBytes || 0) || 0));
+  const externalAssetBytes = Object.values(assetCategories).reduce((sum, item) => sum + item.bytes, 0);
+  const exportTotalBytes = mainCacheBytes + externalAssetBytes;
+  const categories = [
+    ...snapshot.categories,
+    ...Object.entries(assetCategories).map(([key, value]) => ({
+      key,
+      label: value.label,
+      bytes: Math.max(0, Math.round(value.bytes)),
+      count: Math.max(0, Math.round(value.count)),
+      ratio: 0,
+    })),
+  ].map((item) => ({
+    ...item,
+    ratio: exportTotalBytes > 0 ? Math.max(0, Number(item.bytes || 0) || 0) / exportTotalBytes : 0,
+  }));
+
+  return {
+    ...snapshot,
+    mainCacheBytes,
+    externalAssetBytes: Math.max(0, Math.round(externalAssetBytes)),
+    exportTotalBytes: Math.max(0, Math.round(exportTotalBytes)),
+    totalBytes: Math.max(0, Math.round(exportTotalBytes)),
+    unresolvedAssetCount: Math.max(0, assetKeys.length - assets.size),
+    categories,
   };
 };
 const compactStateForMainCache = async (state = {}) => {
@@ -26316,7 +26378,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.20-natural-range-edit-lock";
+const APP_BUILD_VERSION_LABEL = "v2026.05.20-journey-diversity-export-size";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -33417,26 +33479,38 @@ const renderStorageUsageCategoryList = (snapshot = null) => {
 const renderStorageHealthPanel = (state) => {
   const snapshot = state?.storageUsageSnapshot || null;
   const busy = Boolean(state?.storageUsageBusy);
-  const total = snapshot ? formatStorageBytes(snapshot.totalBytes) : "未体检";
+  const total = snapshot ? formatStorageBytes(snapshot.exportTotalBytes || snapshot.totalBytes) : "未体检";
+  const mainCache = snapshot ? formatStorageBytes(snapshot.mainCacheBytes ?? snapshot.totalBytes) : "未体检";
+  const externalAssets = snapshot ? formatStorageBytes(snapshot.externalAssetBytes || 0) : "未知";
   const compressible = snapshot ? formatStorageBytes(snapshot.compressibleBytes) : "未知";
   const lastCompaction = snapshot?.lastCompaction;
+  const unresolvedAssetCount = Math.max(0, Number(snapshot?.unresolvedAssetCount || 0) || 0);
   const lastNote = lastCompaction
-    ? `上次压缩 ${Math.max(0, Number(lastCompaction.compactedImages || 0))} 张图片，约 ${formatStorageBytes(lastCompaction.removedInlineBytes)}`
-    : "压缩会保留聊天和图片，只把大图从主缓存移到本机资源库";
+    ? `上次压缩 ${Math.max(0, Number(lastCompaction.compactedImages || 0))} 张图片，主缓存减少约 ${formatStorageBytes(lastCompaction.removedInlineBytes)}`
+    : "完整导出会把主缓存和本机资源库一起打包；压缩主缓存只是把大图移到本机资源库";
+  const assetNote = unresolvedAssetCount ? `；另有 ${unresolvedAssetCount} 项资源引用暂未读到` : "";
 
   const body = `
     <section class="storage-health-summary">
       <div class="storage-health-metrics">
         <article>
-          <span>主缓存估算</span>
+          <span>完整导出估算</span>
           <strong>${escapeHtml(total)}</strong>
+        </article>
+        <article>
+          <span>主缓存</span>
+          <strong>${escapeHtml(mainCache)}</strong>
+        </article>
+        <article>
+          <span>本机资源库</span>
+          <strong>${escapeHtml(externalAssets)}</strong>
         </article>
         <article>
           <span>可压缩图片</span>
           <strong>${escapeHtml(compressible)}</strong>
         </article>
       </div>
-      <p>${escapeHtml(lastNote)}</p>
+      <p>${escapeHtml(`${lastNote}${assetNote}`)}</p>
       <div class="storage-health-actions">
         <button class="sheet-action-btn" type="button" data-action="refresh-storage-usage" ${busy ? "disabled" : ""}>重新体检</button>
         <button class="sheet-action-btn primary" type="button" data-action="compact-main-cache" ${busy ? "disabled" : ""}>${busy ? "处理中..." : "压缩主缓存"}</button>
@@ -33455,7 +33529,7 @@ const renderStorageHealthPanel = (state) => {
 
 const renderIosDataSettingsPage = (state) => {
   const snapshot = state?.storageUsageSnapshot || null;
-  const usageDetail = snapshot?.totalBytes ? `${formatStorageBytes(snapshot.totalBytes)}` : "";
+  const usageDetail = snapshot?.totalBytes ? `${formatStorageBytes(snapshot.exportTotalBytes || snapshot.totalBytes)}` : "";
   const body = `
     ${renderIosSection(
       "缓存体检",
@@ -38840,6 +38914,16 @@ const refreshStorageUsageSnapshot = () => {
   const snapshot = analyzeStateStorageUsage(serializeState());
   state.storageUsageSnapshot = {
     ...snapshot,
+    totalBytes: Math.max(0, Math.round(Number(snapshot.exportTotalBytes || snapshot.totalBytes || 0) || 0)),
+    measuredAt: new Date().toISOString(),
+  };
+  return state.storageUsageSnapshot;
+};
+
+const refreshStorageUsageSnapshotAsync = async () => {
+  const snapshot = await analyzeStateStorageUsageWithAssets(serializeState());
+  state.storageUsageSnapshot = {
+    ...snapshot,
     measuredAt: new Date().toISOString(),
   };
   return state.storageUsageSnapshot;
@@ -38900,6 +38984,14 @@ const compactMainCacheNow = async () => {
     repairVisibleStickerProtocolMessages();
     state.storageUsageSnapshot = {
       ...result.after,
+      mainCacheBytes: Math.max(0, Math.round(Number(result.after?.totalBytes || 0) || 0)),
+      externalAssetBytes: Math.max(0, Math.round(Number(result.removedInlineBytes || 0) || 0)),
+      exportTotalBytes:
+        Math.max(0, Math.round(Number(result.after?.totalBytes || 0) || 0)) +
+        Math.max(0, Math.round(Number(result.removedInlineBytes || 0) || 0)),
+      totalBytes:
+        Math.max(0, Math.round(Number(result.after?.totalBytes || 0) || 0)) +
+        Math.max(0, Math.round(Number(result.removedInlineBytes || 0) || 0)),
       measuredAt: new Date().toISOString(),
       lastCompaction: {
         compactedImages: result.compactedImages,
@@ -38908,6 +39000,7 @@ const compactMainCacheNow = async () => {
     };
     state.storageUsageBusy = false;
     saveState(serializeState());
+    await refreshStorageUsageSnapshotAsync();
     paint();
     setToast(
       result.compactedImages
@@ -58015,6 +58108,80 @@ const sanitizeJourneyWeekTextField = (value = "") =>
     .replace(/\s+/g, " ")
     .trim();
 
+const JOURNEY_RESCUE_PATTERN_RE = /(救|营救|求助|撑场|搅局|避难|侦察|接他|接人|车坏|抛锚|爆胎|相亲|前任|赔罪|狐朋狗友|连环夺命call|被迫|强行|硬拉|拉着)/i;
+
+const normalizeJourneyDiversityText = (value = "") =>
+  sanitizeJourneyWeekTextField(value).replace(/\s+/g, "").toLowerCase();
+
+const extractJourneyNpcMentionNames = (value = "") =>
+  [...String(value || "").matchAll(/@([\u4e00-\u9fa5A-Za-z0-9_·・-]{1,12})/g)]
+    .map((match) => sanitizeJourneyWeekTextField(match[1] || ""))
+    .filter(Boolean);
+
+const collectJourneyRecentDiversityContext = (role, targetDateKey = formatDateKey(), lookbackDays = 7) => {
+  const normalizedTargetDate = formatDateKey(targetDateKey || new Date());
+  const rows = [];
+  for (let offset = 1; offset <= Math.max(1, Number(lookbackDays) || 1); offset += 1) {
+    const dateKey = shiftDateKey(normalizedTargetDate, -offset);
+    const holiday = getChinaHolidayInfo(dateKey);
+    normalizeJourneyTimelineItems(getRoleTimelineForDate(role, dateKey)).forEach((item) => {
+      const text = compactLivingText(item?.title, item?.place, item?.detail);
+      if (!text) return;
+      rows.push({
+        dateKey,
+        dayType: holiday?.dayType || "",
+        title: sanitizeJourneyWeekTextField(item?.title || ""),
+        place: sanitizeJourneyWeekTextField(item?.place || ""),
+        text,
+        normalizedText: normalizeJourneyDiversityText(text),
+        npcNames: extractJourneyNpcMentionNames(text),
+        hasRescuePattern: JOURNEY_RESCUE_PATTERN_RE.test(text),
+      });
+    });
+  }
+  const npcCounts = new Map();
+  const placeCounts = new Map();
+  let rescuePatternCount = 0;
+  rows.forEach((row) => {
+    if (row.hasRescuePattern) rescuePatternCount += 1;
+    if (row.place) placeCounts.set(row.place, (placeCounts.get(row.place) || 0) + 1);
+    row.npcNames.forEach((name) => npcCounts.set(name, (npcCounts.get(name) || 0) + 1));
+  });
+  const overusedNpcNames = [...npcCounts.entries()].filter(([, count]) => count >= 3).map(([name]) => name);
+  const overusedPlaces = [...placeCounts.entries()].filter(([, count]) => count >= 4).map(([place]) => place);
+  const recentExamples = rows
+    .slice(0, 10)
+    .map((row) => `${row.dateKey} ${truncateContextText([row.title, row.place, row.text].filter(Boolean).join(" "), 60)}`);
+  return {
+    lookbackDays,
+    rows,
+    overusedNpcNames,
+    overusedPlaces,
+    rescuePatternCount,
+    hasRescueLoop: rescuePatternCount >= 3,
+    recentExamples,
+  };
+};
+
+const buildJourneyDiversityPromptLines = (diversity = null) => {
+  if (!diversity || !Array.isArray(diversity.rows) || !diversity.rows.length) return [];
+  const lines = [
+    `最近${diversity.lookbackDays || 7}天行程摘要：${diversity.recentExamples.slice(0, 8).join("；")}`,
+    "今天必须主动换题材、换冲突来源、换主要陪伴对象；昨天和前几天只当连续性背景，不能照着再来一遍。",
+  ];
+  if (diversity.hasRescueLoop) {
+    lines.push("最近已经多次出现朋友求助/救场/被迫陪同/相亲或前任避难/车辆故障这类桥段；今天禁止再把主线写成同类营救、撑场、被拉走或赔罪饭。");
+  }
+  if (diversity.overusedNpcNames.length) {
+    lines.push(`这些 NPC 最近出场过密：${diversity.overusedNpcNames.join(" / ")}；今天不要让他们继续当主事件发动机，除非用户提示词点名要求。`);
+  }
+  if (diversity.overusedPlaces.length) {
+    lines.push(`这些地点最近使用过密：${diversity.overusedPlaces.join(" / ")}；今天优先换到其他可用地点或只作为路过背景。`);
+  }
+  lines.push("如果用户自定义提示词和最近上下文冲突，优先遵守用户自定义提示词；最近重复桥段只能作为避开的反例。");
+  return lines;
+};
+
 const JOURNEY_WEATHERISH_TEXT_RE =
   /(?:\d{1,2}:\d{2}|°C|℃|天气|气温|温度|体感|湿度|晴|阴|雨|雪|云|风|雾|雷|多云|少云|阵雨|雷阵雨|暴雨|小雨|中雨|大雨)/i;
 
@@ -59184,6 +59351,7 @@ const buildJourneyWeekCompactSystemPrompt = (role, dayPlans = [], enabledPlaces 
   const nightSlotDisplay = getJourneyNightSlotDisplay(role);
   const lineCount = Math.max(1, dayPlans.length || 0);
   const exampleDate = dayPlans[0]?.targetDate || formatDateKey();
+  const diversityLines = buildJourneyDiversityPromptLines(collectJourneyRecentDiversityContext(role, exampleDate, 7));
   return `你现在只负责快速生成连续 ${lineCount} 天的可直接预览行程。
 不要输出 JSON 不要解释 不要 Markdown 只输出 ${lineCount} 行纯文本 每天正好 1 行
 格式固定:
@@ -59206,6 +59374,7 @@ ${buildJourneyPlaceDiversityPrompt(currentPlace)}
 - NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 - 场景只能是现代城市日常生活 不允许玄幻 古风 游戏任务 旅游攻略 异世界
 ${buildJourneyMultiDayContinuityPrompt(role, dayPlans[0]?.targetDate || formatDateKey())}
+- 最近多天避重规则: ${diversityLines.join("；") || "无"}
 - 自定义补充要求如果很长 只抓最关键的一两点
 示例:
 ${exampleDate}||起床洗漱##${anchorPlace}##吃完早餐顺手看今天安排||处理主线##${middayPlace}##把白天最重要的事推进一点||出门跑腿##${afternoonPlace}##顺路把下午要办的事处理掉||${nightSlotDisplay.exampleTitle}##${anchorPlace}##${nightSlotDisplay.exampleDetail}`;
@@ -59845,6 +60014,7 @@ const buildJourneyStableTextSystemPrompt = (role, dayPlans = [], enabledPlaces =
   const firstSlot = firstPlan?.slotTemplates?.[0] || { key: "morning" };
   const firstLabel = firstPlan?.targetDateLabel || formatJourneyDateLabel();
   const lastLabel = dayPlans[totalDays - 1]?.targetDateLabel || firstLabel;
+  const diversityLines = buildJourneyDiversityPromptLines(collectJourneyRecentDiversityContext(role, firstPlan?.targetDate || formatDateKey(), 7));
   return `你现在只负责生成可直接预览的${totalDays === 1 ? `${firstLabel} 当天行程` : `连续 ${totalDays} 天行程`}。
 不要输出 JSON，不要解释，不要 Markdown，只输出 ${totalLines} 行纯文本。
 每行格式固定：
@@ -59869,6 +60039,7 @@ ${buildJourneyPlaceDiversityPrompt(currentPlace)}
 - NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 72 }) || "暂无"}
 - 场景只能是现代城市日常生活，不允许玄幻、古风、游戏任务、旅游攻略、异世界
 ${buildJourneyMultiDayContinuityPrompt(role, dayPlans[0]?.targetDate || formatDateKey())}
+- 最近多天避重规则：${diversityLines.join("；") || "无"}
 - 用户补充要求如果很长，只抓 1 到 2 个最关键要求，不要复述背景，不要为了铺垫拖慢输出
 - 写完最后一行就立即停止，不要补任何总结
 示例：
@@ -61561,6 +61732,8 @@ const buildJourneyTimelineOnlyTextCompletedTimeline = (
     currentPlace = "",
     goalTitles = [],
     mealTimes = [],
+    targetDateKey = formatDateKey(),
+    diversityContext = null,
   } = {},
 ) => {
   const normalizedParsedTimeline = normalizeJourneyTimelineItems(parsedTimeline);
@@ -61675,7 +61848,7 @@ const buildJourneyTimelineOnlyTextCompletedTimeline = (
     };
   };
 
-  return Array.from({ length: totalCount }, (_, index) => {
+  const completedTimeline = Array.from({ length: totalCount }, (_, index) => {
     const source = normalizedParsedTimeline[index] || null;
     const fallbackTime =
       sanitizeJourneyWeekTextField(timeSeeds[index]?.time || "") ||
@@ -61688,6 +61861,24 @@ const buildJourneyTimelineOnlyTextCompletedTimeline = (
       };
     }
     return buildSupplementEntry(index, fallbackTime);
+  });
+  const diversity = diversityContext || collectJourneyRecentDiversityContext(role, targetDateKey, 7);
+  const shouldAvoidRescueLoop = Boolean(diversity?.hasRescueLoop);
+  const overusedNpcNames = normalizeArray(diversity?.overusedNpcNames);
+  if (!shouldAvoidRescueLoop && !overusedNpcNames.length) return completedTimeline;
+
+  return completedTimeline.map((entry) => {
+    const text = compactLivingText(entry?.title, entry?.detail);
+    const hitsRescue = shouldAvoidRescueLoop && JOURNEY_RESCUE_PATTERN_RE.test(text);
+    const hitsNpc = overusedNpcNames.some((name) => name && text.includes(name));
+    if (!hitsRescue && !hitsNpc) return entry;
+    return {
+      ...entry,
+      npcNames: normalizeArray(entry?.npcNames).filter((name) => !overusedNpcNames.includes(name)),
+      title: hitsRescue ? "临时换个节奏" : sanitizeJourneyWeekTextField(String(entry?.title || "").replace(/陈谦文/g, "朋友")),
+      mood: entry?.mood || "在线",
+      detail: "避开最近重复的救场社交桥段，按保存的行程提示词回到自己的生活和事业节奏",
+    };
   });
 };
 
@@ -61973,6 +62164,7 @@ const buildJourneyA3PlainTextContext = ({
   fortuneRoll = null,
   lifeFateSettings = null,
   lifeNodeClockHint = "",
+  diversityContext = null,
 } = {}) => {
   const profile = role?.profile || {};
   const continuity = buildJourneyContinuityContext(role, normalizedTargetDate);
@@ -62016,6 +62208,7 @@ const buildJourneyA3PlainTextContext = ({
     .slice(0, Math.max(1, preferredEntryCount))
     .map((item) => item?.time || item)
     .filter(Boolean);
+  const diversityLines = buildJourneyDiversityPromptLines(diversityContext);
   const lines = [
     `任务：生成 ${targetDateLabel || normalizedTargetDate} 的当天行程纯文本`,
     `角色：${roleName || profile.note || profile.name || "角色"}`,
@@ -62030,6 +62223,8 @@ const buildJourneyA3PlainTextContext = ({
       ? `NPC关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 96 })}`
       : "",
     normalizedJourneyPrompt ? `用户要求：${truncateContextText(normalizedJourneyPrompt, 90)}` : "",
+    normalizedJourneyPrompt ? "用户要求优先级：必须优先遵守上面的用户要求，它高于最近行程的惯性和模型自行发挥" : "",
+    diversityLines.length ? `避重规则：${diversityLines.join("；")}` : "",
     targetHoliday?.name || targetHoliday?.promptHint
       ? `日期节奏：${targetHoliday?.name || "普通日"} ${truncateContextText(targetHoliday?.promptHint || "", 72)}`
       : "",
@@ -62086,6 +62281,8 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     .map((item) => String(item?.title || "").trim())
     .filter(Boolean);
   const normalizedJourneyPrompt = normalizeJourneyGenerationPrompt(journeyPrompt, 72);
+  const journeyDiversityContext = collectJourneyRecentDiversityContext(role, normalizedTargetDate, 7);
+  const journeyDiversityLines = buildJourneyDiversityPromptLines(journeyDiversityContext);
   const { settings: lifeFateSettings, roll: fortuneRoll } = buildLifeFatePromptBlock(role, normalizedTargetDate);
   const npcDetails = buildNpcContextEntries(role, {
     userInput: [
@@ -62122,6 +62319,12 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     referenceCity: String(role?.profile?.realCityReference || role?.profile?.location || "").trim(),
     weather: String(role?.profile?.weather || "").trim(),
     continuity: buildJourneyContinuityContext(role, normalizedTargetDate),
+    diversity: {
+      overusedNpcNames: journeyDiversityContext.overusedNpcNames,
+      overusedPlaces: journeyDiversityContext.overusedPlaces,
+      rescuePatternCount: journeyDiversityContext.rescuePatternCount,
+      recentExamples: journeyDiversityContext.recentExamples.slice(0, 6),
+    },
     goalTitles: journeyGoalTitles,
     placeOptions: allowedPlaces,
     npcNames,
@@ -62169,12 +62372,16 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     fortuneRoll,
     lifeFateSettings,
     lifeNodeClockHint,
+    diversityContext: journeyDiversityContext,
   });
   const journeySystemPrompt = `纯文本格式任务：只输出双竖线分隔文本，不要 JSON，不要 Markdown，不要代码块，不要解释。
 你负责生成 ${targetDateLabel} 的当天行程${journeyCanWriteEventLine ? "和生活轨迹" : ""}。
 第一行必须从数字开头，格式固定：HH:MM-HH:MM||标题||地点||详情
 输出规则：
 - 必须简体中文，不能写日文、英文段落、代码块、表格、字段名或开场白。
+- 用户自定义提示词是最高优先级：${normalizedJourneyPrompt ? `「${normalizedJourneyPrompt}」` : "未填写时才按角色日常自动发挥"}。
+- 不要把最近几天的旧桥段当模板复读；连续性只用于承接生活状态，不用于重复同一个 NPC、同一种求助或同一个饭局套路。
+${journeyDiversityLines.map((line) => `- ${line}`).join("\n")}
 - 行程输出 ${preferredEntryCount} 行左右，按时间正序，不重叠；前端会完整保留，不要故意少写。
 - 地点只能从参考上下文“可用地点”里选；角色、城市、NPC、昨天余波都以参考上下文为准。
 - 先锁定“今日主事件类型”，再写行程；行程不是流水账，要给这个主事件留出至少 1 个自然发生的时段。
@@ -62234,6 +62441,8 @@ ${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：生活轨迹
     currentPlace,
     goalTitles: journeyGoalTitles,
     mealTimes,
+    targetDateKey: normalizedTargetDate,
+    diversityContext: journeyDiversityContext,
   });
   const parsedMonitorPayload = journeyCanWriteEventLine
     ? parseLifeMonitorPlainTextPayload(rawResponseText, normalizedTargetDate)
@@ -65850,6 +66059,7 @@ const buildLifeFateMainEventType = ({
   storyThemes = [],
   storyHooks = [],
 } = {}) => {
+  const diversity = collectJourneyRecentDiversityContext(role, targetDateKey, 7);
   const npcDetails = buildNpcContextEntries(role, {
     userInput: [targetDateKey, tierKey, ...storyThemes, ...storyHooks].filter(Boolean).join(" "),
     limit: 4,
@@ -65873,7 +66083,11 @@ const buildLifeFateMainEventType = ({
     catastrophe: ["family-drama", "memory-object", "public-identity"],
   }[tierKey] || [];
   const seed = [targetDateKey, tierKey, String(role?.id || ""), String(role?.profile?.name || role?.profile?.note || "")].join("|");
-  const candidates = LIFE_FATE_MAIN_EVENT_TYPES.filter((item) => !item.needsNpc || npcNames.length);
+  const candidates = LIFE_FATE_MAIN_EVENT_TYPES.filter((item) => {
+    if (item.needsNpc && !npcNames.length) return false;
+    if (diversity.hasRescueLoop && ["work-rescue", "npc-social"].includes(item.key)) return false;
+    return true;
+  });
   const selected =
     candidates
       .map((item) => {
@@ -76372,6 +76586,7 @@ eventRoot.addEventListener("click", async (event) => {
     clearTransient();
     if (button.dataset.panel === "storage-health") {
       refreshStorageUsageSnapshot();
+      void refreshStorageUsageSnapshotAsync().then(() => paint());
     }
     openPanel(button.dataset.panel);
     return;
@@ -76379,6 +76594,8 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "refresh-storage-usage") {
     refreshStorageUsageSnapshot();
+    paint();
+    await refreshStorageUsageSnapshotAsync();
     paint();
     setToast("缓存体检已更新");
     return;
