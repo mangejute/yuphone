@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="format-detection" content="telephone=no,email=no,address=no" />
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#ffffff" />
@@ -39,7 +39,9 @@
 html,
 body {
   margin: 0;
+  width: 100%;
   min-height: 100%;
+  max-width: 100vw;
   background:
     radial-gradient(circle at top left, rgba(131, 171, 255, 0.16), transparent 28%),
     radial-gradient(circle at bottom right, rgba(255, 220, 190, 0.2), transparent 24%),
@@ -47,11 +49,15 @@ body {
   color: var(--text);
   font-family: var(--font);
   overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   display: flex;
   justify-content: center;
+  touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 button,
@@ -59,6 +65,8 @@ input,
 textarea,
 select {
   font: inherit;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 button {
@@ -73,9 +81,48 @@ select {
   outline: none;
 }
 
+@media (max-width: 640px), (pointer: coarse) {
+  input,
+  textarea,
+  select,
+  .soft-input,
+  .soft-area,
+  .chat-input-pill textarea,
+  .composer-plain textarea,
+  .wechat-composer-pill textarea,
+  .chat-screen.bubble-theme-qq .composer-plain textarea,
+  .video-session-textarea,
+  .ios-widget-textarea,
+  .wallet-line-field input {
+    font-size: 16px !important;
+  }
+
+  html,
+  body,
+  .app-shell,
+  #app,
+  .ios-device-scene,
+  .ios-device-frame,
+  .ios-device-screen,
+  .ios-device-main,
+  .chat-screen,
+  .panel-screen {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .overlay-screen {
+    width: 100vw;
+    max-width: 100vw;
+    overflow: hidden;
+  }
+}
+
 .app-shell {
-  width: 100vw;
+  width: var(--app-visible-width, 100vw);
+  max-width: 100vw;
   height: var(--app-visible-height);
+  overflow: hidden;
 }
 
 .ambient {
@@ -22096,6 +22143,23 @@ body {
   background: transparent !important;
 }
 
+@media (max-width: 640px), (pointer: coarse) {
+  input,
+  textarea,
+  select,
+  .soft-input,
+  .soft-area,
+  .chat-input-pill textarea,
+  .composer-plain textarea,
+  .wechat-composer-pill textarea,
+  .chat-screen.bubble-theme-qq .composer-plain textarea,
+  .video-session-textarea,
+  .ios-widget-textarea,
+  .wallet-line-field input {
+    font-size: 16px !important;
+  }
+}
+
     </style>
   </head>
   <body>
@@ -26603,7 +26667,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.26-ai-image-generation";
+const APP_BUILD_VERSION_LABEL = "v2026.05.26-mobile-viewport-fix";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -31873,7 +31937,7 @@ const renderChatMessageBubble = (message, role, { isUser, selectionMode, checked
           : message.type === "photo" || message.type === "image"
           ? " image-bubble media-bubble"
           : "";
-  const bubbleTag = ["voice", "videoCall"].includes(message.type) ? "div" : "button";
+  const bubbleTag = ["voice", "videoCall", "photo", "image"].includes(message.type) ? "div" : "button";
   const bubbleTypeAttr = bubbleTag === "button" ? ' type="button"' : "";
   const bubbleInteractiveAttr =
     (message.type === "photo" || message.type === "image") && (message.content?.dataUrl || message.content?.assetKey)
@@ -31930,6 +31994,7 @@ const renderChatGroupModern = (group, role, state = {}) => {
   const isUser = group.role === "user";
   const chatSkin = getChatBubbleSkin(role);
   const isPerMessageAvatarTheme = chatSkin === "qq" || chatSkin === "wechat";
+  const usesPerMessageTail = chatSkin === "qq" || chatSkin === "wechat";
   const selectionMode = role.chats.selectedMessageIds.length > 0;
   const firstMessage = group.messages[0];
   const firstIsTailless = isTaillessBubbleMessage(firstMessage);
@@ -31941,7 +32006,7 @@ const renderChatGroupModern = (group, role, state = {}) => {
       <div class="chat-group-row ${isUser ? "user" : "ai"}">
         ${isUser ? '<div class="chat-group-avatar-spacer"></div>' : renderAvatar(role.profile, "chat-side-avatar group-avatar", role.profile.note)}
         <div class="chat-group-stack ${isUser ? "align-right" : ""}">
-          ${isPerMessageAvatarTheme ? "" : groupName}
+          ${usesPerMessageTail ? "" : groupName}
           ${group.messages
             .map((message, index) =>
               renderChatMessageBubble(message, role, {
@@ -31950,7 +32015,7 @@ const renderChatGroupModern = (group, role, state = {}) => {
                 checked: role.chats.selectedMessageIds.includes(message.id),
                 showTail: shouldShowChatBubbleTail(message, {
                   chatSkin,
-                  isPerMessageAvatarTheme,
+                  isPerMessageAvatarTheme: usesPerMessageTail,
                   index,
                   firstIsTailless,
                 }),
@@ -41050,6 +41115,7 @@ const composerRuntime = {
   draftSyncTimer: 0,
   keyboardSyncFrame: 0,
   viewportSyncFrame: 0,
+  mobileViewportFrame: 0,
   isComposing: false,
   pendingPaint: false,
   suppressNextFocusRestore: false,
@@ -41283,6 +41349,36 @@ const queueVisibleViewportHeightSync = () => {
   composerRuntime.viewportSyncFrame = window.requestAnimationFrame(() => {
     composerRuntime.viewportSyncFrame = 0;
     syncVisibleViewportHeight();
+  });
+};
+
+const syncMobileViewportScaleGuard = () => {
+  const viewportContent = "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
+  let viewportMeta = document.querySelector('meta[name="viewport"]');
+  if (!viewportMeta) {
+    viewportMeta = document.createElement("meta");
+    viewportMeta.setAttribute("name", "viewport");
+    document.head?.prepend(viewportMeta);
+  }
+  if (viewportMeta.getAttribute("content") !== viewportContent) {
+    viewportMeta.setAttribute("content", viewportContent);
+  }
+
+  const docEl = document.documentElement;
+  if (!docEl) return;
+  const viewportWidth = Math.round(Number(window.visualViewport?.width || 0));
+  const layoutWidth = Math.round(Number(window.innerWidth || docEl.clientWidth || 0));
+  const width = Math.max(320, Math.min(...[viewportWidth, layoutWidth].filter((value) => Number.isFinite(value) && value > 0)));
+  if (width) {
+    docEl.style.setProperty("--app-visible-width", `${width}px`);
+  }
+};
+
+const queueMobileViewportScaleGuardSync = () => {
+  if (composerRuntime.mobileViewportFrame) return;
+  composerRuntime.mobileViewportFrame = window.requestAnimationFrame(() => {
+    composerRuntime.mobileViewportFrame = 0;
+    syncMobileViewportScaleGuard();
   });
 };
 
@@ -79170,10 +79266,14 @@ window.addEventListener("pageshow", handleAppForeground);
 window.addEventListener("online", handleAppForeground);
 window.addEventListener("offline", handleSystemChromeConnectionChange);
 window.addEventListener("resize", () => {
+  queueMobileViewportScaleGuardSync();
   queueVisibleViewportHeightSync();
   maybeResumeRuntimeTick();
 });
-window.addEventListener("orientationchange", queueVisibleViewportHeightSync);
+window.addEventListener("orientationchange", () => {
+  queueMobileViewportScaleGuardSync();
+  queueVisibleViewportHeightSync();
+});
 window.addEventListener("pagehide", handleAppBackground);
 window.addEventListener("beforeunload", () => {
   queueRoleProfileSync({ flush: true });
@@ -79194,21 +79294,25 @@ document.addEventListener("visibilitychange", () => {
 });
 if (window.visualViewport?.addEventListener) {
   window.visualViewport.addEventListener("resize", () => {
+    queueMobileViewportScaleGuardSync();
     queueVisibleViewportHeightSync();
     queueChatKeyboardViewportStateSync();
   });
   window.visualViewport.addEventListener("scroll", () => {
+    queueMobileViewportScaleGuardSync();
     queueVisibleViewportHeightSync();
     queueChatKeyboardViewportStateSync();
   });
 }
 
+syncMobileViewportScaleGuard();
 syncVisibleViewportHeight();
 markAppForegrounded({ sync: false });
 refreshGlobalFeatureStatus({ paintNow: false });
 primeSystemChromeStatus({ paintNow: true });
 void syncBackgroundKeepAliveMode({ silent: true });
 paint();
+queueMobileViewportScaleGuardSync();
 queueVisibleViewportHeightSync();
 queueChatKeyboardViewportStateSync();
 queueAppBadgeSync(0);
