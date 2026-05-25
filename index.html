@@ -1358,7 +1358,8 @@ select {
 .ai-scene-card-head {
   display: flex;
   align-items: flex-start;
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .ai-scene-place {
@@ -1425,6 +1426,36 @@ select {
   color: #a0a4ac;
   font-size: 11px;
   font-weight: 600;
+}
+
+.ai-image-generate-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.16);
+}
+
+.ai-image-generate-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ai-image-generate-btn:disabled {
+  opacity: 0.8;
+}
+
+.ai-scene-card.is-generating .ai-scene-card-body {
+  opacity: 0.72;
+}
+
+.ai-scene-card.has-generation-error {
+  border-color: rgba(255, 59, 48, 0.24);
 }
 
 .share-card strong,
@@ -5669,6 +5700,113 @@ body {
   border: 1px solid rgba(60, 60, 67, 0.14);
 }
 
+.role-image-settings-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.chat-settings-screen .role-image-character-area {
+  min-height: 118px;
+}
+
+.chat-settings-screen .role-image-prompt-area {
+  min-height: 156px;
+}
+
+.role-image-reference-block {
+  display: grid;
+  gap: 10px;
+}
+
+.role-image-reference-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-image-reference-head strong {
+  color: #111111;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.role-image-reference-head .soft-outline-btn.mini {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.role-image-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.role-image-reference-card {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 8px;
+  background: #f7f7fa;
+  overflow: hidden;
+}
+
+.role-image-reference-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.role-image-reference-card.is-empty {
+  color: #8e8e93;
+  gap: 3px;
+  border-style: dashed;
+}
+
+.role-image-reference-card.is-empty span {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+}
+
+.role-image-reference-card.is-empty svg {
+  width: 16px;
+  height: 16px;
+}
+
+.role-image-reference-card.is-empty small {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.role-image-reference-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.72);
+  color: #ffffff;
+}
+
+.role-image-reference-remove svg {
+  width: 12px;
+  height: 12px;
+}
+
+.image-generation-prompt-area {
+  min-height: 164px;
+}
+
 .chat-settings-screen .chat-manage-editor-card {
   gap: 14px;
 }
@@ -9447,6 +9585,11 @@ body {
   box-shadow: 0 8px 20px rgba(17, 17, 17, 0.06) !important;
   color: #111111 !important;
   overflow: hidden !important;
+}
+
+.chat-message-line.media-line .ai-scene-card-head,
+.chat-row.media-line .ai-scene-card-head {
+  justify-content: space-between !important;
 }
 
 .chat-message-line.media-line .image-placeholder.image-real,
@@ -13314,6 +13457,11 @@ html.chat-composer-focused .ref-chat-composer {
   overflow: hidden !important;
 }
 
+.chat-screen.bubble-theme-wechat .chat-message-line.media-line .ai-scene-card-head,
+.chat-screen.bubble-theme-custom .chat-message-line.media-line .ai-scene-card-head {
+  justify-content: space-between !important;
+}
+
 .chat-screen.bubble-theme-wechat .chat-message-line.media-line .image-real {
   display: block !important;
   width: fit-content !important;
@@ -13848,10 +13996,17 @@ html.chat-composer-focused .ref-chat-composer {
   padding: 18px 14px calc(18px + env(safe-area-inset-bottom, 0px));
 }
 
-.image-viewer-close {
+.image-viewer-actions {
   position: absolute;
   top: 0;
   right: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-viewer-close,
+.image-viewer-download {
   display: grid;
   place-items: center;
   width: 38px;
@@ -13862,7 +14017,8 @@ html.chat-composer-focused .ref-chat-composer {
   color: #ffffff;
 }
 
-.image-viewer-close svg {
+.image-viewer-close svg,
+.image-viewer-download svg {
   width: 16px;
   height: 16px;
 }
@@ -22170,6 +22326,10 @@ const DEFAULT_SUMMARY_PROMPT =
   "请只基于这一次送来的最近聊天记录，按时间顺序整理成一份对话归档，重点写清这最近一轮都聊了什么。不要把内容改写成长期记忆、重要记忆、人物档案、基础信息总表，也不要擅自扩写到更早历史。直接输出正文，并严格按这四段结构写：本轮聊了什么、对方这边的新进展、用户这边提到的情况、接下来待继续聊/做/确认。每一段都用编号逐条写具体事实，优先保留真实聊到的细节、原句要点、事件推进、物品、地点、时间、情绪原因、身体状态、工作或目标进度。如果某一段没有新增内容，也要据实写清楚，不要用空话代替细节";
 const DEFAULT_SUMMARY_REFINE_PROMPT =
   "请把已有的总结记忆改写成更干净的长期记忆，直接输出正文，不要标题和分隔线，并尽量保留原来的四段结构：本轮细节、对方推进、用户相关、待继续跟进。删除重复句子和无效铺垫，但必须保留明确时间、具体事件、事务或目标推进、用户这边的重要状态与安排、重要承诺和后续待处理话题，不要把具体事实压缩成空泛概括，也不要改写原本事实";
+const DEFAULT_IMAGE_GENERATION_PROMPT =
+  "生成一张真实手机照片风格的图片。画面应该像普通人随手拍下的生活瞬间，而不是商业摄影、电影剧照、CG、插画或精修写真。保留自然光线、真实环境细节、轻微噪点、手机镜头畸变、随手构图、不完美曝光和生活化氛围。根据聊天语境决定是第一人称视角、自拍、他拍、风景、食物、房间、工作环境或手边物品。不要出现水印、文字、过度美颜、塑料皮肤、夸张滤镜或明显 AI 痕迹。";
+const DEFAULT_ROLE_IMAGE_PROMPT =
+  "保持该角色的人物一致性：脸型、五官比例、发型、发色、肤色、气质、穿衣习惯和日常状态都应稳定。角色看起来像真实生活中的同一个人，而不是每次变成不同模特。照片应该符合角色当前聊天情绪和场景，可以是自拍、半身照、镜中照、生活抓拍，或角色视角拍到的环境。除非聊天内容明确需要，不要让角色每次都正脸看镜头。";
 
 const LEGACY_SUMMARY_PROMPTS = Object.freeze(
   new Set([
@@ -22275,6 +22435,24 @@ const stripFixedOnlineStyleEmojiLines = (value = "") => {
 const resolvePreferredRoleVoiceId = () => "";
 
 const normalizeArray = (value, fallback = []) => (Array.isArray(value) ? value : fallback);
+
+const normalizeRoleImageReferenceEntryData = (item = {}) => {
+  const dataUrl = String(item?.dataUrl || item?.url || "").trim();
+  if (!dataUrl) return null;
+  const createdAt = String(item?.createdAt || "").trim() || nowIso();
+  return {
+    id: String(item?.id || uid("role-img-ref")).trim(),
+    name: String(item?.name || "参考图").trim() || "参考图",
+    dataUrl,
+    createdAt,
+  };
+};
+
+const normalizeRoleImageReferenceImagesData = (items = []) =>
+  normalizeArray(items)
+    .map((item) => normalizeRoleImageReferenceEntryData(item))
+    .filter(Boolean)
+    .slice(0, 4);
 
 const clampStoreNumber = (value, min, max) => Math.min(max, Math.max(min, Number.isFinite(Number(value)) ? Number(value) : min));
 const LIFE_FORTUNE_TIER_DEFS = Object.freeze([
@@ -23676,6 +23854,16 @@ const ensureDefaultPandaApiConfig = (config = {}) => ({
     embeddingKey: String(config?.memory?.embeddingKey || "").trim(),
     embeddingModel: String(config?.memory?.embeddingModel || "").trim(),
   },
+  imageGeneration: {
+    enabled: config?.imageGeneration?.enabled === true,
+    autoGenerate: config?.imageGeneration?.autoGenerate === true,
+    type: String(config?.imageGeneration?.type || "openai").trim() || "openai",
+    url: String(config?.imageGeneration?.url || "").trim(),
+    model: String(config?.imageGeneration?.model || "gpt-image-2").trim() || "gpt-image-2",
+    key: String(config?.imageGeneration?.key || "").trim(),
+    size: String(config?.imageGeneration?.size || "1024x1024").trim() || "1024x1024",
+    prompt: String(config?.imageGeneration?.prompt || DEFAULT_IMAGE_GENERATION_PROMPT).trim() || DEFAULT_IMAGE_GENERATION_PROMPT,
+  },
   presets: [...new Set(["\u718a\u732b", ...(Array.isArray(config?.presets) ? config.presets : [])])],
 });
 
@@ -23765,6 +23953,16 @@ const createDefaultApiConfig = () => ensureDefaultPandaApiConfig({
     secretId: "",
     secretKey: "",
     engineModelType: "16k_zh",
+  },
+  imageGeneration: {
+    enabled: false,
+    autoGenerate: false,
+    type: "openai",
+    url: "",
+    model: "gpt-image-2",
+    key: "",
+    size: "1024x1024",
+    prompt: DEFAULT_IMAGE_GENERATION_PROMPT,
   },
   planner: {
     id: uid("api"),
@@ -23962,6 +24160,9 @@ const createRole = (overrides = {}) => {
       voiceId: overrides.settings?.voiceId || overrides.voiceId || preferredVoiceId || "male-qn-qingse",
       voiceMessageChance: clampStoreNumber(overrides.settings?.voiceMessageChance ?? overrides.voiceMessageChance ?? 20, 0, 100),
       imageMessageChance: clampStoreNumber(overrides.settings?.imageMessageChance ?? overrides.imageMessageChance ?? 10, 0, 100),
+      imageCharacterDescription: String(overrides.settings?.imageCharacterDescription || "").trim(),
+      imagePrompt: String(overrides.settings?.imagePrompt || DEFAULT_ROLE_IMAGE_PROMPT).trim() || DEFAULT_ROLE_IMAGE_PROMPT,
+      imageReferenceImages: normalizeRoleImageReferenceImagesData(overrides.settings?.imageReferenceImages),
       stickerMessageChance: clampStoreNumber(overrides.settings?.stickerMessageChance ?? overrides.stickerMessageChance ?? 20, 0, 100),
       voiceEmotion: overrides.settings?.voiceEmotion ?? overrides.settings?.emotion ?? "",
       voiceSpeed:
@@ -24284,6 +24485,9 @@ const mergeRole = (role, fallback) => {
       ...role.settings,
       lifeFate: normalizeLifeFateSettings(role.settings?.lifeFate || fallback.settings?.lifeFate),
       autoWalletAfterJourney: role.settings?.autoWalletAfterJourney ?? fallback.settings?.autoWalletAfterJourney ?? false,
+      imageCharacterDescription: String(role.settings?.imageCharacterDescription ?? fallback.settings?.imageCharacterDescription ?? "").trim(),
+      imagePrompt: String(role.settings?.imagePrompt || fallback.settings?.imagePrompt || DEFAULT_ROLE_IMAGE_PROMPT).trim() || DEFAULT_ROLE_IMAGE_PROMPT,
+      imageReferenceImages: normalizeRoleImageReferenceImagesData(role.settings?.imageReferenceImages || fallback.settings?.imageReferenceImages),
       voiceId: (() => {
         const incomingVoiceId = String(role.settings?.voiceId || role.voiceId || "").trim();
         const preferredVoiceId = resolvePreferredRoleVoiceId(role.profile?.note, role.profile?.name, fallback.profile?.note, fallback.profile?.name);
@@ -24599,6 +24803,20 @@ const mergeState = (incoming = {}) => {
           incoming.appConfig?.memory?.purpose ||
           fallback.appConfig.memory?.purpose ||
           "用于角色长期记忆、生活热力、习惯和钱包整理",
+      },
+      imageGeneration: {
+        ...(fallback.appConfig.imageGeneration || {}),
+        ...((incoming.appConfig?.imageGeneration && typeof incoming.appConfig.imageGeneration === "object")
+          ? incoming.appConfig.imageGeneration
+          : {}),
+        enabled: incoming.appConfig?.imageGeneration?.enabled === true,
+        autoGenerate: incoming.appConfig?.imageGeneration?.autoGenerate === true,
+        type: String(incoming.appConfig?.imageGeneration?.type || fallback.appConfig.imageGeneration?.type || "openai").trim() || "openai",
+        url: String(incoming.appConfig?.imageGeneration?.url || "").trim(),
+        model: String(incoming.appConfig?.imageGeneration?.model || fallback.appConfig.imageGeneration?.model || "gpt-image-2").trim() || "gpt-image-2",
+        key: String(incoming.appConfig?.imageGeneration?.key || "").trim(),
+        size: String(incoming.appConfig?.imageGeneration?.size || fallback.appConfig.imageGeneration?.size || "1024x1024").trim() || "1024x1024",
+        prompt: String(incoming.appConfig?.imageGeneration?.prompt || fallback.appConfig.imageGeneration?.prompt || DEFAULT_IMAGE_GENERATION_PROMPT).trim() || DEFAULT_IMAGE_GENERATION_PROMPT,
       },
       tencentAsr: {
         ...fallback.appConfig.tencentAsr,
@@ -26385,7 +26603,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.25-late-reply-awareness";
+const APP_BUILD_VERSION_LABEL = "v2026.05.26-ai-image-generation";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -28773,6 +28991,84 @@ const renderChatFallbackApiCard = (api = {}, state = {}) => `
   </section>
 `;
 
+const renderImageGenerationSection = (imageConfig = {}, state = {}) => {
+  const config = {
+    enabled: imageConfig.enabled === true,
+    autoGenerate: imageConfig.autoGenerate === true,
+    type: String(imageConfig.type || "openai").trim() || "openai",
+    url: String(imageConfig.url || "").trim(),
+    key: String(imageConfig.key || "").trim(),
+    model: String(imageConfig.model || "gpt-image-2").trim() || "gpt-image-2",
+    size: String(imageConfig.size || "1024x1024").trim() || "1024x1024",
+    prompt: String(imageConfig.prompt || DEFAULT_IMAGE_GENERATION_PROMPT).trim() || DEFAULT_IMAGE_GENERATION_PROMPT,
+  };
+  const apiEnabled = state.appConfig?.apiEnabled !== false;
+  return `
+    <section class="setting-card setting-subpanel card-enter image-generation-settings-card">
+      <div class="subapi-head">
+        <div>
+          <h3>AI 生图</h3>
+          <p>角色发图片描述时，可以自动生成真实手机照片；关闭自动时，图片卡片右上角会显示生成按钮。</p>
+        </div>
+        <label class="switch mini">
+          <input type="checkbox" data-config="imageGeneration.enabled" ${config.enabled ? "checked" : ""} />
+          <span></span>
+        </label>
+      </div>
+
+      <label class="ios-form-field compact-switch-field">
+        <span>自动生成</span>
+        <label class="switch mini">
+          <input type="checkbox" data-config="imageGeneration.autoGenerate" ${config.autoGenerate ? "checked" : ""} />
+          <span></span>
+        </label>
+      </label>
+
+      <div class="setting-label">接口类型</div>
+      <select class="soft-input" data-config="imageGeneration.type">
+        <option value="openai" ${config.type === "openai" ? "selected" : ""}>OpenAI 图片格式</option>
+      </select>
+
+      <div class="setting-label">接口地址</div>
+      <input class="soft-input" data-config="imageGeneration.url" value="${escapeHtml(config.url)}" placeholder="例如 https://api.example.com/v1 或 /v1/images/generations" />
+
+      <div class="setting-label">API Key</div>
+      <input class="soft-input" data-config="imageGeneration.key" type="password" value="${escapeHtml(config.key)}" placeholder="sk-..." />
+
+      <div class="setting-label">模型</div>
+      <div class="inline-row">
+        <input class="soft-input" data-config="imageGeneration.model" value="${escapeHtml(config.model)}" placeholder="gpt-image-2" />
+        <button class="tiny-btn" type="button" data-action="fetch-models" data-api-lane="imageGeneration" ${apiEnabled ? "" : "disabled"}>${hasBusyToken(state.modelFetchBusy, "imageGeneration") ? "拉取中" : "拉取"}</button>
+      </div>
+      ${
+        state.availableModels?.length && state.modelPickerOpen && state.modelPickerTarget === "imageGeneration"
+          ? `
+            <div class="setting-mini-note">已拉取 ${state.availableModels.length} 个模型，点一下就会直接切换</div>
+            <div class="model-option-list" data-scroll-key="image-generation-model-list">
+              ${state.availableModels
+                .map(
+                  (model) => `
+                    <button class="model-option-btn ${config.model === model ? "active" : ""}" type="button" data-action="select-model" data-model-id="${escapeHtml(model)}" data-api-lane="imageGeneration" data-model-target="imageGeneration">
+                      <span>${escapeHtml(model)}</span>
+                    </button>
+                  `,
+                )
+                .join("")}
+            </div>
+          `
+          : ""
+      }
+
+      <div class="setting-label">图片尺寸</div>
+      <input class="soft-input" data-config="imageGeneration.size" value="${escapeHtml(config.size)}" placeholder="1024x1024" />
+
+      <div class="setting-label">全局生图提示词</div>
+      <textarea class="soft-input soft-area image-generation-prompt-area" data-config="imageGeneration.prompt" placeholder="${escapeHtml(DEFAULT_IMAGE_GENERATION_PROMPT)}">${escapeHtml(config.prompt)}</textarea>
+      ${apiEnabled ? "" : '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起图片生成请求。</div>'}
+    </section>
+  `;
+};
+
 const renderSubApiCard = (api, index, state) => `
   <section class="setting-card setting-subpanel card-enter">
     <div class="subapi-head">
@@ -29301,23 +29597,34 @@ const renderMessageContent = (message, role = null, state = {}, { suppressQuote 
           : typeof message.content === "string"
             ? message.content
             : "一张照片";
+      const content = message.content && typeof message.content === "object" ? message.content : {};
+      const generationStatus = String(content.generationStatus || "").trim();
+      const generating = generationStatus === "loading";
+      const generationError = String(content.generationError || "").trim();
+      const imageGenerationEnabled = state?.appConfig?.imageGeneration?.enabled === true;
+      const canGenerate = imageGenerationEnabled || generationError || generating;
 
       return `
         ${quoteBlock}
         ${mediaDebugBadge}
-        <article class="ai-scene-card">
+        <article class="ai-scene-card ${generating ? "is-generating" : ""} ${generationError ? "has-generation-error" : ""}">
           <div class="ai-scene-card-head">
             <span class="ai-scene-place">
               <span class="ai-scene-place-icon" aria-hidden="true">${icons.location}</span>
               <span>${escapeHtml(place || "当前位置")}</span>
             </span>
+            ${
+              canGenerate
+                ? `<button class="ai-image-generate-btn" type="button" data-action="generate-ai-image" data-message-id="${escapeHtml(message.id || "")}" aria-label="${generating ? "正在生成图片" : generationError ? "重试生成图片" : "生成真实图片"}" ${generating ? "disabled" : ""}>${generating ? '<span class="busy-spinner"></span>' : icons.photo}</button>`
+                : ""
+            }
           </div>
           <div class="ai-scene-card-body">
             <p>${nlToBr(description)}</p>
           </div>
           <div class="ai-scene-card-foot">
             <span class="ai-scene-divider" aria-hidden="true"></span>
-            <time class="ai-scene-time">${formatMessageTime(message.timestamp)}</time>
+            <time class="ai-scene-time">${escapeHtml(generationError ? "生成失败" : formatMessageTime(message.timestamp))}</time>
           </div>
         </article>
       `;
@@ -29721,7 +30028,7 @@ const renderChatRow = (message, role) => {
         : message.type === "photo" || message.type === "image"
           ? " image-bubble media-bubble"
           : "";
-  const bubbleTag = ["voice", "videoCall"].includes(message.type) ? "div" : "button";
+  const bubbleTag = ["voice", "videoCall", "photo", "image"].includes(message.type) ? "div" : "button";
   const bubbleTypeAttr = bubbleTag === "button" ? ' type="button"' : "";
 
   return `
@@ -30471,6 +30778,54 @@ const renderRoleVoiceSettingsBody = (role, state) => {
 `;
 };
 
+const renderRoleImageReferenceGrid = (role) => {
+  const refs = Array.isArray(role.settings?.imageReferenceImages) ? role.settings.imageReferenceImages.slice(0, 4) : [];
+  const slots = [...refs];
+  while (slots.length < 4) slots.push(null);
+  return `
+    <div class="role-image-reference-grid">
+      ${slots
+        .map((item, index) =>
+          item
+            ? `
+              <article class="role-image-reference-card">
+                <img src="${escapeHtml(item.dataUrl || "")}" alt="${escapeHtml(item.name || `参考图 ${index + 1}`)}" />
+                <button class="role-image-reference-remove" type="button" data-action="remove-role-image-reference" data-reference-id="${escapeHtml(item.id || "")}" aria-label="删除参考图">${icons.close}</button>
+              </article>
+            `
+            : `
+              <button class="role-image-reference-card is-empty" type="button" data-action="pick-role-image-reference" aria-label="上传参考图">
+                <span>${icons.plus}</span>
+                <small>${index + 1}/4</small>
+              </button>
+            `,
+        )
+        .join("")}
+    </div>
+  `;
+};
+
+const renderRoleImageSettingsBody = (role) => `
+  <div class="role-image-settings-stack">
+    <label class="ios-form-field">
+      <span>角色形象描述</span>
+      <textarea class="soft-input soft-area role-image-character-area ios-settings-area" data-action="update-role-setting" data-role-setting="imageCharacterDescription" placeholder="写清楚角色脸型、五官、发型、肤色、气质、穿衣习惯等">${escapeHtml(role.settings?.imageCharacterDescription || "")}</textarea>
+    </label>
+    <label class="ios-form-field">
+      <span>角色生图提示词</span>
+      <textarea class="soft-input soft-area role-image-prompt-area ios-settings-area" data-action="update-role-setting" data-role-setting="imagePrompt" placeholder="${escapeHtml(DEFAULT_ROLE_IMAGE_PROMPT)}">${escapeHtml(role.settings?.imagePrompt || DEFAULT_ROLE_IMAGE_PROMPT)}</textarea>
+    </label>
+    <div class="role-image-reference-block">
+      <div class="role-image-reference-head">
+        <strong>多角度参考图</strong>
+        <button class="soft-outline-btn mini" type="button" data-action="pick-role-image-reference" ${(role.settings?.imageReferenceImages || []).length >= 4 ? "disabled" : ""}>上传</button>
+      </div>
+      ${renderRoleImageReferenceGrid(role)}
+      <p class="setting-mini-note">最多 4 张，会跟角色数据一起导出/导入；建议放正脸、侧脸、半身和日常氛围图。</p>
+    </div>
+  </div>
+`;
+
 const renderChatSettingsPanel = (state, role) => `
   <div class="overlay-screen panel-overlay">
     <section class="panel-screen page-enter chat-settings-screen">
@@ -30506,6 +30861,14 @@ const renderChatSettingsPanel = (state, role) => `
           extraClass: "ios-role-voice-editor-card",
           action: `<button class="tiny-header-btn ios-segment-btn" type="button" data-action="toggle-role-voice-chance-edit">${state.roleVoiceChanceEditing ? "完成" : "编辑"}</button>`,
           body: renderRoleVoiceSettingsBody(role, state),
+        })}
+
+        ${renderChatSettingsSectionLabel("角色图片")}
+        ${renderChatSettingsEditorCard({
+          title: "角色形象与参考图",
+          note: "用于让 AI 生图保持人物一致性；生成风景、食物、房间时也会按聊天语境自动切换视角",
+          extraClass: "ios-role-image-editor-card",
+          body: renderRoleImageSettingsBody(role),
         })}
 
         ${renderChatSettingsSectionLabel("回复约束")}
@@ -33427,6 +33790,7 @@ const renderIosApiSettingsPage = (state) => {
     ${renderIosApiAvailabilityRow(apiEnabled)}
     ${renderIosCardListSection("预设与主 API", `${renderPresetCard(config, state)}${renderApiSection(config, state)}${renderChatFallbackApiCard(config.chatFallback || {}, state)}`)}
     ${renderIosCardListSection("副 API", `${config.secondary.map((api, index) => renderSubApiCard(api, index, state)).join("")}${renderPlannerApiCard(config.planner || {}, state)}${renderMemoryApiCard(config.memory || {}, state)}`)}
+    ${renderIosSection("AI 生图", renderImageGenerationSection(config.imageGeneration || {}, state))}
     ${renderIosSection("视频语音识别", renderTencentAsrSection(config.tencentAsr || {}, apiEnabled))}
     ${renderIosSection("回复参数", renderReplyTuningSection(config))}
   `;
@@ -35892,6 +36256,10 @@ const renderBusyBanner = (state) => {
       pushLabel("正在等待角色回复动态评论");
       return;
     }
+    if (value.startsWith("image-generation:")) {
+      pushLabel("正在生成图片");
+      return;
+    }
     if (apiBusyMap[value]) {
       pushLabel(apiBusyMap[value]);
       return;
@@ -35927,7 +36295,10 @@ const renderImageViewer = (state) => {
   return `
     <div class="overlay-screen highest image-viewer-overlay" data-action="close-image-viewer-backdrop">
       <section class="image-viewer-sheet">
-        <button class="image-viewer-close" type="button" data-action="close-image-viewer" aria-label="关闭">${icons.close}</button>
+        <div class="image-viewer-actions">
+          <button class="image-viewer-download" type="button" data-action="download-image-viewer" aria-label="下载图片">${icons.download}</button>
+          <button class="image-viewer-close" type="button" data-action="close-image-viewer" aria-label="关闭">${icons.close}</button>
+        </div>
         <figure class="image-viewer-figure">
           <img src="${viewer.src}" alt="${escapeHtml(viewer.alt || "图片")}" />
           ${viewer.alt ? `<figcaption>${escapeHtml(viewer.alt)}</figcaption>` : ""}
@@ -45629,6 +46000,42 @@ const getSecondaryApiConfig = () => {
   return normalizeSecondaryApiConfig(primaryConfig, secondarySource);
 };
 
+const IMAGE_GENERATION_DEFAULTS = Object.freeze({
+  enabled: false,
+  autoGenerate: false,
+  type: "openai",
+  url: "",
+  model: "gpt-image-2",
+  key: "",
+  size: "1024x1024",
+  prompt: DEFAULT_IMAGE_GENERATION_PROMPT,
+});
+
+const normalizeImageGenerationConfig = (config = {}) => ({
+  ...IMAGE_GENERATION_DEFAULTS,
+  ...(config && typeof config === "object" ? config : {}),
+  enabled: config?.enabled === true,
+  autoGenerate: config?.autoGenerate === true,
+  type: String(config?.type || IMAGE_GENERATION_DEFAULTS.type).trim() || IMAGE_GENERATION_DEFAULTS.type,
+  url: normalizeApiConfigUrl(config?.url || ""),
+  model: normalizeApiConfigModel(config?.model || IMAGE_GENERATION_DEFAULTS.model) || IMAGE_GENERATION_DEFAULTS.model,
+  key: normalizeApiConfigKey(config?.key || ""),
+  size: String(config?.size || IMAGE_GENERATION_DEFAULTS.size).trim() || IMAGE_GENERATION_DEFAULTS.size,
+  prompt: String(config?.prompt || DEFAULT_IMAGE_GENERATION_PROMPT).trim() || DEFAULT_IMAGE_GENERATION_PROMPT,
+});
+
+const getImageGenerationConfig = () => normalizeImageGenerationConfig(state.appConfig?.imageGeneration || {});
+
+const hasImageGenerationConfig = (config = getImageGenerationConfig()) =>
+  Boolean(config.enabled && config.url && config.key && config.model);
+
+const getOpenAiImageGenerationEndpoint = (base) => {
+  const normalized = String(base || "").replace(/\/+$/, "");
+  if (!normalized) return "";
+  if (/\/images\/generations$/i.test(normalized)) return normalized;
+  return ensureEndpoint(normalized, /\/v1$/i.test(normalized) ? "/images/generations" : "/v1/images/generations");
+};
+
 const getPlannerApiConfig = () => {
   const secondaryConfig = getSecondaryApiConfig();
   return normalizePlannerApiConfig(secondaryConfig, state.appConfig?.planner || {});
@@ -48297,8 +48704,12 @@ const requestJourneyModelText = async ({
 const getModelsEndpointCandidates = (base) => {
   const normalized = String(base || "").replace(/\/+$/, "");
   if (!normalized) return [];
-  const candidates = [ensureEndpoint(normalized, "/models")];
-  if (!/\/v1$/i.test(normalized)) {
+  const candidates = [];
+  if (/\/images\/generations$/i.test(normalized)) {
+    candidates.push(normalized.replace(/\/images\/generations$/i, "/models"));
+  }
+  candidates.push(ensureEndpoint(normalized, "/models"));
+  if (!/\/v1$/i.test(normalized) && !/\/images\/generations$/i.test(normalized)) {
     candidates.push(ensureEndpoint(normalized, "/v1/models"));
   }
   return [...new Set(candidates)];
@@ -50869,6 +51280,237 @@ const validateBlockedTermsInJourneyResult = (role, payload, label = "行程") =>
     ]),
   ].filter(Boolean);
   return validateBlockedTermsForRole(role, texts, label);
+};
+
+const extractAiImagePromptParts = (message = {}, role = null) => {
+  const content = message?.content && typeof message.content === "object" ? message.content : {};
+  const description =
+    typeof message?.content === "string"
+      ? message.content
+      : content.description || content.content || content.text || "一张照片";
+  const place = content.place || content.location || getRoleCurrentPlace(role) || "";
+  return {
+    description: sanitizeChatLine(description || "一张照片"),
+    place: sanitizeChatLine(place || ""),
+  };
+};
+
+const getRecentChatImageContextText = (role = null, messageId = "") => {
+  const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
+  const targetIndex = messages.findIndex((item) => String(item?.id || "") === String(messageId || ""));
+  const source = messages
+    .slice(Math.max(0, (targetIndex >= 0 ? targetIndex : messages.length) - 8), targetIndex >= 0 ? targetIndex : messages.length)
+    .filter((item) => item?.role === "user" || item?.role === "ai")
+    .slice(-6);
+  return source
+    .map((item) => {
+      if (typeof item.content === "string") return `${item.role === "user" ? "用户" : "角色"}：${sanitizeChatLine(item.content)}`;
+      if (item.type === "image" || item.type === "photo") {
+        const text = item.content?.description || item.content?.name || "图片";
+        return `${item.role === "user" ? "用户" : "角色"}：[图片]${sanitizeChatLine(text)}`;
+      }
+      if (item.type === "voice") return `${item.role === "user" ? "用户" : "角色"}：[语音]${sanitizeChatLine(item.content || "")}`;
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n")
+    .slice(-900);
+};
+
+const buildAiImageGenerationPrompt = (role, message, config = getImageGenerationConfig()) => {
+  const { description, place } = extractAiImagePromptParts(message, role);
+  const roleName = String(role?.profile?.note || role?.profile?.name || "角色").trim();
+  const currentPlace = getRoleCurrentPlace(role);
+  const characterDescription = String(role?.settings?.imageCharacterDescription || "").trim();
+  const rolePrompt = String(role?.settings?.imagePrompt || DEFAULT_ROLE_IMAGE_PROMPT).trim() || DEFAULT_ROLE_IMAGE_PROMPT;
+  const referenceCount = Math.min(4, Array.isArray(role?.settings?.imageReferenceImages) ? role.settings.imageReferenceImages.length : 0);
+  const recentContext = getRecentChatImageContextText(role, message?.id || "");
+  return [
+    "请根据下面信息生成一张单张真实照片。输出只需要图片，不要在图片里加字幕、水印、界面文字或说明文字。",
+    "",
+    "全局真实感要求：",
+    String(config.prompt || DEFAULT_IMAGE_GENERATION_PROMPT).trim() || DEFAULT_IMAGE_GENERATION_PROMPT,
+    "",
+    "角色一致性要求：",
+    rolePrompt,
+    characterDescription ? `角色外貌/脸部描述：${characterDescription}` : "",
+    roleName ? `角色名：${roleName}` : "",
+    currentPlace ? `角色当前地点：${currentPlace}` : "",
+    place ? `这张图发生/拍摄地点：${place}` : "",
+    "",
+    "这次聊天图片意图：",
+    description || "一张照片",
+    "",
+    recentContext ? `最近聊天上下文：\n${recentContext}` : "",
+    referenceCount ? `已随请求附带 ${referenceCount} 张角色参考图。请优先参考参考图的人物脸型、五官、发型、肤色和整体气质，但仍按本次聊天场景生成自然手机照片。` : "",
+    "",
+    "构图判断：如果描述像自拍、给你看我、我现在这样，就使用角色本人自拍/镜中照/生活抓拍；如果描述像窗外、食物、桌面、工作环境、房间或现场，就使用角色视角拍到的物品/环境，不要强行让角色本人出镜。",
+  ]
+    .filter((line) => String(line || "").trim() || line === "")
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
+const extractImageDataUrlFromGenerationResponse = async (data = {}) => {
+  const candidates = [];
+  const pushCandidate = (value) => {
+    if (value == null) return;
+    if (typeof value === "string") {
+      const text = value.trim();
+      if (text) candidates.push(text);
+      return;
+    }
+    if (value && typeof value === "object") {
+      [
+        value.b64_json,
+        value.base64,
+        value.image_base64,
+        value.data,
+        value.url,
+        value.image_url,
+        value.output_image,
+      ].forEach(pushCandidate);
+    }
+  };
+  if (Array.isArray(data?.data)) data.data.forEach(pushCandidate);
+  if (Array.isArray(data?.images)) data.images.forEach(pushCandidate);
+  if (Array.isArray(data?.output)) data.output.forEach((item) => {
+    pushCandidate(item);
+    if (Array.isArray(item?.content)) item.content.forEach(pushCandidate);
+  });
+  [data?.b64_json, data?.base64, data?.image_base64, data?.url, data?.image_url, data?.data].forEach(pushCandidate);
+
+  const directDataUrl = candidates.find((item) => /^data:image\//i.test(item));
+  if (directDataUrl) return directDataUrl;
+  const url = candidates.find((item) => /^https?:\/\//i.test(item));
+  if (url) return fetchImageSourceAsDataUrl(url);
+  const base64 = candidates.find((item) => /^[a-z0-9+/=\s]+$/i.test(item) && item.replace(/\s+/g, "").length > 128);
+  if (base64) return `data:image/png;base64,${base64.replace(/\s+/g, "")}`;
+  throw new Error("图片接口没有返回可用图片数据");
+};
+
+const requestOpenAiImageGeneration = async ({ role, message, signal = null } = {}) => {
+  const config = getImageGenerationConfig();
+  ensureApiRequestsEnabled("AI 生图");
+  if (!hasImageGenerationConfig(config)) {
+    throw new Error("请先在 API 设置里填好 AI 生图地址、Key 和模型，并开启 AI 生图");
+  }
+  const endpoint = getOpenAiImageGenerationEndpoint(config.url);
+  const prompt = buildAiImageGenerationPrompt(role, message, config);
+  const references = (Array.isArray(role?.settings?.imageReferenceImages) ? role.settings.imageReferenceImages : [])
+    .slice(0, 4)
+    .map((item) => String(item?.dataUrl || "").trim())
+    .filter((item) => item.startsWith("data:image/"));
+  const body = {
+    model: config.model,
+    prompt,
+    size: config.size || "1024x1024",
+    n: 1,
+    response_format: "b64_json",
+  };
+  if (references.length) {
+    body.image = references.length === 1 ? references[0] : references;
+    body.images = references;
+  }
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.key}`,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
+  if (!response.ok) {
+    const messageText = data?.error?.message || data?.message || text || `AI 生图失败 ${response.status}`;
+    throw new Error(String(messageText).slice(0, 220));
+  }
+  const dataUrl = await extractImageDataUrlFromGenerationResponse(data);
+  return {
+    dataUrl,
+    prompt,
+    model: config.model,
+  };
+};
+
+const updateAiImageMessageContent = (roleId, messageId, updater, { paintNow = true } = {}) => {
+  const normalizedMessageId = String(messageId || "").trim();
+  if (!normalizedMessageId) return false;
+  let changed = false;
+  updateRole(roleId, (nextRole) => {
+    const message = (nextRole.chats.messages || []).find((item) => item.id === normalizedMessageId);
+    if (!message || message.role !== "ai" || message.type !== "image") return nextRole;
+    const content = message.content && typeof message.content === "object" ? structuredClone(message.content) : { description: String(message.content || "") };
+    message.content = updater(content, message) || content;
+    changed = true;
+    return nextRole;
+  }, { paintNow });
+  return changed;
+};
+
+const generateAiImageForMessage = async (roleId, messageId, { silent = false } = {}) => {
+  const role = getRoleById(state, roleId);
+  const message = (role?.chats?.messages || []).find((item) => item.id === messageId);
+  if (!role || !message || message.role !== "ai" || message.type !== "image") return false;
+  if (message.content?.dataUrl || message.content?.assetKey || message.content?.generationStatus === "loading") return false;
+
+  const token = `image-generation:${roleId}:${messageId}`;
+  const controller = new AbortController();
+  addBusyToken("apiGenerationBusy", token);
+  updateAiImageMessageContent(roleId, messageId, (content) => ({
+    ...content,
+    generationStatus: "loading",
+    generationError: "",
+  }), { paintNow: true });
+
+  try {
+    const liveRole = getRoleById(state, roleId) || role;
+    const liveMessage = (liveRole?.chats?.messages || []).find((item) => item.id === messageId) || message;
+    const result = await requestOpenAiImageGeneration({
+      role: liveRole,
+      message: liveMessage,
+      signal: controller.signal,
+    });
+    updateAiImageMessageContent(roleId, messageId, (content) => ({
+      ...content,
+      name: `${String(liveRole?.profile?.note || "role").trim() || "role"}-generated-image.jpg`,
+      dataUrl: result.dataUrl,
+      transferStatus: "ready",
+      generationStatus: "ready",
+      generationError: "",
+      generatedAt: new Date().toISOString(),
+      generatedPrompt: result.prompt,
+      generatedModel: result.model,
+    }), { paintNow: true });
+    if (!silent) setToast("图片已生成");
+    return true;
+  } catch (error) {
+    updateAiImageMessageContent(roleId, messageId, (content) => ({
+      ...content,
+      generationStatus: "error",
+      generationError: error?.message || "图片生成失败",
+    }), { paintNow: true });
+    if (!silent) setToast(error?.message || "图片生成失败");
+    return false;
+  } finally {
+    removeBusyToken("apiGenerationBusy", token);
+    paint();
+  }
+};
+
+const shouldAutoGenerateAiImageForMessage = (role, message) => {
+  const config = getImageGenerationConfig();
+  if (!config.enabled || !config.autoGenerate || !hasImageGenerationConfig(config)) return false;
+  if (!role || !message || message.role !== "ai" || message.type !== "image") return false;
+  return !(message.content?.dataUrl || message.content?.assetKey || message.content?.generationStatus === "loading");
 };
 
 const buildMessagesFromChatResult = (
@@ -54448,6 +55090,14 @@ const normalizeVoiceResponsePayload = (data = {}) => {
     traceId: data?.trace_id || data?.data?.trace_id || data?.base_resp?.trace_id || "",
     audioPayload: String(audioPayload || "").trim(),
   };
+};
+
+const fetchImageSourceAsDataUrl = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`图片下载失败 ${response.status}`);
+  }
+  return blobToDataUrl(await response.blob());
 };
 
 const decodeAudioPayloadToDataUrl = async (audioPayload, mimeType) => {
@@ -69445,6 +70095,7 @@ const appendMessagesSequentially = async (
     !shouldPauseLiveChatFeedPaint(roleId);
   const baseTimestamp = normalizeLooseTimestamp(messageTimestamp);
   const baseTimestampMs = baseTimestamp ? new Date(baseTimestamp).getTime() : Number.NaN;
+  const imageGenerationJobs = [];
 
   for (let index = 0; index < messages.length; index += 1) {
     const source = messages[index];
@@ -69462,6 +70113,7 @@ const appendMessagesSequentially = async (
     const appendedTimestamp =
       Number.isFinite(baseTimestampMs) ? new Date(baseTimestampMs + index * 15_000).toISOString() : "";
 
+    let appendedImageMessageId = "";
     updateRole(roleId, (nextRole) => {
       const appended = createMessage({
         role: source.role || "ai",
@@ -69484,6 +70136,9 @@ const appendMessagesSequentially = async (
       }
       if (appended.role === "ai" && appended.type === "image") {
         nextRole.runtime.lastAiImageAt = appended.timestamp;
+        if (shouldAutoGenerateAiImageForMessage(nextRole, appended)) {
+          appendedImageMessageId = appended.id;
+        }
       }
       if (appended.role === "ai" && appended.type === "sticker") {
         nextRole.runtime.lastAiStickerAt = appended.timestamp;
@@ -69494,6 +70149,9 @@ const appendMessagesSequentially = async (
       }
       return nextRole;
     }, { paintNow: paintStepNow });
+    if (appendedImageMessageId) {
+      imageGenerationJobs.push(appendedImageMessageId);
+    }
     if ((source.role || "ai") === "ai") {
       void playMessageSoundEffect("role");
     }
@@ -69505,6 +70163,9 @@ const appendMessagesSequentially = async (
   void maybeNotifyForRoleMessages(roleId, messages, { source: notificationSource });
   queueAutoSummaryCheckForRole(roleId);
   queueLivingMemoryAutoDigestForRole(roleId, { delayMs: 1200, reason: "message-threshold" });
+  imageGenerationJobs.forEach((messageId) => {
+    void generateAiImageForMessage(roleId, messageId, { silent: true });
+  });
 };
 
 const resolveFollowUpPrompt = (role) => {
@@ -74652,6 +75313,15 @@ const optimizeRoleForExport = async (role) => {
   nextRole.profile.avatarImage = await createThumbnailDataUrl(String(nextRole.profile.avatarImage || "").trim(), 420);
   nextRole.profile.cardImage = await createThumbnailDataUrl(String(nextRole.profile.cardImage || "").trim(), 1280);
   nextRole.chats.backgroundImage = await createThumbnailDataUrl(String(nextRole.chats.backgroundImage || "").trim(), 1440);
+  nextRole.settings = nextRole.settings || {};
+  nextRole.settings.imageReferenceImages = await Promise.all(
+    (Array.isArray(nextRole.settings.imageReferenceImages) ? nextRole.settings.imageReferenceImages : [])
+      .slice(0, 4)
+      .map(async (item) => ({
+        ...(item || {}),
+        dataUrl: await createThumbnailDataUrl(String(item?.dataUrl || "").trim(), 768),
+      })),
+  );
   const messages = Array.isArray(nextRole.chats.messages) ? nextRole.chats.messages.slice(-1000) : [];
   nextRole.chats.messages = await Promise.all(messages.map((message) => optimizeMessageForExport(message)));
   nextRole.moments = Array.isArray(nextRole.moments) ? nextRole.moments.slice(0, 120) : [];
@@ -75057,6 +75727,38 @@ const handleImageSelection = async (event) => {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+  if (target.kind === "role-image-reference") {
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role) {
+      imageInput.value = "";
+      return;
+    }
+    const existing = Array.isArray(role.settings?.imageReferenceImages) ? role.settings.imageReferenceImages : [];
+    if (existing.length >= 4) {
+      setToast("参考图最多 4 张");
+      imageInput.value = "";
+      return;
+    }
+    const optimizedReference = await createThumbnailDataUrl(String(dataUrl || "").trim(), 768);
+    updateRole(role.id, (nextRole) => {
+      nextRole.settings.imageReferenceImages = Array.isArray(nextRole.settings.imageReferenceImages)
+        ? nextRole.settings.imageReferenceImages.slice(0, 4)
+        : [];
+      if (nextRole.settings.imageReferenceImages.length < 4) {
+        nextRole.settings.imageReferenceImages.push({
+          id: `role-img-ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: String(file?.name || "参考图").trim() || "参考图",
+          dataUrl: optimizedReference,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      return nextRole;
+    });
+    setToast("参考图已添加");
+    imageInput.value = "";
+    return;
+  }
 
   if (target.kind === "user-avatar") {
     state.userProfile.avatarImage = dataUrl;
@@ -75690,6 +76392,7 @@ eventRoot.addEventListener("input", (event) => {
     updateRoleSetting(
       target.dataset.roleSetting,
       getRangeInputCommitValue(target),
+      { paintNow: !(target instanceof HTMLTextAreaElement) },
     );
     return;
   }
@@ -75762,6 +76465,7 @@ eventRoot.addEventListener("change", (event) => {
     updateRoleSetting(
       target.dataset.roleSetting,
       getRangeInputCommitValue(target),
+      { paintNow: true },
     );
     if (target.dataset.roleSetting === "summaryTriggerCount") {
       const role = getActiveChatRole() || getCurrentRole();
@@ -75849,6 +76553,20 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "close-image-viewer") {
     state.imageViewer = null;
     paint();
+    return;
+  }
+
+  if (action === "download-image-viewer") {
+    const viewer = state.imageViewer || {};
+    const src = String(viewer.src || "").trim();
+    if (!src.startsWith("data:image/")) return;
+    try {
+      const blob = await dataUrlToBlob(src);
+      downloadBlob(String(viewer.filename || viewer.alt || "generated-image.jpg").trim() || "generated-image.jpg", blob);
+      setToast("已开始下载图片");
+    } catch (error) {
+      setToast(error?.message || "图片下载失败");
+    }
     return;
   }
 
@@ -75993,6 +76711,13 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "generate-ai-image") {
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role || !messageId) return;
+    void generateAiImageForMessage(role.id, messageId);
+    return;
+  }
+
   if (action === "open-image-viewer") {
     const role = getActiveChatRole() || getCurrentRole();
     const message = (role?.chats?.messages || []).find((item) => item.id === messageId);
@@ -76001,6 +76726,7 @@ eventRoot.addEventListener("click", async (event) => {
     state.imageViewer = {
       src: dataUrl,
       alt: String(message?.content?.name || "图片"),
+      filename: String(message?.content?.name || "generated-image.jpg"),
     };
     paint();
     return;
@@ -76008,6 +76734,33 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "pick-chat-background") {
     beginImagePick({ kind: "chat-background" });
+    return;
+  }
+
+  if (action === "pick-role-image-reference") {
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role) return;
+    const refs = Array.isArray(role.settings?.imageReferenceImages) ? role.settings.imageReferenceImages : [];
+    if (refs.length >= 4) {
+      setToast("参考图最多 4 张");
+      return;
+    }
+    beginImagePick({ kind: "role-image-reference" });
+    return;
+  }
+
+  if (action === "remove-role-image-reference") {
+    const role = getActiveChatRole() || getCurrentRole();
+    const referenceId = String(button.dataset.referenceId || "").trim();
+    if (!role || !referenceId) return;
+    updateRole(role.id, (nextRole) => {
+      nextRole.settings.imageReferenceImages = (Array.isArray(nextRole.settings?.imageReferenceImages)
+        ? nextRole.settings.imageReferenceImages
+        : []
+      ).filter((item) => String(item?.id || "") !== referenceId);
+      return nextRole;
+    });
+    setToast("参考图已删除");
     return;
   }
 
@@ -77273,22 +78026,25 @@ eventRoot.addEventListener("click", async (event) => {
     const isPlanner = apiLane === "planner";
     const isMemory = apiLane === "memory";
     const isChatFallback = apiLane === "chatFallback";
+    const isImageGeneration = apiLane === "imageGeneration";
     const config = isMemory
       ? state.appConfig.memory
       : isPlanner
         ? state.appConfig.planner
         : isChatFallback
           ? state.appConfig.chatFallback
-          : isSecondary
-            ? state.appConfig.secondary[subApiIndex]
-            : state.appConfig.primary;
+          : isImageGeneration
+            ? state.appConfig.imageGeneration
+            : isSecondary
+              ? state.appConfig.secondary[subApiIndex]
+              : state.appConfig.primary;
 
     if (!config?.url || !config?.key) {
       setToast("先填好接口地址和 Key");
       return;
     }
 
-    const modelBusyToken = isMemory ? "memory" : isPlanner ? "planner" : isChatFallback ? "chatFallback" : isSecondary ? `secondary-${subApiIndex}` : "primary";
+    const modelBusyToken = isMemory ? "memory" : isPlanner ? "planner" : isChatFallback ? "chatFallback" : isImageGeneration ? "imageGeneration" : isSecondary ? `secondary-${subApiIndex}` : "primary";
     addBusyToken("modelFetchBusy", modelBusyToken);
     paint();
 
@@ -77372,6 +78128,8 @@ eventRoot.addEventListener("click", async (event) => {
     const subApiIndex = Number(button.dataset.subapiIndex);
     if (button.dataset.modelTarget === "minimax-voice-model") {
       state.appConfig.minimaxVoice.model = nextModel || state.appConfig.minimaxVoice.model;
+    } else if (apiLane === "imageGeneration" && state.appConfig.imageGeneration) {
+      state.appConfig.imageGeneration.model = nextModel || state.appConfig.imageGeneration.model;
     } else if (apiLane === "chatFallback" && state.appConfig.chatFallback) {
       state.appConfig.chatFallback.model = nextModel || state.appConfig.chatFallback.model;
     } else if (apiLane === "memory" && state.appConfig.memory) {
