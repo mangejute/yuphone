@@ -26385,7 +26385,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.20-quote-time-context-budget";
+const APP_BUILD_VERSION_LABEL = "v2026.05.25-late-reply-awareness";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -41676,7 +41676,9 @@ const MONITOR_SUBTASK_VARIETY_RULE =
 const ROLE_LIFE_MEMORY_CHAT_RULE =
   "如果 payload.roleContext.monitor.timeline 有内容 这些是角色今天已经发生或正在发生的真实生活轨迹 不是给用户看的设定 如果 payload.roleContext.events 有内容 这些是角色真实经历过的突发事件和事件簿节点 用户问今天 刚才 路上 突发事件 灵感 某个 NPC 或生活轨迹时 必须优先按这些记忆自然回答 记不清细节可以说记不太准 但不要否认发生过 也不要把它说成系统生成的小故事";
 const ROLE_REAL_TIME_PROGRESS_CHAT_RULE =
-  "每轮聊天都必须读取 payload.roleContext.currentTimePlainText 或 payload.roleContext.currentTime 作为当前真实时间，并逐条读取 recentMessages 里的 [时间 ...] 标签来判断旧消息距现在多久；如果消息里有 [引用:原消息；时间=...]，必须按引用原消息时间理解那句被引用的话，不能把引用预览误当成当前刚说的话。昨天、数小时前或更早的用户消息只能当作旧话题或后续追问来接，严禁说成“刚刚”“刚买”“现在才要去买”“这会儿才提到”；只有时间标签显示几分钟内，才可以用刚刚/刚才。按现实合理时间推进剧情、地点和手头动作。当前行程是持续状态范围，不是一句固定台词；进入某个长时间段后，角色应已经在该地点展开子动作、遇到新细节或切到下一个合理小步骤，不能连续多轮停在“刚准备去”“刚拎着东西要出发”“马上过去”这种起步动作里。如果 09:00-12:00 都在便利店，09:50 就应表现为已经在便利店内处理、等待、补货、和人搭话或被小插曲打断，而不是还在去便利店路上；除非用户明确问时间，不要机械报时。";
+  "每轮聊天都必须读取 payload.roleContext.currentTimePlainText 或 payload.roleContext.currentTime 作为当前真实时间，并逐条读取 recentMessages 里的 [时间 ...] 标签来判断旧消息距现在多久；如果 payload.roleContext.timeContext.currentTurnReplyGap 存在，它表示用户本轮回复与角色上一轮消息之间的真实间隔，比 minutesSinceLastMessage 更重要。currentTurnReplyGap.minutes 超过 180 或 crossesDay 为 true 时，角色不能像刚刚一直在聊一样无事发生，第一反应要自然带出等待、终于回、被晾着、松口气、小埋怨、撒娇或嘴硬中的一种，再接用户本轮内容；不要机械报时，也不要说“根据时间间隔”。如果消息里有 [引用:原消息；时间=...]，必须按引用原消息时间理解那句被引用的话，不能把引用预览误当成当前刚说的话。昨天、数小时前或更早的用户消息只能当作旧话题或后续追问来接，严禁说成“刚刚”“刚买”“现在才要去买”“这会儿才提到”；只有时间标签显示几分钟内，才可以用刚刚/刚才。按现实合理时间推进剧情、地点和手头动作。当前行程是持续状态范围，不是一句固定台词；进入某个长时间段后，角色应已经在该地点展开子动作、遇到新细节或切到下一个合理小步骤，不能连续多轮停在“刚准备去”“刚拎着东西要出发”“马上过去”这种起步动作里。如果 09:00-12:00 都在便利店，09:50 就应表现为已经在便利店内处理、等待、补货、和人搭话或被小插曲打断，而不是还在去便利店路上；除非用户明确问时间，不要机械报时。";
+const ROLE_LATE_USER_REPLY_CHAT_RULE =
+  "如果 payload.roleContext.timeContext.currentTurnReplyGap 或纯文本上下文里的“用户本轮回复间隔”显示用户隔了数小时、跨天或更久才回角色上一轮消息，普通聊天第一反应必须自然带出等待感、终于回、被晾着、松口气、小埋怨、撒娇或嘴硬之一，再接本轮用户内容；不要像没发生，也不要机械报时。短间隔不用刻意提。";
 const ROLE_CHAT_PUNCTUATION_SOFT_RULE =
   "问号和感叹号只在语气自然需要时使用 不要每条消息都带";
 const ROLE_SUBJECTIVE_AWARENESS_RULE =
@@ -41709,7 +41711,7 @@ const INTERNAL_PROMPTS = {
     "你是角色离线留言生成器 你的说话方式必须和普通聊天回复几乎完全一致 要像真人顺手留下一整轮消息 而不是系统汇报状态 绝不能只留一句 当用户不在当前聊天界面时 角色会在每个离线时间点各留下一轮像真人发来的离线消息 不是整次离线总共只留 3 到 6 条 你必须结合核心人设 世界书 NPC 关系 地图地点 当前行程 生活轨迹 长短期目标 事件簿 最近对话 自动总结和长期记忆 在每个时间点生成 3 到 6 条自然消息 不能少于 3 条 也不能多于 6 条 并且必须把 payload.roleContext.currentTime 和 payload.roleContext.timeContext 当作当前真实时间背景 让离线留言带有此刻的生活推进感 不要像几小时前的旧草稿 也不要像系统播报近况。离线留言应该来自角色此刻还没散掉的生活余波和对用户的关系判断，不是把近况按条汇报；先想“我为什么现在会顺手给用户留这几句”，再写成自然消息，只露一点痕迹，不要把原因整段讲透。不写旁白 不写括号动作心理 不要句号 不要假装用户刚刚发了新消息 不要机械复述当前位置 目标 事件簿或提示词里的原话 也不要整段像汇报工作 更不要把一句完整的话拆成几条零碎消息 如果当前天气存在 只有它真的影响出门 状态 行程推进或话题时才顺手带一下 普通天气不要刻意提 若天气和当前行程打架 优先把内容写成带伞 躲雨 改室内 路上被天气打断这种临场变化 前端可能会把其中一条普通文字消息转成语音条 所以每一条 text content 都只能是角色真正会说出口的话 不允许动作描述 心情描述 也不允许任何括号里的内容 也不要输出 emoji 颜文字或单独的表情符号 普通 text 或 voice content 里都不要夹带 emoji 默认只返回文字消息 只有在系统额外明确要求你发语音 图片或表情包时 才返回对应类型消息 必须严格沿用当前角色身份 地点 关系和人生轨迹 不要把内部参考线索直接写成斜杠分隔符 例如 / 或 / / 这种连接符",
 };
 
-INTERNAL_PROMPTS.chat = `${INTERNAL_PROMPTS.chat} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
+INTERNAL_PROMPTS.chat = `${INTERNAL_PROMPTS.chat} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE} ${ROLE_LATE_USER_REPLY_CHAT_RULE}`;
 INTERNAL_PROMPTS.proactive = `${INTERNAL_PROMPTS.proactive} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
 INTERNAL_PROMPTS.offline = `${INTERNAL_PROMPTS.offline} ${ROLE_SUBJECTIVE_AWARENESS_RULE} ${ROLE_SUBJECTIVE_EXPRESSION_RULE} ${ROLE_CHAT_PUNCTUATION_SOFT_RULE} ${ROLE_LIFE_MEMORY_CHAT_RULE} ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}`;
 
@@ -42452,6 +42454,77 @@ const formatChatContextTimestamp = (timestamp, now = new Date()) => {
   return [absolute, [dayLabel, relativeLabel].filter(Boolean).join("，")].filter(Boolean).join("（") + (dayLabel || relativeLabel ? "）" : "");
 };
 
+const formatChatContextDuration = (minutes = 0) => {
+  const safeMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+  if (safeMinutes < 1) return "不到1分钟";
+  if (safeMinutes < 60) return `${safeMinutes}分钟`;
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  if (hours < 24) return `${hours}小时${mins ? `${mins}分钟` : ""}`;
+  const days = Math.floor(hours / 24);
+  const restHours = hours % 24;
+  return `${days}天${restHours ? `${restHours}小时` : ""}`;
+};
+
+const buildCurrentTurnReplyGapContext = (role, now = new Date()) => {
+  const messages = Array.isArray(role?.chats?.messages) ? role.chats.messages : [];
+  if (!messages.length) return null;
+  const lastUserIndex = messages.length - 1;
+  if (messages[lastUserIndex]?.role !== "user") return null;
+  let firstUserIndex = lastUserIndex;
+  while (firstUserIndex > 0 && messages[firstUserIndex - 1]?.role === "user") {
+    firstUserIndex -= 1;
+  }
+  const userMessage = messages[firstUserIndex];
+  const roleMessageIndex = (() => {
+    for (let index = firstUserIndex - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === "ai") return index;
+    }
+    return -1;
+  })();
+  if (roleMessageIndex < 0) return null;
+  const roleMessage = messages[roleMessageIndex];
+  const userAt = parseValidTimestamp(userMessage?.timestamp || "");
+  const roleAt = parseValidTimestamp(roleMessage?.timestamp || "");
+  if (!userAt || !roleAt) return null;
+  const minutes = Math.max(0, Math.round((userAt.getTime() - roleAt.getTime()) / 60_000));
+  const currentDelayMinutes = Math.max(0, Math.round(((now instanceof Date ? now : new Date()).getTime() - userAt.getTime()) / 60_000));
+  const crossesDay = !isSameLocalCalendarDay(roleAt, userAt);
+  const isLong = minutes >= 180 || crossesDay;
+  return {
+    roleMessageAt: roleMessage.timestamp || roleAt.toISOString(),
+    userMessageAt: userMessage.timestamp || userAt.toISOString(),
+    roleMessageTimeText: formatChatContextTimestamp(roleAt, now),
+    userMessageTimeText: formatChatContextTimestamp(userAt, now),
+    minutes,
+    label: formatChatContextDuration(minutes),
+    crossesDay,
+    isLong,
+    currentDelayMinutes,
+  };
+};
+
+const formatCurrentTurnReplyGapLine = (gap = null) => {
+  if (!gap || !Number.isFinite(Number(gap.minutes))) return "";
+  const labels = [];
+  if (gap.isLong) labels.push("长间隔");
+  if (gap.crossesDay) labels.push("跨天");
+  const sourceText = [
+    gap.roleMessageTimeText ? `角色上次发言 ${gap.roleMessageTimeText}` : "",
+    gap.userMessageTimeText ? `用户本轮才回 ${gap.userMessageTimeText}` : "",
+  ]
+    .filter(Boolean)
+    .join("；");
+  return [
+    `用户本轮回复间隔：约 ${gap.label || formatChatContextDuration(gap.minutes)}`,
+    labels.length ? `判定：${labels.join("、")}` : "",
+    sourceText,
+    gap.isLong ? "回复时要自然承认等待感或被晾着的关系反应，再接用户这次说的话；不要当作刚刚无缝聊天" : "短间隔，不必刻意提等待",
+  ]
+    .filter(Boolean)
+    .join("；");
+};
+
 const buildRecentMessageTimeTag = (timestamp, now = new Date()) => {
   const normalized = formatChatContextTimestamp(timestamp, now);
   return normalized ? `[时间 ${normalized}]` : "";
@@ -42879,6 +42952,7 @@ const buildRoleTimeContext = (role, now = new Date()) => {
   const minutesSinceLastMessage = Number.isNaN(lastMessageMs)
     ? null
     : Math.max(0, Math.round((now.getTime() - lastMessageMs) / 60_000));
+  const currentTurnReplyGap = buildCurrentTurnReplyGapContext(role, now);
 
   return {
     nowText: currentTimeText,
@@ -42900,6 +42974,7 @@ const buildRoleTimeContext = (role, now = new Date()) => {
     nextTimeline: timeContext.next,
     lastMessageAt,
     minutesSinceLastMessage,
+    currentTurnReplyGap,
   };
 };
 
@@ -45982,6 +46057,7 @@ const buildChatSubjectiveAwarenessBlock = ({ userInput = "", roleContext = null 
     Number.isFinite(Number(timeContext?.minutesSinceLastMessage))
       ? `距离上一条聊天约 ${Math.max(0, Math.round(Number(timeContext.minutesSinceLastMessage)))} 分钟`
       : "",
+    formatCurrentTurnReplyGapLine(timeContext?.currentTurnReplyGap),
     recentMessages.length ? `最近几句：${recentMessages.join(" / ")}` : "",
     userInput ? `本轮用户输入：${truncateContextText(userInput, 140)}` : "",
   ].filter(Boolean);
@@ -46076,6 +46152,7 @@ const buildChatPlainTextContext = ({
     Number.isFinite(Number(timeContext.minutesSinceLastMessage))
       ? `距离上一条聊天：约 ${Math.max(0, Math.round(Number(timeContext.minutesSinceLastMessage)))} 分钟`
       : "",
+    formatCurrentTurnReplyGapLine(timeContext.currentTurnReplyGap),
     roleContext?.restStateHint ? `作息约束：${roleContext.restStateHint}` : "",
     roleContext?.timeContext ? `时间上下文：${compactChatContextValue(roleContext.timeContext, { textLimit: 180, itemLimit: 10 })}` : "",
     Array.isArray(roleContext?.goals) && roleContext.goals.length
@@ -46129,7 +46206,7 @@ const buildChatPlainTextContext = ({
     Array.isArray(roleContext?.recentMessages) && roleContext.recentMessages.length
       ? `最近聊天轨迹：\n${roleContext.recentMessages.join("\n")}`
       : "",
-    "时间判定：最近聊天前面的 [时间 ...] 是这条消息真实发生时间；[引用:原消息；时间=...] 是被引用那条旧消息的原始时间；旧消息只能当作旧话题或后续追问来接，不能说成刚刚发生",
+    "时间判定：最近聊天前面的 [时间 ...] 是这条消息真实发生时间；[引用:原消息；时间=...] 是被引用那条旧消息的原始时间；旧消息只能当作旧话题或后续追问来接，不能说成刚刚发生；如果“用户本轮回复间隔”是长间隔或跨天，先把等待感/被晾着/终于回来的关系反应自然带出来，再接用户这次的话",
     userInput ? `本轮用户输入：${String(userInput || "").trim()}` : "",
   ];
 
@@ -51656,6 +51733,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
 不要输出 emoji 颜文字或表情符号 不要单独一行只发一个 emoji
 不要把“我这会儿在线”“这会儿在线”“我还在这边”“在线中”这种报在线状态的话当成正式回复正文
 每轮先按“自我生活线”和“关系反应线”理解当前处境，再输出聊天消息；回复要像角色本人此刻从生活里抬头看见用户消息后的反应
+如果纯文本上下文显示“用户本轮回复间隔”为长间隔或跨天，第一条或前两条消息要自然承认等待感、终于回、被晾着、松口气、小埋怨、撒娇或嘴硬之一，再接用户本轮内容；不能像一直无缝聊天一样直接回答
 不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
 不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
 绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体、只能处理或生成文本，也不要说“我的设计用途只是处理和生成文本”
@@ -51666,6 +51744,7 @@ const requestPrimaryChatReplyRescueRewrite = async (
 必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、昨天/今天/明天行程窗口、时间、生活轨迹、突发事件、地图、NPC 和目标；用户问到相关内容时按真实上下文回答
 优先消化“最高优先级：角色主观意识”里的自我生活线与关系反应线，再写自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
+${ROLE_LATE_USER_REPLY_CHAT_RULE}
 ${hasImageAttachments ? "如果这轮带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再重写回复 看不清的部分不要硬编" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
 ${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行消息里必须至少有 1 行使用 [图片] 标签，图片卡本身算一条消息，优先放在第 2 到第 4 行，格式写成 [图片] 上帝视角照片描述｜地点；必须由你根据当前角色和现场上下文新写具体照片描述，不能只写泛泛模板，也不能省略图片卡；把它当成文字版图片卡片，不需要真实图片文件" : ""}
@@ -51810,6 +51889,7 @@ const requestPrimaryChatReplyTextFallback = async (
 不要输出 emoji 颜文字或表情符号 不要单独一行只发一个 emoji
 不要把“我这会儿在线”“这会儿在线”“我还在这边”“在线中”这种报在线状态的话当成正式回复正文
 每轮先按“自我生活线”和“关系反应线”理解当前处境，再输出聊天消息；回复要像角色本人此刻从生活里抬头看见用户消息后的反应
+如果纯文本上下文显示“用户本轮回复间隔”为长间隔或跨天，第一条或前两条消息要自然承认等待感、终于回、被晾着、松口气、小埋怨、撒娇或嘴硬之一，再接用户本轮内容；不能像一直无缝聊天一样直接回答
 不要只围着用户服务，也不要只汇报自己的状态；要让角色自己的生活余波和对用户的关系判断同时影响语气
 不要把这套思考过程写出来，只让它自然影响 3 到 6 行消息
 绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体、只能处理或生成文本，也不要说“我的设计用途只是处理和生成文本”
@@ -51820,6 +51900,7 @@ const requestPrimaryChatReplyTextFallback = async (
 必须读取下方纯文本参考上下文里的用户设定、角色资料、世界书、重要记忆、自动总结、最近聊天轨迹、昨天/今天/明天行程窗口、时间、生活轨迹、突发事件、地图、NPC 和目标；用户问到相关内容时按真实上下文回答
 优先消化“最高优先级：角色主观意识”里的自我生活线与关系反应线，再写自然聊天；不要把上下文清单念给用户
 ${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
+${ROLE_LATE_USER_REPLY_CHAT_RULE}
 ${hasImageAttachments ? "如果这轮带了用户图片 你必须先看最新一张图里能确认的主体 场景 关键文字和明显元素 再回复 看不清的部分不要硬编 更不能把没看到的食物 商品 地点或品牌说成看到了" : ""}
 ${REFERENCE_CITY_USAGE_RULE}
 ${forceImageReply ? "这轮用户明确要看图或照片 后面的 3 到 6 行消息里必须至少有 1 行使用 [图片] 标签，图片卡本身算一条消息，优先放在第 2 到第 4 行，格式写成 [图片] 上帝视角照片描述｜地点；必须由你根据当前角色和现场上下文新写具体照片描述，不能只写泛泛模板，也不能省略图片卡；把它当成文字版图片卡片，不需要真实图片文件" : ""}
