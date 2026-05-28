@@ -26931,7 +26931,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "5月28日-4";
+const APP_BUILD_VERSION_LABEL = "5月29日-1";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -35302,13 +35302,8 @@ const getJourneyRoleTodoStatus = (todo = {}) => {
 };
 
 const getJourneyRoleTodoTypeLabel = (todo = {}) => {
-  const explicit = String(todo?.category || "").trim();
-  if (explicit) return explicit;
-  const type = String(todo?.type || "todo").trim();
-  if (type === "deferred-photo") return "照片";
-  if (type === "reminder") return "提醒";
-  if (type === "today-todo") return "今日";
-  return "待办";
+  void todo;
+  return "";
 };
 
 const getJourneyTodoActor = (value = "", fallback = "user") => {
@@ -35339,7 +35334,6 @@ const getJourneyTodoActionLabel = (todo = {}, role = null) => {
     const target = getJourneyTodoActor(todo?.targetSpeaker || "user", "user") === "role" ? roleName : "你";
     return `${roleName}提醒${target}`;
   }
-  if (type === "deferred-photo") return `${roleName}发给你`;
   return getJourneyTodoAssigneeLabel(todo, role);
 };
 
@@ -35357,6 +35351,39 @@ const formatJourneyTodoDueLabel = (todo = {}) => {
   if (dateKey === todayKey) return `今天 ${clock}`;
   if (dateKey === tomorrowKey) return `明天 ${clock}`;
   return `${formatJourneyDateLabel(dateKey)} ${clock}`;
+};
+
+const normalizeJourneyTodoCompareText = (value = "") =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[\s。！？!?,，、；;：:「」『』“”"'（）()\[\]【】]+/gu, "")
+    .trim();
+
+const isJourneyPhotoTodoLike = (todo = {}) => {
+  const text = [todo?.title, todo?.actionText, todo?.sourceText, todo?.ackText, todo?.detail, todo?.triggerText].filter(Boolean).join(" ");
+  return String(todo?.type || "") === "deferred-photo" || /拍|照|图|照片|自拍|现场照|图片/u.test(text);
+};
+
+const getJourneyPhotoTodoTriggerKind = (todo = {}) => {
+  const explicit = String(todo?.triggerKind || "").trim();
+  if (["home", "later"].includes(explicit)) return explicit;
+  const text = [todo?.title, todo?.actionText, todo?.sourceText, todo?.ackText, todo?.detail, todo?.triggerText].filter(Boolean).join(" ");
+  if (/回去|回家|到家|回屋|到屋|进屋|回房|回卧室|回公寓|回住处|回宿舍|回酒店|收工|下班|洗完澡|睡前|上床|躺下|家里|屋里|卧室|公寓|住处|宿舍|酒店房间/u.test(text)) return "home";
+  if (/等|待会|一会|等会|晚点|稍后|到时候|之后|回头/u.test(text)) return "later";
+  return "";
+};
+
+const shouldHideJourneyTodoAsDuplicate = (todo = {}, todos = []) => {
+  if (!isJourneyPhotoTodoLike(todo) || String(todo?.type || "") === "deferred-photo") return false;
+  const triggerKind = getJourneyPhotoTodoTriggerKind(todo);
+  const text = normalizeJourneyTodoCompareText(todo.sourceText || todo.actionText || todo.title || "");
+  return (Array.isArray(todos) ? todos : []).some((candidate) => {
+    if (!candidate || candidate.id === todo.id || String(candidate.type || "") !== "deferred-photo") return false;
+    const candidateTrigger = getJourneyPhotoTodoTriggerKind(candidate);
+    if (triggerKind && candidateTrigger && triggerKind !== candidateTrigger) return false;
+    const candidateText = normalizeJourneyTodoCompareText(candidate.sourceText || candidate.actionText || candidate.title || "");
+    return !text || !candidateText || text === candidateText || text.includes(candidateText) || candidateText.includes(text) || Boolean(triggerKind || candidateTrigger);
+  });
 };
 
 const getJourneyTodoDetailText = (todo = {}, done = false) => {
@@ -35379,6 +35406,7 @@ const formatJourneyTodoEditorDateTimeLocal = (value = "") => {
 const getRoleJourneyTodos = (role) =>
   (Array.isArray(role?.todos) ? role.todos : [])
     .filter((todo) => todo && getJourneyRoleTodoStatus(todo) !== "cancelled")
+    .filter((todo, _index, todos) => !shouldHideJourneyTodoAsDuplicate(todo, todos))
     .sort((left, right) => {
       const leftDone = getJourneyRoleTodoStatus(left) === "done" ? 1 : 0;
       const rightDone = getJourneyRoleTodoStatus(right) === "done" ? 1 : 0;
@@ -35415,11 +35443,12 @@ const renderJourneyTodoStrip = (role) => {
             const detail = getJourneyTodoDetailText(todo, done);
             const typeLabel = getJourneyRoleTodoTypeLabel(todo);
             const sourceLabel = getJourneyTodoSourceLabel(todo, role);
+            const titlePrefix = typeLabel ? `<span class="journey-todo-type">${escapeHtml(typeLabel)}</span>` : "";
             return `
               <div class="journey-todo-item ${done ? "is-done" : ""} ${busy || summaryPending ? "is-busy" : ""}">
                 <button class="journey-todo-check" type="button" data-action="toggle-role-todo-status" data-role-id="${roleId}" data-todo-id="${escapeHtml(todo.id || "")}" aria-label="${done ? "恢复未完成" : "划掉待办"}">${done ? "✓" : ""}</button>
                 <div class="journey-todo-copy">
-                  <strong><span class="journey-todo-type">${escapeHtml(typeLabel)}</span>${escapeHtml(title)}</strong>
+                  <strong>${titlePrefix}${escapeHtml(title)}</strong>
                   <small class="journey-todo-source">${escapeHtml(sourceLabel)}</small>
                   ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
                 </div>
@@ -35437,19 +35466,10 @@ const renderJourneyTodoEditorSheet = (state, role) => {
   const draft = state.journeyTodoEditDraft;
   if (!draft) return "";
   const roleName = getJourneyTodoRoleName(role, draft);
-  const type = String(draft.type || "today-todo").trim();
-  const sourceSpeaker = getJourneyTodoActor(draft.sourceSpeaker || "user", "user");
   const assignee = getJourneyTodoActor(draft.assignee || "user", "user");
-  const targetSpeaker = getJourneyTodoActor(draft.targetSpeaker || "user", "user");
   const dueAtLocal = String(draft.dueAtLocal || "").trim() || formatJourneyTodoEditorDateTimeLocal(draft.dueAt || "");
-  const typeOptions = [
-    ["today-todo", "今日待办"],
-    ["role-todo", "角色要做"],
-    ["reminder", "提醒"],
-    ["deferred-photo", "补发图片"],
-  ];
   const speakerOptions = [
-    ["user", "用户"],
+    ["user", "你"],
     ["role", roleName],
   ];
   return renderChatBottomSheet(
@@ -35463,35 +35483,16 @@ const renderJourneyTodoEditorSheet = (state, role) => {
 
         <div class="journey-todo-editor-grid">
           <label class="journey-todo-editor-field">
-            <span>类型</span>
-            <select class="soft-input" data-journey-todo-edit-field="type">
-              ${typeOptions.map(([value, label]) => `<option value="${value}" ${type === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
-            </select>
-          </label>
-          <label class="journey-todo-editor-field">
-            <span>谁说的</span>
-            <select class="soft-input" data-journey-todo-edit-field="sourceSpeaker">
-              ${speakerOptions.map(([value, label]) => `<option value="${value}" ${sourceSpeaker === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
-            </select>
-          </label>
-          <label class="journey-todo-editor-field">
             <span>谁来做</span>
             <select class="soft-input" data-journey-todo-edit-field="assignee">
               ${speakerOptions.map(([value, label]) => `<option value="${value}" ${assignee === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
             </select>
           </label>
           <label class="journey-todo-editor-field">
-            <span>提醒谁</span>
-            <select class="soft-input" data-journey-todo-edit-field="targetSpeaker">
-              ${speakerOptions.map(([value, label]) => `<option value="${value}" ${targetSpeaker === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
-            </select>
+            <span>完成时间</span>
+            <input class="soft-input" type="datetime-local" data-journey-todo-edit-field="dueAtLocal" value="${escapeHtml(dueAtLocal)}" />
           </label>
         </div>
-
-        <label class="journey-todo-editor-field is-full">
-          <span>完成时间</span>
-          <input class="soft-input" type="datetime-local" data-journey-todo-edit-field="dueAtLocal" value="${escapeHtml(dueAtLocal)}" />
-        </label>
 
         <label class="journey-todo-editor-field is-full">
           <span>补充</span>
@@ -54575,11 +54576,12 @@ const parseAppUserAssignedRoleTodoRequests = (input = "", now = new Date()) => {
   const text = normalizeTodoText(input);
   if (!text || !APP_USER_ROLE_TODO_INTENT_RE.test(text)) return [];
   if (APP_TODO_COMPLETION_RE.test(text) || APP_TODO_CANCEL_RE.test(text)) return [];
+  if (isDeferredPhotoRequest(text)) return [];
   const due = parseAppReminderDueDate(text, now);
   const titles = splitAppTodoTitleList(extractAppUserAssignedRoleTodoTitle(text));
   return titles.map((title, index) => ({
     type: "role-todo",
-    category: "角色",
+    category: "",
     title,
     detail: "你交代角色等会要做的事",
     sourceSpeaker: "user",
@@ -54621,7 +54623,7 @@ const parseAppRolePromisedTodos = (input = "", now = new Date()) => {
     const dueAt = triggerKind === "later" ? due.date.toISOString() : "";
     todos.push({
       type: "deferred-photo",
-      category: "照片",
+      category: "",
       title: buildDeferredPhotoTodoTitle(text, triggerKind),
       detail: "角色承诺稍后补发照片",
       sourceSpeaker: "role",
@@ -54641,7 +54643,7 @@ const parseAppRolePromisedTodos = (input = "", now = new Date()) => {
     if (title && !/提醒你|叫你|喊你|拍照|照片|图片|自拍/u.test(title)) {
       todos.push({
         type: "role-todo",
-        category: "角色",
+        category: "",
         title,
         detail: "角色自己等会要做的事",
         sourceSpeaker: "role",
@@ -54662,6 +54664,7 @@ const parseAppRolePromisedTodos = (input = "", now = new Date()) => {
 const shouldMergeAppTodo = (todo = {}, payload = {}) => {
   if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
   const type = String(payload.type || "todo").trim();
+  if (areEquivalentDeferredPhotoTodos(todo, payload)) return true;
   if (String(todo.type || "todo").trim() !== type) return false;
   const existingMessageId = String(todo.sourceMessageId || "").trim();
   const incomingMessageId = String(payload.sourceMessageId || "").trim();
@@ -54684,6 +54687,7 @@ const shouldSuppressAppTodoByExisting = (todo = {}, payload = {}) => {
   const status = getAppRoleTodoStatus(todo);
   if (!["done", "cancelled"].includes(status)) return false;
   const type = String(payload.type || "todo").trim();
+  if (areEquivalentDeferredPhotoTodos(todo, payload)) return true;
   if (String(todo.type || "todo").trim() !== type) return false;
   const existingMessageId = String(todo.sourceMessageId || "").trim();
   const incomingMessageId = String(payload.sourceMessageId || "").trim();
@@ -54701,6 +54705,41 @@ const shouldSuppressAppTodoByExisting = (todo = {}, payload = {}) => {
   return String(todo.triggerKind || "") === String(payload.triggerKind || "");
 };
 
+const hasDeferredPhotoTodoEquivalent = (role = null, payload = {}) =>
+  Boolean(
+    role &&
+      (Array.isArray(role.todos) ? role.todos : []).some(
+        (todo) => getAppRoleTodoStatus(todo) === "pending" && areEquivalentDeferredPhotoTodos(todo, payload),
+      ),
+  );
+
+const mergeDuplicateRoleTodosForRuntime = (role = null, now = new Date()) => {
+  if (!role || !Array.isArray(role.todos) || role.todos.length < 2) return false;
+  let changed = false;
+  role.todos.forEach((todo) => {
+    if (!todo || getAppRoleTodoStatus(todo) !== "pending" || String(todo.type || "") !== "role-todo") return;
+    const deferredPhoto = role.todos.find(
+      (candidate) => candidate?.id !== todo.id && getAppRoleTodoStatus(candidate) === "pending" && areEquivalentDeferredPhotoTodos(candidate, todo),
+    );
+    if (!deferredPhoto) return;
+    const nowIsoText = now.toISOString();
+    deferredPhoto.ackSpeaker = deferredPhoto.ackSpeaker || normalizeAppTodoSourceSpeaker(todo.sourceSpeaker || "role");
+    deferredPhoto.ackMessageId = deferredPhoto.ackMessageId || String(todo.sourceMessageId || "").trim();
+    deferredPhoto.ackText = deferredPhoto.ackText || String(todo.sourceText || "").trim();
+    deferredPhoto.actionText = deferredPhoto.actionText || String(todo.actionText || todo.title || "").trim();
+    deferredPhoto.imageDescription = normalizeTodoText(deferredPhoto.imageDescription || todo.imageDescription || todo.sourceText || todo.title || "");
+    deferredPhoto.updatedAt = nowIsoText;
+    markAppRoleTodoStatus(role, todo.id, "cancelled", String(todo.sourceMessageId || "").trim(), now, {
+      executionStartedAt: "",
+      executionError: "",
+      updatedAt: nowIsoText,
+      mergedIntoTodoId: deferredPhoto.id || "",
+    });
+    changed = true;
+  });
+  return changed;
+};
+
 const upsertAppRoleTodo = (roleId = "", payload = {}) => {
   if (!roleId || !payload?.title) return false;
   const nowIsoText = new Date().toISOString();
@@ -54711,7 +54750,12 @@ const upsertAppRoleTodo = (roleId = "", payload = {}) => {
     if (nextRole.todos.some((todo) => shouldSuppressAppTodoByExisting(todo, normalizedPayload))) {
       return nextRole;
     }
-    const existing = nextRole.todos.find((todo) => shouldMergeAppTodo(todo, normalizedPayload));
+    const existing = nextRole.todos.find((todo) => {
+      if (!shouldMergeAppTodo(todo, normalizedPayload)) return false;
+      const existingType = String(todo.type || "todo").trim();
+      const payloadType = String(normalizedPayload.type || "todo").trim();
+      return existingType === payloadType || payloadType === "deferred-photo";
+    });
     if (existing) {
       const existingSourceSpeaker = normalizeAppTodoSourceSpeaker(existing.sourceSpeaker || "user");
       const payloadSourceSpeaker = normalizeAppTodoSourceSpeaker(normalizedPayload.sourceSpeaker || existingSourceSpeaker);
@@ -54778,6 +54822,7 @@ const upsertAppRoleTodo = (roleId = "", payload = {}) => {
 const upsertGeneralRoleTodosFromUserMessage = (roleId = "", { sourceMessageId = "", sourceText = "", now = new Date() } = {}) => {
   const normalizedSourceText = normalizeTodoText(sourceText);
   if (!roleId || !normalizedSourceText) return false;
+  if (isDeferredPhotoRequest(normalizedSourceText)) return false;
   const reminder = parseAppReminderTodoRequest(normalizedSourceText, now);
   if (reminder) {
     const changed = upsertAppRoleTodo(roleId, {
@@ -55051,16 +55096,13 @@ const normalizeAppTodoEditorType = (value = "") => {
 };
 
 const getAppTodoEditorDefaultCategory = (type = "today-todo") => {
-  if (type === "deferred-photo") return "照片";
-  if (type === "role-todo") return "角色";
+  void type;
   return "";
 };
 
 const getAppTodoEditorDefaultDetail = (type = "today-todo") => {
-  if (type === "reminder") return "到点后角色会在聊天里提醒你";
-  if (type === "deferred-photo") return "到点后角色会补发图片";
-  if (type === "role-todo") return "角色等会要做的事";
-  return "今日待办，完成后可以划掉";
+  void type;
+  return "";
 };
 
 const formatAppTodoEditorDateTimeLocal = (value = "") => {
@@ -55127,15 +55169,21 @@ const openRoleTodoEditor = (roleId = "", todoId = "") => {
 };
 
 const buildAppTodoPayloadFromEditorDraft = (draft = {}, existingTodo = null) => {
-  const type = normalizeAppTodoEditorType(draft.type);
+  const existingType = normalizeAppTodoEditorType(existingTodo?.type || draft.type);
+  const editedAssignee = normalizeAppTodoActor(draft.assignee || existingTodo?.assignee || getAppTodoDefaultAssignee({ type: existingType }), "user");
+  const type = existingType === "deferred-photo" || (existingType === "reminder" && editedAssignee === "role")
+    ? existingType
+    : editedAssignee === "role"
+      ? "role-todo"
+      : "today-todo";
   const now = new Date();
-  const title = normalizeAppTodoTitle(draft.title, type === "reminder" ? "提醒事项" : type === "deferred-photo" ? "补发图片" : "待办事项");
+  const title = normalizeAppTodoTitle(draft.title, "待办事项");
   const rawDueAt = parseAppTodoEditorDateTimeLocal(draft.dueAtLocal);
   const needsTimeFallback = ["reminder", "role-todo", "deferred-photo"].includes(type);
   const fallbackDueAt = needsTimeFallback ? new Date(now.getTime() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString() : "";
   const dueAt = rawDueAt || fallbackDueAt;
   const dueDate = parseValidTimestamp(dueAt || "");
-  const triggerKind = dueDate ? "time" : type === "deferred-photo" ? String(draft.triggerKind || existingTodo?.triggerKind || "home").trim() || "home" : "manual";
+  const triggerKind = type === "deferred-photo" ? String(draft.triggerKind || existingTodo?.triggerKind || (dueDate ? "later" : "home")).trim() || "home" : dueDate ? "time" : "manual";
   const triggerText = dueDate
     ? formatAppTodoDueTriggerText(dueDate, now)
     : type === "today-todo"
@@ -55146,6 +55194,7 @@ const buildAppTodoPayloadFromEditorDraft = (draft = {}, existingTodo = null) => 
   const defaultAssignee = getAppTodoDefaultAssignee({ type });
   const defaultTarget = getAppTodoDefaultTarget({ type });
   const detail = normalizeTodoText(draft.detail || getAppTodoEditorDefaultDetail(type));
+  const targetSpeaker = type === "reminder" || type === "deferred-photo" ? "user" : editedAssignee || defaultTarget;
   return {
     type,
     title,
@@ -55154,14 +55203,14 @@ const buildAppTodoPayloadFromEditorDraft = (draft = {}, existingTodo = null) => 
     summaryError: "",
     summarizedAt: String(existingTodo?.summarizedAt || "").trim(),
     detail,
-    category: String(draft.category || getAppTodoEditorDefaultCategory(type)).trim(),
+    category: "",
     triggerKind,
     triggerText,
     dueAt,
     dateKey: dueDate ? formatDateKey(dueDate) : type === "today-todo" ? formatDateKey(now) : "",
     sourceSpeaker: normalizeAppTodoSourceSpeaker(draft.sourceSpeaker || existingTodo?.sourceSpeaker || "user"),
-    assignee: normalizeAppTodoActor(draft.assignee || existingTodo?.assignee || defaultAssignee, defaultAssignee),
-    targetSpeaker: normalizeAppTodoActor(draft.targetSpeaker || existingTodo?.targetSpeaker || defaultTarget, defaultTarget),
+    assignee: editedAssignee || defaultAssignee,
+    targetSpeaker,
     sourceText: normalizeTodoText(draft.sourceText || existingTodo?.sourceText || title),
     imageDescription: normalizeTodoText(draft.imageDescription || existingTodo?.imageDescription || (type === "deferred-photo" ? detail || title : "")),
     order: dueDate ? dueDate.getTime() : Number(existingTodo?.order || Date.now()),
@@ -55302,9 +55351,10 @@ const toggleRoleTodoDoneById = (roleId = "", todoId = "") => {
 };
 
 const PHOTO_REQUEST_RE = /(?:发|来|拍|给我|让我|想看|看看).{0,12}(?:图|照|照片|自拍|现场照|图片)|(?:图|照|照片|自拍|现场照|图片).{0,12}(?:发|拍|给我|看看|看你)/i;
-const FUTURE_PHOTO_TRIGGER_RE = /(?:等|待会|一会|等会|晚点|稍后|到时候|之后|回头|回家|到家|到屋|进屋|下班|收工|洗完澡|睡前|上床|躺下)/i;
-const HOME_TRIGGER_RE = /(?:回家|到家|回屋|到屋|进屋|回房|回卧室|回公寓|回住处|回宿舍|回酒店|收工|下班|洗完澡|睡前|上床|躺下|家里|屋里|卧室|公寓|住处|宿舍|酒店房间)/i;
+const FUTURE_PHOTO_TRIGGER_RE = /(?:等|待会|一会|等会|晚点|稍后|到时候|之后|回头|回去|回家|到家|到屋|进屋|下班|收工|洗完澡|睡前|上床|躺下)/i;
+const HOME_TRIGGER_RE = /(?:回去|回家|到家|回屋|到屋|进屋|回房|回卧室|回公寓|回住处|回宿舍|回酒店|收工|下班|洗完澡|睡前|上床|躺下|家里|屋里|卧室|公寓|住处|宿舍|酒店房间)/i;
 const HOME_PLACE_RE = /(?:家|屋|房间|卧室|床|客厅|公寓|住处|宿舍|酒店|民宿|洗澡|睡前|休息|收工|下班|到家|回家)/i;
+const DEFERRED_PHOTO_HOME_JOURNEY_RE = /(?:回去|回家|到家|回屋|到屋|进屋|回房|回卧室|回公寓|回住处|回宿舍|回酒店|返程|回程|收工|下班|洗完澡|睡前|上床|躺下|家里|屋里|卧室|客厅|公寓|住处|宿舍|酒店房间|休息)/i;
 
 const isDeferredPhotoRequest = (input = "") => {
   const text = normalizeTodoText(input);
@@ -55316,6 +55366,87 @@ const isDeferredPhotoRequest = (input = "") => {
 const inferDeferredPhotoTriggerKind = (input = "") => (HOME_TRIGGER_RE.test(input) ? "home" : "later");
 
 const formatDeferredPhotoTriggerText = (kind = "later") => (kind === "home" ? "回家后" : "稍后");
+
+const formatDeferredPhotoJourneyClock = (minutes = 0) => {
+  const normalized = ((Math.round(Number(minutes) || 0) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+};
+
+const buildDeferredPhotoJourneyDate = (dateKey = formatJourneyDayKey(), minutes = 0) =>
+  buildDateKeyClockDate(dateKey, formatDeferredPhotoJourneyClock(minutes));
+
+const isDeferredPhotoHomeJourneyEntry = (item = {}) => {
+  const text = normalizeTodoText([item?.title, item?.place, item?.detail, item?.mood].filter(Boolean).join(" "));
+  return Boolean(text && DEFERRED_PHOTO_HOME_JOURNEY_RE.test(text));
+};
+
+const findDeferredPhotoJourneyDue = (role = null, triggerKind = "later", now = new Date()) => {
+  if (!role || String(triggerKind || "later") !== "home") return null;
+  const safeNow = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+  const todayKey = formatJourneyDayKey(safeNow);
+  const dateKeys = [todayKey, shiftDateKey(todayKey, 1)];
+  const candidates = [];
+  dateKeys.forEach((dateKey) => {
+    getRoleTimelineForDate(role, dateKey).forEach((item, index) => {
+      if (!isDeferredPhotoHomeJourneyEntry(item)) return;
+      const range = parseRuntimeTimelineRange(item?.time || "");
+      if (!range) return;
+      const startDate = buildDeferredPhotoJourneyDate(dateKey, range.start);
+      let endDate = buildDeferredPhotoJourneyDate(dateKey, range.end);
+      if (!startDate || !endDate) return;
+      if (endDate.getTime() < startDate.getTime()) {
+        endDate = new Date(endDate.getTime() + 24 * 60 * 60_000);
+      }
+      if (endDate.getTime() < safeNow.getTime() - 60_000) return;
+      const dueDate = startDate.getTime() <= safeNow.getTime() && endDate.getTime() >= safeNow.getTime() ? safeNow : startDate;
+      candidates.push({
+        dueDate,
+        startDate,
+        endDate,
+        dateKey,
+        item,
+        index,
+      });
+    });
+  });
+  const match = candidates.sort((left, right) => left.dueDate.getTime() - right.dueDate.getTime() || left.index - right.index)[0] || null;
+  if (!match) return null;
+  return {
+    dueAt: match.dueDate.toISOString(),
+    dateKey: formatDateKey(match.dueDate),
+    triggerText: formatAppTodoDueTriggerText(match.dueDate, safeNow),
+    place: String(match.item?.place || "").trim(),
+  };
+};
+
+const isPhotoLikeTodo = (todo = {}) => {
+  const text = normalizeTodoText([todo?.title, todo?.actionText, todo?.sourceText, todo?.ackText, todo?.detail, todo?.triggerText].filter(Boolean).join(" "));
+  return String(todo?.type || "").trim() === "deferred-photo" || /拍|照|图|照片|自拍|现场照|图片/u.test(text);
+};
+
+const getDeferredPhotoCompareTriggerKind = (todo = {}) => {
+  const explicit = String(todo?.triggerKind || "").trim();
+  if (["home", "later"].includes(explicit)) return explicit;
+  const text = normalizeTodoText([todo?.title, todo?.actionText, todo?.sourceText, todo?.ackText, todo?.detail, todo?.triggerText].filter(Boolean).join(" "));
+  if (HOME_TRIGGER_RE.test(text)) return "home";
+  if (FUTURE_PHOTO_TRIGGER_RE.test(text)) return "later";
+  return "";
+};
+
+const areEquivalentDeferredPhotoTodos = (left = {}, right = {}) => {
+  if (!left || !right || !isPhotoLikeTodo(left) || !isPhotoLikeTodo(right)) return false;
+  if (String(left.type || "") !== "deferred-photo" && String(right.type || "") !== "deferred-photo") return false;
+  const leftTrigger = getDeferredPhotoCompareTriggerKind(left);
+  const rightTrigger = getDeferredPhotoCompareTriggerKind(right);
+  if (leftTrigger && rightTrigger && leftTrigger !== rightTrigger) return false;
+  const leftSource = normalizeAppTodoCompareText(left.sourceText || left.ackText || left.actionText || left.title || "");
+  const rightSource = normalizeAppTodoCompareText(right.sourceText || right.ackText || right.actionText || right.title || "");
+  if (leftSource && rightSource && (leftSource === rightSource || leftSource.includes(rightSource) || rightSource.includes(leftSource))) return true;
+  const leftTitle = normalizeAppTodoCompareTitle(left.actionText || left.title || left.sourceText || "");
+  const rightTitle = normalizeAppTodoCompareTitle(right.actionText || right.title || right.sourceText || "");
+  if (leftTitle && rightTitle && (leftTitle === rightTitle || leftTitle.includes(rightTitle) || rightTitle.includes(leftTitle))) return true;
+  return Boolean(leftTrigger || rightTrigger);
+};
 
 const buildDeferredPhotoTodoTitle = (sourceText = "", triggerKind = "later") => {
   const triggerText = formatDeferredPhotoTriggerText(triggerKind);
@@ -55330,10 +55461,15 @@ const upsertDeferredPhotoTodo = (roleId = "", { sourceMessageId = "", sourceText
   const normalizedSourceText = normalizeTodoText(sourceText);
   if (!roleId || !normalizedSourceText || !isDeferredPhotoRequest(normalizedSourceText)) return false;
   const triggerKind = inferDeferredPhotoTriggerKind(normalizedSourceText);
-  const nowIsoText = new Date().toISOString();
-  const deferredPhotoDueAt = triggerKind === "later" ? new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString() : "";
+  const now = new Date();
+  const nowIsoText = now.toISOString();
   updateRole(roleId, (nextRole) => {
     nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
+    const journeyDue = findDeferredPhotoJourneyDue(nextRole, triggerKind, now);
+    const deferredPhotoDueAt = journeyDue?.dueAt || (triggerKind === "later" ? new Date(now.getTime() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString() : "");
+    const deferredPhotoDueDate = parseValidTimestamp(deferredPhotoDueAt || "");
+    const deferredPhotoTriggerText = journeyDue?.triggerText || formatDeferredPhotoTriggerText(triggerKind);
+    const deferredPhotoPlace = String(journeyDue?.place || "").trim();
     const suppressed = nextRole.todos.some(
       (todo) =>
         getAppRoleTodoStatus(todo) !== "pending" &&
@@ -55349,31 +55485,47 @@ const upsertDeferredPhotoTodo = (roleId = "", { sourceMessageId = "", sourceText
         String(todo.type || "") === "deferred-photo" &&
         String(todo.triggerKind || "") === triggerKind,
     );
+    const duplicateRoleTodo = nextRole.todos.find(
+      (todo) =>
+        getAppRoleTodoStatus(todo) === "pending" &&
+        String(todo.type || "") === "role-todo" &&
+        areEquivalentDeferredPhotoTodos(todo, { type: "deferred-photo", triggerKind, sourceText: normalizedSourceText, title: buildDeferredPhotoTodoTitle(normalizedSourceText, triggerKind) }),
+    );
     if (existing) {
       existing.sourceMessageId = String(sourceMessageId || existing.sourceMessageId || "").trim();
       existing.sourceText = normalizedSourceText || existing.sourceText || "";
       existing.imageDescription = normalizeTodoText(imageDescription) || existing.imageDescription || "";
       existing.title = buildDeferredPhotoTodoTitle(existing.sourceText, triggerKind);
-      existing.triggerText = formatDeferredPhotoTriggerText(triggerKind);
+      existing.triggerText = deferredPhotoTriggerText;
       existing.dueAt = deferredPhotoDueAt || existing.dueAt || "";
-      existing.dateKey = deferredPhotoDueAt ? formatDateKey(deferredPhotoDueAt) : existing.dateKey || "";
+      existing.dateKey = deferredPhotoDueDate ? formatDateKey(deferredPhotoDueDate) : existing.dateKey || "";
+      existing.place = deferredPhotoPlace || existing.place || "";
+      existing.order = deferredPhotoDueDate ? deferredPhotoDueDate.getTime() : Number(existing.order || Date.now());
       existing.sourceSpeaker = normalizeAppTodoSourceSpeaker(existing.sourceSpeaker || "user");
       existing.assignee = normalizeAppTodoActor(existing.assignee || "role", "role");
       existing.targetSpeaker = normalizeAppTodoActor(existing.targetSpeaker || "user", "user");
       existing.updatedAt = nowIsoText;
+      if (duplicateRoleTodo) {
+        markAppRoleTodoStatus(nextRole, duplicateRoleTodo.id, "cancelled", duplicateRoleTodo.sourceMessageId || "", new Date(nowIsoText), {
+          executionStartedAt: "",
+          executionError: "",
+          updatedAt: nowIsoText,
+          mergedIntoTodoId: existing.id || "",
+        });
+      }
       return nextRole;
     }
-    nextRole.todos.unshift({
+    const newTodo = {
       id: createRoleTodoId(),
       type: "deferred-photo",
       status: "pending",
-      category: "照片",
+      category: "",
       title: buildDeferredPhotoTodoTitle(normalizedSourceText, triggerKind),
       detail: "等角色行程推进到对应状态后自动补发照片",
       triggerKind,
-      triggerText: formatDeferredPhotoTriggerText(triggerKind),
+      triggerText: deferredPhotoTriggerText,
       dueAt: deferredPhotoDueAt,
-      dateKey: deferredPhotoDueAt ? formatDateKey(deferredPhotoDueAt) : "",
+      dateKey: deferredPhotoDueDate ? formatDateKey(deferredPhotoDueDate) : "",
       sourceSpeaker: "user",
       assignee: "role",
       targetSpeaker: "user",
@@ -55381,9 +55533,19 @@ const upsertDeferredPhotoTodo = (roleId = "", { sourceMessageId = "", sourceText
       sourceText: normalizedSourceText,
       imageDescription: normalizeTodoText(imageDescription),
       actionText: buildDeferredPhotoTodoTitle(normalizedSourceText, triggerKind),
+      place: deferredPhotoPlace,
       createdAt: nowIsoText,
-      order: Date.now(),
-    });
+      order: deferredPhotoDueDate ? deferredPhotoDueDate.getTime() : Date.now(),
+    };
+    nextRole.todos.unshift(newTodo);
+    if (duplicateRoleTodo) {
+      markAppRoleTodoStatus(nextRole, duplicateRoleTodo.id, "cancelled", duplicateRoleTodo.sourceMessageId || "", new Date(nowIsoText), {
+        executionStartedAt: "",
+        executionError: "",
+        updatedAt: nowIsoText,
+        mergedIntoTodoId: newTodo.id || "",
+      });
+    }
     nextRole.todos = nextRole.todos.slice(0, APP_ROLE_TODO_MAX_ITEMS);
     return nextRole;
   }, { paintNow: false });
@@ -55459,6 +55621,36 @@ const markDeferredPhotoTodoDone = (role, todoId = "", messageId = "", now = new 
   markAppRoleTodoStatus(role, todoId, "done", messageId, now);
 };
 
+const syncDeferredPhotoTodosWithJourney = (role = null, now = new Date()) => {
+  if (!role || !Array.isArray(role.todos)) return false;
+  let changed = false;
+  role.todos.forEach((todo) => {
+    if (!todo || getAppRoleTodoStatus(todo) !== "pending") return;
+    if (String(todo.type || "") !== "deferred-photo" || String(todo.triggerKind || "") !== "home") return;
+    const journeyDue = findDeferredPhotoJourneyDue(role, "home", now);
+    if (!journeyDue?.dueAt) return;
+    const dueDate = parseValidTimestamp(journeyDue.dueAt);
+    if (!dueDate) return;
+    const nextTriggerText = journeyDue.triggerText || formatAppTodoDueTriggerText(dueDate, now);
+    const nextPlace = String(journeyDue.place || "").trim();
+    if (
+      String(todo.dueAt || "") === journeyDue.dueAt &&
+      String(todo.triggerText || "") === nextTriggerText &&
+      String(todo.place || "") === nextPlace
+    ) {
+      return;
+    }
+    todo.dueAt = journeyDue.dueAt;
+    todo.dateKey = formatDateKey(dueDate);
+    todo.triggerText = nextTriggerText;
+    todo.place = nextPlace || todo.place || "";
+    todo.order = dueDate.getTime();
+    todo.updatedAt = now.toISOString();
+    changed = true;
+  });
+  return changed;
+};
+
 const hasAppTodoExecutionStarted = (todo = {}, now = new Date()) => {
   const startedAt = parseValidTimestamp(todo?.executionStartedAt || "");
   if (!startedAt) return false;
@@ -55478,6 +55670,7 @@ const isRoleSelfTodoDue = (todo, now = new Date()) => {
   if (hasAppTodoExecutionStarted(todo, now)) return false;
   if (String(todo.type || "") !== "role-todo") return false;
   if (normalizeAppTodoActor(todo.assignee || "role", "role") !== "role") return false;
+  if (isPhotoLikeTodo(todo)) return false;
   const dueAt = parseValidTimestamp(todo.dueAt || "");
   return Boolean(dueAt && dueAt.getTime() <= now.getTime());
 };
@@ -78237,6 +78430,12 @@ const applyRuntime = async () => {
     if (syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now)) {
       changed = true;
     }
+    if (mergeDuplicateRoleTodosForRuntime(next, now)) {
+      changed = true;
+    }
+    if (syncDeferredPhotoTodosWithJourney(next, now)) {
+      changed = true;
+    }
     if (markDueTextTodosForApiExecution(next, now, { executionJobs: todoExecutionJobs })) {
       changed = true;
     }
@@ -78681,6 +78880,13 @@ eventRoot.addEventListener("input", (event) => {
         nextDraft.dueAtLocal = formatAppTodoEditorDateTimeLocal(new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString());
       }
     }
+    if (field === "assignee" && !String(nextDraft.id || "").trim() && String(nextDraft.type || "") !== "reminder") {
+      nextDraft.type = normalizeAppTodoActor(target.value, "user") === "role" ? "role-todo" : "today-todo";
+      nextDraft.targetSpeaker = getAppTodoDefaultTarget({ type: nextDraft.type });
+      if (nextDraft.type === "role-todo" && !String(nextDraft.dueAtLocal || "").trim()) {
+        nextDraft.dueAtLocal = formatAppTodoEditorDateTimeLocal(new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString());
+      }
+    }
     state.journeyTodoEditDraft = nextDraft;
     return;
   }
@@ -78785,6 +78991,13 @@ eventRoot.addEventListener("change", (event) => {
       nextDraft.category = getAppTodoEditorDefaultCategory(type);
       nextDraft.detail = nextDraft.detail || getAppTodoEditorDefaultDetail(type);
       if (!String(nextDraft.dueAtLocal || "").trim() && ["reminder", "role-todo", "deferred-photo"].includes(type)) {
+        nextDraft.dueAtLocal = formatAppTodoEditorDateTimeLocal(new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString());
+      }
+    }
+    if (field === "assignee" && !String(nextDraft.id || "").trim() && String(nextDraft.type || "") !== "reminder") {
+      nextDraft.type = normalizeAppTodoActor(target.value, "user") === "role" ? "role-todo" : "today-todo";
+      nextDraft.targetSpeaker = getAppTodoDefaultTarget({ type: nextDraft.type });
+      if (nextDraft.type === "role-todo" && !String(nextDraft.dueAtLocal || "").trim()) {
         nextDraft.dueAtLocal = formatAppTodoEditorDateTimeLocal(new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString());
       }
     }
