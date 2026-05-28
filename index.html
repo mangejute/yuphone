@@ -11557,6 +11557,102 @@ body {
   font-size: 12px;
 }
 
+.journey-todo-card {
+  padding: 12px 14px !important;
+}
+
+.journey-todo-list {
+  display: grid;
+  gap: 8px;
+}
+
+.journey-todo-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 34px;
+}
+
+.journey-todo-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(10, 132, 255, 0.55);
+  background: #ffffff;
+  color: #0a84ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.journey-todo-check:disabled {
+  cursor: default;
+}
+
+.journey-todo-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.journey-todo-copy strong {
+  color: #1d1d1f;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.journey-todo-type {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(10, 132, 255, 0.1);
+  color: #0a84ff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: 1px;
+}
+
+.journey-todo-copy small {
+  color: #8e8e93;
+  font-size: 11px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.journey-todo-source {
+  color: #3a3a3c !important;
+  font-weight: 700;
+}
+
+.journey-todo-item.is-done .journey-todo-check {
+  background: #34c759;
+  border-color: #34c759;
+  color: #ffffff;
+}
+
+.journey-todo-item.is-done .journey-todo-copy strong {
+  color: #8e8e93;
+  text-decoration: line-through;
+}
+
+.journey-todo-item.is-done .journey-todo-type {
+  background: rgba(142, 142, 147, 0.12);
+  color: #8e8e93;
+}
+
 .journey-sheet-wrap .journey-main strong,
 .journey-generator-wrap .journey-main strong {
   font-size: 13px;
@@ -24171,6 +24267,59 @@ const normalizeMessage = (message = {}) => ({
   timestamp: message.timestamp || nowIso(),
 });
 
+const normalizeRoleTodoStatus = (value = "") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["done", "completed", "finished", "checked"].includes(normalized)) return "done";
+  if (["cancelled", "canceled", "deleted"].includes(normalized)) return "cancelled";
+  return "pending";
+};
+
+const normalizeRoleTodoData = (todo = {}, index = 0) => {
+  const type = String(todo?.type || "todo").trim() || "todo";
+  const title = String(todo?.title || todo?.text || todo?.detail || "待办事项").trim() || "待办事项";
+  const status = normalizeRoleTodoStatus(todo?.status);
+  const dueAt = String(todo?.dueAt || todo?.remindAt || "").trim();
+  const dateKey = String(todo?.dateKey || todo?.targetDateKey || "").trim();
+  return {
+    id: todo?.id || uid("todo"),
+    type,
+    status,
+    title,
+    detail: String(todo?.detail || "").trim(),
+    category: String(todo?.category || "").trim(),
+    triggerKind: String(todo?.triggerKind || "").trim(),
+    triggerText: String(todo?.triggerText || "").trim(),
+    dueAt,
+    dateKey,
+    sourceSpeaker: String(todo?.sourceSpeaker || todo?.speaker || "user").trim() || "user",
+    sourceName: String(todo?.sourceName || "").trim(),
+    sourceMessageId: String(todo?.sourceMessageId || "").trim(),
+    sourceText: String(todo?.sourceText || "").trim(),
+    assignee: String(todo?.assignee || todo?.owner || "").trim(),
+    assigneeName: String(todo?.assigneeName || "").trim(),
+    targetSpeaker: String(todo?.targetSpeaker || todo?.target || "").trim(),
+    targetName: String(todo?.targetName || "").trim(),
+    ackSpeaker: String(todo?.ackSpeaker || "").trim(),
+    ackMessageId: String(todo?.ackMessageId || "").trim(),
+    ackText: String(todo?.ackText || "").trim(),
+    imageDescription: String(todo?.imageDescription || todo?.description || "").trim(),
+    place: String(todo?.place || "").trim(),
+    createdAt: todo?.createdAt || nowIso(),
+    updatedAt: String(todo?.updatedAt || "").trim(),
+    remindedAt: String(todo?.remindedAt || "").trim(),
+    reminderMessageId: String(todo?.reminderMessageId || "").trim(),
+    completedAt: status === "done" ? String(todo?.completedAt || todo?.doneAt || nowIso()).trim() : String(todo?.completedAt || "").trim(),
+    completedMessageId: String(todo?.completedMessageId || "").trim(),
+    order: Number.isFinite(Number(todo?.order)) ? Number(todo.order) : index,
+  };
+};
+
+const normalizeRoleTodosData = (todos = []) =>
+  normalizeArray(todos)
+    .map((todo, index) => normalizeRoleTodoData(todo, index))
+    .filter((todo) => todo.title)
+    .slice(0, 40);
+
 const createRole = (overrides = {}) => {
   const note = repairKnownText(overrides.note) || "角色A";
   const name = repairKnownText(overrides.name) || note;
@@ -24407,6 +24556,7 @@ const createRole = (overrides = {}) => {
           ],
     memory: normalizeArray(overrides.memory, ["喜欢你直说，不喜欢绕来绕去"]),
     livingMemory: createLivingMemoryData(overrides.livingMemory || {}),
+    todos: normalizeRoleTodosData(overrides.todos || overrides.pendingTodos),
     chats: {
       draft: overrides.chats?.draft || "",
       unreadCount: Math.max(0, Number(overrides.chats?.unreadCount || 0)),
@@ -24657,6 +24807,7 @@ const mergeRole = (role, fallback) => {
     npcs: normalizeArray(role.npcs).length > 0 ? role.npcs.map((npc) => createNpcEntryData(npc)) : fallback.npcs,
     memory: normalizeArray(role.memory).length > 0 ? role.memory : fallback.memory,
     livingMemory: createLivingMemoryData(role.livingMemory || fallback.livingMemory || {}),
+    todos: normalizeRoleTodosData(role.todos || role.pendingTodos || fallback.todos),
     moments: normalizeArray(role.moments),
     voiceCache: role.voiceCache || fallback.voiceCache,
     monitor: {
@@ -26667,7 +26818,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.26-mobile-viewport-fix";
+const APP_BUILD_VERSION_LABEL = "v2026.05.28-todo-speakers-assignees";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -35029,6 +35180,119 @@ const isJourneyEntryLikelyLifeTrackStory = (item = {}) => {
 const filterJourneyTimelineForDisplay = (items = []) =>
   (Array.isArray(items) ? items : []).filter((item) => !isJourneyEntryLikelyLifeTrackStory(item));
 
+const getJourneyRoleTodoStatus = (todo = {}) => {
+  const status = String(todo?.status || "pending").trim().toLowerCase();
+  if (["done", "completed", "finished", "checked"].includes(status)) return "done";
+  if (["cancelled", "canceled", "deleted"].includes(status)) return "cancelled";
+  return "pending";
+};
+
+const getJourneyRoleTodoTypeLabel = (todo = {}) => {
+  const explicit = String(todo?.category || "").trim();
+  if (explicit) return explicit;
+  const type = String(todo?.type || "todo").trim();
+  if (type === "deferred-photo") return "照片";
+  if (type === "reminder") return "提醒";
+  if (type === "today-todo") return "今日";
+  return "待办";
+};
+
+const getJourneyTodoActor = (value = "", fallback = "user") => {
+  const normalized = String(value || fallback || "").trim().toLowerCase();
+  if (["role", "ai", "assistant", "character"].includes(normalized) || /角色|对方|ta|她|他|它/i.test(normalized)) return "role";
+  return "user";
+};
+
+const getJourneyTodoRoleName = (role = null, todo = {}) =>
+  String(role?.profile?.note || role?.profile?.name || todo?.sourceName || "角色").trim() || "角色";
+
+const getJourneyTodoSourceLabel = (todo = {}, role = null) => {
+  const sourceSpeaker = getJourneyTodoActor(todo?.sourceSpeaker || "user", "user");
+  const roleName = getJourneyTodoRoleName(role, todo);
+  if (sourceSpeaker === "role") return `${roleName}说的`;
+  return todo?.ackSpeaker ? `你说的 · ${roleName}已应下` : "你说的";
+};
+
+const getJourneyTodoAssigneeLabel = (todo = {}, role = null) => {
+  const actor = getJourneyTodoActor(todo?.assignee || (todo?.type === "deferred-photo" || todo?.type === "reminder" ? "role" : "user"), "user");
+  return `${actor === "role" ? getJourneyTodoRoleName(role, todo) : "你"}要做`;
+};
+
+const getJourneyTodoActionLabel = (todo = {}, role = null) => {
+  const type = String(todo?.type || "todo").trim();
+  const roleName = getJourneyTodoRoleName(role, todo);
+  if (type === "reminder") {
+    const target = getJourneyTodoActor(todo?.targetSpeaker || "user", "user") === "role" ? roleName : "你";
+    return `${roleName}提醒${target}`;
+  }
+  if (type === "deferred-photo") return `${roleName}发给你`;
+  return getJourneyTodoAssigneeLabel(todo, role);
+};
+
+const formatJourneyTodoDueLabel = (todo = {}) => {
+  const dueAt = String(todo?.dueAt || "").trim();
+  if (!dueAt) return "";
+  const parsed = new Date(dueAt);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const dateKey = formatDateKey(parsed);
+  const todayKey = formatJourneyDayKey();
+  const tomorrow = new Date(`${todayKey}T12:00:00`);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKey = formatDateKey(tomorrow);
+  const clock = formatMessageTime(parsed.toISOString());
+  if (dateKey === todayKey) return `今天 ${clock}`;
+  if (dateKey === tomorrowKey) return `明天 ${clock}`;
+  return `${formatJourneyDateLabel(dateKey)} ${clock}`;
+};
+
+const getJourneyTodoDetailText = (todo = {}, done = false) => {
+  if (done) return todo?.completedAt ? `已完成 ${formatShortDateTime(todo.completedAt)}` : "已完成";
+  const dueLabel = formatJourneyTodoDueLabel(todo);
+  const actionLabel = getJourneyTodoActionLabel(todo);
+  return [actionLabel, dueLabel || todo.triggerText || todo.detail || "等待触发"].filter(Boolean).join(" · ");
+};
+
+const getRoleJourneyTodos = (role) =>
+  (Array.isArray(role?.todos) ? role.todos : [])
+    .filter((todo) => todo && getJourneyRoleTodoStatus(todo) !== "cancelled")
+    .sort((left, right) => {
+      const leftDone = getJourneyRoleTodoStatus(left) === "done" ? 1 : 0;
+      const rightDone = getJourneyRoleTodoStatus(right) === "done" ? 1 : 0;
+      return leftDone - rightDone || Number(left.order || 0) - Number(right.order || 0);
+    })
+    .slice(0, 6);
+
+const renderJourneyTodoStrip = (role) => {
+  const todos = getRoleJourneyTodos(role);
+  if (!todos.length) return "";
+  return `
+    <section class="sheet-card journey-mobile-card journey-todo-card">
+      <div class="sheet-kicker">待办</div>
+      <div class="journey-todo-list">
+        ${todos
+          .map((todo) => {
+            const done = getJourneyRoleTodoStatus(todo) === "done";
+            const title = String(todo.title || todo.sourceText || "待办事项").trim();
+            const detail = getJourneyTodoDetailText(todo, done);
+            const typeLabel = getJourneyRoleTodoTypeLabel(todo);
+            const sourceLabel = getJourneyTodoSourceLabel(todo, role);
+            return `
+              <div class="journey-todo-item ${done ? "is-done" : ""}">
+                <button class="journey-todo-check" type="button" data-action="complete-role-todo" data-role-id="${escapeHtml(role?.id || "")}" data-todo-id="${escapeHtml(todo.id || "")}" aria-label="${done ? "已完成" : "划掉待办"}" ${done ? "disabled" : ""}>${done ? "✓" : ""}</button>
+                <div class="journey-todo-copy">
+                  <strong><span class="journey-todo-type">${escapeHtml(typeLabel)}</span>${escapeHtml(title)}</strong>
+                  <small class="journey-todo-source">${escapeHtml(sourceLabel)}</small>
+                  ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+                </div>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+};
+
 const renderJourneySheetRefined = (state, role) => {
   const activeDate = clampDateKeyToCurrentMonth(state.journeyActiveDate || formatJourneyDayKey());
   const activeDateKey = formatDateKey(activeDate);
@@ -35041,6 +35305,7 @@ const renderJourneySheetRefined = (state, role) => {
   return renderChatBottomSheet(
     "行程",
     `
+      ${renderJourneyTodoStrip(role)}
       ${renderJourneyGenerationStatusCard(state, {
         wrapperClass: "sheet-card journey-mobile-card",
         note: "当前有行程联动任务正在运行，完成后这里会自动刷新",
@@ -44725,6 +44990,21 @@ const buildRoleGenerationContext = (
   const livingMemorySummary = shouldPreserveLifeStoryContext
     ? getLivingMemorySummaryForContext(role, { userInput, monthKey: getMonthKeyFromDateKey(roleTimeContext.dateKey || now) })
     : "";
+  const pendingTodos = getPendingRoleTodos(role).slice(0, 6).map((todo) => ({
+    type: String(todo.type || "todo").trim(),
+    category: String(todo.category || "").trim(),
+    title: truncateContextText(todo.title || todo.sourceText || "待办事项", 80),
+    triggerText: truncateContextText(todo.triggerText || todo.detail || "", 80),
+    sourceSpeaker: normalizeAppTodoSourceSpeaker(todo.sourceSpeaker || "user"),
+    sourceLabel: getAppTodoSourceLabel(todo, role),
+    assignee: normalizeAppTodoActor(todo.assignee || getAppTodoDefaultAssignee(todo), getAppTodoDefaultAssignee(todo)),
+    assigneeLabel: getAppTodoAssigneeLabel(todo, role),
+    targetSpeaker: normalizeAppTodoActor(todo.targetSpeaker || getAppTodoDefaultTarget(todo), getAppTodoDefaultTarget(todo)),
+    targetLabel: getAppTodoTargetLabel(todo, role),
+    dueAt: String(todo.dueAt || "").trim(),
+    dateKey: String(todo.dateKey || "").trim(),
+    sourceText: truncateContextText(todo.sourceText || "", 120),
+  }));
   const memoryRecall = shouldPreserveLifeStoryContext
     ? buildLivingMemoryRetrievalContext(role, {
         query: userInput,
@@ -44778,6 +45058,7 @@ const buildRoleGenerationContext = (
     monitor: compactMonitor,
     dailyLifeMemory,
     livingMemory: truncateContextText(livingMemorySummary, isVideoMode ? 240 : structuredTask ? 520 : 760),
+    pendingTodos,
     memoryRecall: truncateContextText(memoryRecall, isVideoMode ? 180 : structuredTask ? 480 : 760),
     goals: compactGoals,
     events: compactEvents,
@@ -46555,6 +46836,7 @@ const buildChatSubjectiveAwarenessBlock = ({ userInput = "", roleContext = null 
       ? roleContext.events.slice(-2)
       : [];
   const activeGoals = Array.isArray(roleContext?.goals) ? roleContext.goals.slice(0, 3) : [];
+  const pendingTodos = Array.isArray(roleContext?.pendingTodos) ? roleContext.pendingTodos.slice(0, 3) : [];
   const recentMessages = Array.isArray(roleContext?.recentMessages) ? roleContext.recentMessages.slice(-4) : [];
   const relationCues = [
     Number.isFinite(Number(timeContext?.minutesSinceLastMessage))
@@ -46586,6 +46868,12 @@ const buildChatSubjectiveAwarenessBlock = ({ userInput = "", roleContext = null 
     profile?.weatherLiveHint || profile?.weather ? `天气体感：${profile.weatherLiveHint || profile.weather}` : "",
     recentLifeItems.length ? `今天生活线索：${recentLifeItems.map(formatSubjectiveContextItem).filter(Boolean).join("；")}` : "",
     recentEvents.length ? `事件余波：${recentEvents.map(formatSubjectiveContextEvent).filter(Boolean).join("；")}` : "",
+    pendingTodos.length
+      ? `待执行事项：${pendingTodos
+          .map((todo) => [todo?.category || todo?.type, todo?.sourceLabel, todo?.assigneeLabel, todo?.title, todo?.triggerText].filter(Boolean).join(" "))
+          .filter(Boolean)
+          .join("；")}`
+      : "",
     activeGoals.length
       ? `目标牵引：${activeGoals
           .map((item) => [item?.title, item?.detail || item?.summary].filter(Boolean).join(" "))
@@ -46693,6 +46981,9 @@ const buildChatPlainTextContext = ({
       ? `今日生活记忆：${compactChatContextValue(roleContext.dailyLifeMemory, { textLimit: 260, itemLimit: 10 })}`
       : "",
     roleContext?.livingMemory ? `生活账本摘要：\n${String(roleContext.livingMemory || "").trim()}` : "",
+    Array.isArray(roleContext?.pendingTodos) && roleContext.pendingTodos.length
+      ? `待执行事项：${compactChatContextValue(roleContext.pendingTodos, { textLimit: 220, itemLimit: 8 })}`
+      : "",
     roleContext?.memoryRecall ? `本轮召回记忆：\n${String(roleContext.memoryRecall || "").trim()}` : "",
     roleContext?.livingMemory
       ? "钱包/物品使用规则：生活账本里的钱包金额、资产和已拥有物品属于角色自己；用户最近说“我买了/我喝了/我的”只代表用户，不要自动算作角色消费或角色物品。角色已经拥有的设备、车、房、耳机等不要反复安排购买，除非明确是维修、升级、送人或替换。"
@@ -46755,6 +47046,7 @@ const getPlainTextBreakdownMeta = (label = "") => {
   if (normalized === "用户设定") return { key: "userProfile", label: "用户资料" };
   if (["当前状态", "生活轨迹近况"].includes(normalized)) return { key: "status", label: "状态与时间" };
   if (normalized === "生活账本摘要") return { key: "livingMemory", label: "生活账本" };
+  if (normalized === "待执行事项") return { key: "pendingTodos", label: "待办事项" };
   if (normalized === "本轮召回记忆") return { key: "memoryRecall", label: "召回记忆" };
   if (["目标", "突发事件和余波", "概率设置"].includes(normalized)) return { key: "goals", label: "目标事件" };
   if (normalized === "作息约束") return { key: "status", label: "状态与时间" };
@@ -46858,6 +47150,7 @@ const buildPromptBreakdown = (systemPromptText = "", contextPayload = {}) => {
     { key: "npcs", label: "NPC", value: roleContext?.npcs },
     { key: "recentMessages", label: "最近消息", value: roleContext?.recentMessages },
     { key: "livingMemory", label: "生活账本", value: roleContext?.livingMemory },
+    { key: "pendingTodos", label: "待执行事项", value: roleContext?.pendingTodos },
     { key: "videoCallSummaries", label: "视频总结", value: roleContext?.videoCallSummaries },
     { key: "summaryArchive", label: "总结记忆", value: roleContext?.summaryArchive },
     { key: "memory", label: "长期记忆", value: roleContext?.memory },
@@ -47011,6 +47304,17 @@ const slimChatRoleContextForPlainText = (roleContext = null, { targetChars = PRI
     maxChars: budgets.memory * budgets.memoryItem,
   });
   next.livingMemory = truncateContextText(roleContext.livingMemory || "", budgets.living);
+  next.pendingTodos = Array.isArray(roleContext.pendingTodos)
+    ? roleContext.pendingTodos.slice(0, 6).map((todo) => ({
+        ...todo,
+        title: truncateContextText(todo?.title || "", 80),
+        triggerText: truncateContextText(todo?.triggerText || "", 80),
+        sourceLabel: truncateContextText(todo?.sourceLabel || "", 40),
+        assigneeLabel: truncateContextText(todo?.assigneeLabel || "", 40),
+        targetLabel: truncateContextText(todo?.targetLabel || "", 40),
+        sourceText: truncateContextText(todo?.sourceText || "", 120),
+      }))
+    : roleContext.pendingTodos;
   next.memoryRecall = truncateContextText(roleContext.memoryRecall || "", budgets.recall);
   next.worldbook = Array.isArray(roleContext.worldbook)
     ? roleContext.worldbook.slice(0, budgets.worldbook).map((entry) => ({
@@ -52798,8 +53102,9 @@ ${dailyLifeMemoryPrompt}
 
 const requestPrimaryChatReply = async (role, userInput, { signal = null, quoteCandidates = [], requestTrace = null } = {}) => {
   const explicitImageRequested = isExplicitImageRequest(userInput);
+  const deferredPhotoRequested = isDeferredPhotoRequest(userInput);
   const explicitStickerRequested = isExplicitStickerRequest(userInput);
-  const forceImageReply = explicitImageRequested;
+  const forceImageReply = explicitImageRequested && !deferredPhotoRequested;
   const explicitVoiceDirective = resolveExplicitVoiceDirective(role, userInput);
   const forceVoiceReply = explicitVoiceDirective.forceVoice && hasReadyVoiceConfig(role);
   const explicitVoiceTargetText = forceVoiceReply ? explicitVoiceDirective.targetText : "";
@@ -53626,6 +53931,912 @@ const getOfflineDueTimestamps = (role, now = new Date()) => {
   }
 
   return dueTimestamps;
+};
+
+const createRoleTodoId = () => `todo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const getAppRoleTodoStatus = (todo = {}) => {
+  const status = String(todo?.status || "pending").trim().toLowerCase();
+  if (["done", "completed", "finished", "checked"].includes(status)) return "done";
+  if (["cancelled", "canceled", "deleted"].includes(status)) return "cancelled";
+  return "pending";
+};
+
+const getPendingRoleTodos = (role, { type = "" } = {}) => {
+  const normalizedType = String(type || "").trim();
+  return (Array.isArray(role?.todos) ? role.todos : [])
+    .filter((todo) => todo && getAppRoleTodoStatus(todo) === "pending")
+    .filter((todo) => !normalizedType || String(todo.type || "") === normalizedType)
+    .sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
+};
+
+const normalizeTodoText = (value = "") => sanitizeChatLine(String(value || "").trim());
+
+const APP_ROLE_TODO_MAX_ITEMS = 40;
+const APP_REMINDER_DEFAULT_DELAY_MS = 30 * 60 * 1000;
+const APP_TODO_NUMBER_VALUES = Object.freeze({
+  零: 0,
+  〇: 0,
+  一: 1,
+  二: 2,
+  两: 2,
+  俩: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+  十: 10,
+});
+const APP_REMINDER_INTENT_RE = /(?:提醒我|提醒一下我|到点叫我|到时候叫我|叫我|喊我|记得提醒我|别忘了提醒我)/iu;
+const APP_TODAY_TODO_INTENT_RE = /(?:今日|今天).{0,8}(?:待办|todo|事项|要做|要办|清单)|(?:待办|todo|事项|清单).{0,8}(?:今日|今天)|(?:待办|todo|事项|清单)\s*[：:]|(?:加入|加到|记到|列到|放进).{0,8}(?:待办|todo|事项|清单)|(?:帮我|给我)?(?:记一下|记着|记住).{0,8}(?:今天|今日).{0,8}(?:要|得|需要)/iu;
+const APP_USER_ROLE_TODO_INTENT_RE = /(?:你|角色|对方|他|她|ta).{0,10}(?:待办|todo|事项|清单|等会儿?|待会儿?|一会儿?|稍后|晚点|今天|今日|明天|明早|明晚).{0,16}(?:要|得|需要|记得|去|做|办|处理|拿|取|买|吃|喝|看|写|发|拍)|(?:你|角色|对方|他|她|ta).{0,6}(?:的)?(?:待办|todo|事项|清单)\s*[：:]/iu;
+const APP_TODO_COMPLETION_RE = /(?:(?:这个|这条|刚才|刚刚|上一条|那个|提醒|待办|事项|任务|照片|拍照).{0,14}(?:完成|做完|办完|处理完|搞定|划掉|勾掉|取消|删掉|不用提醒|不用了)|(?:完成|做完|划掉|勾掉|取消|删掉).{0,10}(?:待办|提醒|事项|任务|照片|拍照))/iu;
+const APP_TODO_CANCEL_RE = /(?:取消|删掉|删除|不用提醒|不用了|别提醒|不要提醒)/iu;
+const APP_ROLE_REMINDER_PROMISE_RE = /(?:我(?:会|来|帮你|给你)?|等我|到时候|晚点|待会儿?|一会儿?|回头).{0,14}(?:提醒你|叫你|喊你|给你提个醒)|(?:提醒你|叫你|喊你).{0,10}(?:记得|别忘了|不要忘了)/iu;
+const APP_ROLE_PHOTO_PROMISE_RE = /(?:我|等我|到时候|晚点|待会儿?|一会儿?|回头|回家|到家).{0,18}(?:拍|发|补).{0,8}(?:图|照|照片|自拍|现场照|图片).{0,10}(?:给你|你看|给你看)|(?:给你|给你看).{0,12}(?:拍|发|补).{0,8}(?:图|照|照片|自拍|现场照|图片)/iu;
+
+const normalizeAppTodoSourceSpeaker = (value = "") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["role", "ai", "assistant", "character"].includes(normalized) || /角色|对方|ta|她|他|它/i.test(normalized)) return "role";
+  return "user";
+};
+
+const normalizeAppTodoActor = (value = "", fallback = "") => {
+  const normalized = String(value || fallback || "").trim().toLowerCase();
+  if (["role", "ai", "assistant", "character"].includes(normalized) || /角色|对方|ta|她|他|它/i.test(normalized)) return "role";
+  if (["user", "me", "owner", "human"].includes(normalized) || /用户|我|你自己/i.test(normalized)) return "user";
+  return String(fallback || "").trim() || "user";
+};
+
+const getAppTodoActorLabel = (actor = "", role = null) => {
+  const normalized = normalizeAppTodoActor(actor, "user");
+  if (normalized === "role") return String(role?.profile?.note || role?.profile?.name || "角色").trim() || "角色";
+  return "你";
+};
+
+const getAppTodoDefaultAssignee = (todo = {}) => {
+  const type = String(todo?.type || "todo").trim();
+  if (["reminder", "deferred-photo", "role-todo"].includes(type)) return "role";
+  return "user";
+};
+
+const getAppTodoDefaultTarget = (todo = {}) => {
+  const type = String(todo?.type || "todo").trim();
+  if (["reminder", "deferred-photo"].includes(type)) return "user";
+  if (type === "role-todo") return "role";
+  return "user";
+};
+
+const getAppTodoSourceLabel = (todo = {}, role = null) => {
+  const sourceSpeaker = normalizeAppTodoSourceSpeaker(todo?.sourceSpeaker || "user");
+  const roleName = String(role?.profile?.note || role?.profile?.name || todo?.sourceName || "角色").trim() || "角色";
+  if (sourceSpeaker === "role") return `${roleName}说的`;
+  return todo?.ackSpeaker ? `你说的 · ${roleName}已应下` : "你说的";
+};
+
+const getAppTodoAssigneeLabel = (todo = {}, role = null) => `${getAppTodoActorLabel(todo?.assignee || getAppTodoDefaultAssignee(todo), role)}要做`;
+
+const getAppTodoTargetLabel = (todo = {}, role = null) => `${getAppTodoActorLabel(todo?.targetSpeaker || getAppTodoDefaultTarget(todo), role)}要被提醒`;
+
+const normalizeAppTodoCompareTitle = (value = "") =>
+  normalizeTodoText(value)
+    .replace(/^(?:我|你|角色|对方|ta|他|她|记得|别忘了|不要忘了|先|去|要|得|需要|会|帮你|给你)\s*/iu, "")
+    .replace(/(?:一下|这件事)$/u, "")
+    .trim();
+
+const parseAppTodoNumberToken = (value = "") => {
+  const text = String(value || "")
+    .trim()
+    .replace(/[个\s]/g, "")
+    .replace(/俩/g, "两");
+  if (!text) return Number.NaN;
+  if (/^\d+(?:\.\d+)?$/.test(text)) return Number(text);
+  if (text === "半") return 0.5;
+  if (text.includes("半")) {
+    const baseText = text.replace(/半/g, "");
+    const base = baseText ? parseAppTodoNumberToken(baseText) : 0;
+    return (Number.isFinite(base) ? base : 0) + 0.5;
+  }
+  if (text.includes("十")) {
+    const [tensText = "", unitsText = ""] = text.split("十");
+    const tens = tensText ? APP_TODO_NUMBER_VALUES[tensText] : 1;
+    const units = unitsText ? APP_TODO_NUMBER_VALUES[unitsText] : 0;
+    if (Number.isFinite(tens) && Number.isFinite(units)) return tens * 10 + units;
+  }
+  return Number.isFinite(APP_TODO_NUMBER_VALUES[text]) ? APP_TODO_NUMBER_VALUES[text] : Number.NaN;
+};
+
+const parseAppTodoMinuteToken = (value = "") => {
+  const text = String(value || "").trim();
+  if (!text) return 0;
+  if (text === "半") return 30;
+  if (text === "一刻") return 15;
+  if (text === "三刻") return 45;
+  const parsed = parseAppTodoNumberToken(text);
+  return Number.isFinite(parsed) ? Math.min(59, Math.max(0, Math.round(parsed))) : 0;
+};
+
+const formatAppTodoClockLabel = (date = new Date()) =>
+  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+const formatAppTodoDueTriggerText = (date = new Date(), now = new Date()) => {
+  const dueDateKey = formatDateKey(date);
+  const todayKey = formatDateKey(now);
+  const tomorrowKey = shiftDateKey(todayKey, 1);
+  const clock = formatAppTodoClockLabel(date);
+  if (dueDateKey === todayKey) return `今天 ${clock}`;
+  if (dueDateKey === tomorrowKey) return `明天 ${clock}`;
+  return `${formatJourneyDateLabel(dueDateKey)} ${clock}`;
+};
+
+const parseAppTodoRelativeDueDate = (text = "", now = new Date()) => {
+  const match = String(text || "").match(/(半|[零〇一二两三四五六七八九十\d]+(?:个)?半|[零〇一二两三四五六七八九十\d]+)\s*(?:个)?\s*(分钟|分|小时|钟头|天|日)\s*(?:后|以后|之后)/u);
+  if (!match) return null;
+  const amount = parseAppTodoNumberToken(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const unit = match[2];
+  const multiplier = /分钟|分/u.test(unit) ? 60_000 : /小时|钟头/u.test(unit) ? 60 * 60_000 : 24 * 60 * 60_000;
+  const date = new Date(now.getTime() + amount * multiplier);
+  return {
+    date,
+    triggerText: `${match[0]}提醒`,
+  };
+};
+
+const parseAppTodoClockInText = (text = "") => {
+  const match = String(text || "").match(/(凌晨|早上|早晨|上午|中午|下午|傍晚|晚上|今晚|夜里|半夜)?\s*([零〇一二两三四五六七八九十\d]{1,4})\s*(?:[:：点时])\s*([零〇一二两三四五六七八九十\d]{1,4}|半|一刻|三刻)?\s*(?:分)?/u);
+  if (!match) return null;
+  const period = String(match[1] || "").trim();
+  let hour = parseAppTodoNumberToken(match[2]);
+  let minute = parseAppTodoMinuteToken(match[3]);
+  if (!Number.isFinite(hour)) return null;
+  hour = Math.round(hour);
+  if (/下午|傍晚|晚上|今晚|夜里/u.test(period) && hour > 0 && hour < 12) hour += 12;
+  if (/中午/u.test(period) && hour > 0 && hour < 11) hour += 12;
+  if (/凌晨|半夜/u.test(period) && hour === 12) hour = 0;
+  if (hour === 24) hour = 0;
+  if (hour < 0 || hour > 23) return null;
+  minute = Math.min(59, Math.max(0, Math.round(minute || 0)));
+  return {
+    hour,
+    minute,
+    period,
+    raw: match[0],
+  };
+};
+
+const getAppTodoDateOffsetFromText = (text = "") => {
+  const normalized = String(text || "");
+  if (/大后天/u.test(normalized)) return 3;
+  if (/后天/u.test(normalized)) return 2;
+  if (/明天|明早|明晚|明儿/u.test(normalized)) return 1;
+  if (/今天|今日|今晚|今早|待会|等会|一会|稍后|晚点/u.test(normalized)) return 0;
+  return null;
+};
+
+const getAppTodoDefaultClockForText = (text = "") => {
+  const normalized = String(text || "");
+  if (/明晚|今晚|晚上|傍晚/u.test(normalized)) return { hour: 20, minute: 0 };
+  if (/下午/u.test(normalized)) return { hour: 15, minute: 0 };
+  if (/中午/u.test(normalized)) return { hour: 12, minute: 0 };
+  return { hour: 9, minute: 0 };
+};
+
+const buildAppTodoDateAtClock = (dateKey = formatDateKey(), hour = 9, minute = 0) => {
+  const normalizedDateKey = formatDateKey(dateKey || new Date());
+  const parsed = new Date(`${normalizedDateKey}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const parseAppReminderDueDate = (text = "", now = new Date()) => {
+  const relative = parseAppTodoRelativeDueDate(text, now);
+  if (relative?.date) {
+    return {
+      date: relative.date,
+      triggerText: formatAppTodoDueTriggerText(relative.date, now),
+    };
+  }
+
+  const clock = parseAppTodoClockInText(text);
+  const offset = getAppTodoDateOffsetFromText(text);
+  if (clock) {
+    const baseDateKey = shiftDateKey(formatDateKey(now), Number.isFinite(offset) ? offset : 0);
+    let date = buildAppTodoDateAtClock(baseDateKey, clock.hour, clock.minute);
+    if (date && date.getTime() <= now.getTime() + 60_000) {
+      date = buildAppTodoDateAtClock(shiftDateKey(baseDateKey, 1), clock.hour, clock.minute);
+    }
+    return date
+      ? {
+          date,
+          triggerText: formatAppTodoDueTriggerText(date, now),
+        }
+      : null;
+  }
+
+  if (Number.isFinite(offset) && offset > 0) {
+    const clockFallback = getAppTodoDefaultClockForText(text);
+    const date = buildAppTodoDateAtClock(shiftDateKey(formatDateKey(now), offset), clockFallback.hour, clockFallback.minute);
+    return date
+      ? {
+          date,
+          triggerText: formatAppTodoDueTriggerText(date, now),
+        }
+      : null;
+  }
+
+  const fallbackDate = new Date(now.getTime() + APP_REMINDER_DEFAULT_DELAY_MS);
+  return {
+    date: fallbackDate,
+    triggerText: `稍后 ${formatAppTodoClockLabel(fallbackDate)}`,
+  };
+};
+
+const stripAppTodoTimingText = (text = "") =>
+  String(text || "")
+    .replace(/(半|[零〇一二两三四五六七八九十\d]+(?:个)?半|[零〇一二两三四五六七八九十\d]+)\s*(?:个)?\s*(?:分钟|分|小时|钟头|天|日)\s*(?:后|以后|之后)/gu, "")
+    .replace(/(?:凌晨|早上|早晨|上午|中午|下午|傍晚|晚上|今晚|夜里|半夜)?\s*[零〇一二两三四五六七八九十\d]{1,4}\s*(?:[:：点时])\s*(?:[零〇一二两三四五六七八九十\d]{1,4}|半|一刻|三刻)?\s*(?:分)?/gu, "")
+    .replace(/大后天|后天|明天|明早|明晚|明儿|今天|今日|今晚|今早|待会儿?|等会儿?|一会儿?|稍后|晚点/gu, "");
+
+const normalizeAppTodoTitle = (value = "", fallback = "待办事项") => {
+  const normalized = sanitizeChatLine(String(value || "").replace(/^[：:，,、；;\s]+|[：:，,、；;\s]+$/g, "").trim());
+  const resolved = normalized || sanitizeChatLine(String(fallback || "待办事项").trim()) || "待办事项";
+  return Array.from(resolved).slice(0, 60).join("");
+};
+
+const extractAppReminderTitle = (text = "") => {
+  const source = normalizeTodoText(text);
+  const stripped = stripAppTodoTimingText(source)
+    .replace(/^(?:老公|老婆|宝宝|宝贝|亲爱的)[，,、\s]*/u, "")
+    .replace(/(?:请|麻烦)?(?:你)?(?:帮我|给我)?(?:提醒一下我|提醒我|到点叫我|到时候叫我|叫我|喊我|记得提醒我|别忘了提醒我)/giu, "")
+    .replace(/^(?:凌晨|早上|早晨|上午|中午|下午|傍晚|晚上|夜里|半夜)\s*/u, "")
+    .replace(/^(?:记得|别忘了|不要忘了)\s*/u, "")
+    .trim();
+  return normalizeAppTodoTitle(stripped, source.replace(APP_REMINDER_INTENT_RE, ""));
+};
+
+const extractAppRoleReminderTitle = (text = "") => {
+  const source = normalizeTodoText(text);
+  const stripped = stripAppTodoTimingText(source)
+    .replace(/^(?:好|行|嗯|可以|没问题|知道了|记着了|成)[，,、\s]*/u, "")
+    .replace(/^(?:我|到时候|等我|晚点|待会儿?|一会儿?|回头|等下)\s*/u, "")
+    .replace(/(?:会|来|帮你|给你)?(?:提醒你|叫你|喊你|给你提个醒)/giu, "")
+    .replace(/^(?:记得|别忘了|不要忘了|你)\s*/u, "")
+    .trim();
+  return normalizeAppTodoTitle(stripped, source);
+};
+
+const hasAppReminderIntent = (text = "", now = new Date()) => {
+  const normalized = normalizeTodoText(text);
+  if (!normalized) return false;
+  if (/(?:提醒我|提醒一下我|记得提醒我|别忘了提醒我|到点叫我|到时候叫我)/iu.test(normalized)) return true;
+  if (!/(?:叫我|喊我)/iu.test(normalized)) return false;
+  return Boolean(parseAppTodoRelativeDueDate(normalized, now) || parseAppTodoClockInText(normalized));
+};
+
+const extractAppTodayTodoTitleSeed = (text = "") => {
+  const source = normalizeTodoText(text);
+  const colonMatch = source.match(/(?:今日|今天)?\s*(?:待办|todo|事项|清单)\s*[：:]\s*(.+)$/iu);
+  const base = colonMatch?.[1] || source;
+  const stripped = stripAppTodoTimingText(base)
+    .replace(/^(?:老公|老婆|宝宝|宝贝|亲爱的)[，,、\s]*/u, "")
+    .replace(/(?:请|麻烦)?(?:你)?(?:帮我|给我)?(?:记一下|记着|记住)/giu, "")
+    .replace(/(?:把|将)?(?:这件事|这个|这条|一下)?(?:加入|加到|记到|列到|放进)?(?:今天|今日)?(?:的)?(?:待办|todo|事项|清单)/giu, "")
+    .replace(/^(?:要|得|需要)\s*/u, "")
+    .trim();
+  return normalizeAppTodoTitle(stripped, source);
+};
+
+const extractAppRoleSelfTodoTitle = (text = "") => {
+  const source = normalizeTodoText(text);
+  const stripped = stripAppTodoTimingText(source)
+    .replace(/^(?:好|行|嗯|可以|没问题|知道了|记着了|成)[，,、\s]*/u, "")
+    .replace(/^(?:我|等我|到时候|回头|晚点|待会儿?|一会儿?|稍后|等下)\s*/u, "")
+    .replace(/^(?:会|要|得|去|来|先|再|帮你|给你)\s*/u, "")
+    .replace(/(?:跟你说|告诉你|拍给你看|发给你看|给你看)$/u, "")
+    .trim();
+  return normalizeAppTodoTitle(stripped, source);
+};
+
+const splitAppTodoTitleList = (seed = "") =>
+  String(seed || "")
+    .split(/\s*(?:、|，|,|；|;|\/|\\|\n+)\s*/u)
+    .map((item) => normalizeAppTodoTitle(item, ""))
+    .filter(Boolean)
+    .slice(0, 6);
+
+const parseAppReminderTodoRequest = (input = "", now = new Date()) => {
+  const text = normalizeTodoText(input);
+  if (!text || !hasAppReminderIntent(text, now)) return null;
+  if (/谢谢.{0,6}提醒我|提醒我了|提醒过我|你刚才.{0,6}提醒我/u.test(text)) return null;
+  if (/不用提醒我|别提醒我|不要提醒我/u.test(text)) return null;
+  const due = parseAppReminderDueDate(text, now);
+  if (!due?.date) return null;
+  const title = extractAppReminderTitle(text);
+  return {
+    type: "reminder",
+    title,
+    detail: "到点后角色会在聊天里提醒你",
+    sourceSpeaker: "user",
+    assignee: "role",
+    targetSpeaker: "user",
+    triggerKind: "time",
+    triggerText: due.triggerText,
+    dueAt: due.date.toISOString(),
+    dateKey: formatDateKey(due.date),
+    sourceText: text,
+    order: due.date.getTime(),
+  };
+};
+
+const parseAppTodayTodoRequests = (input = "", now = new Date()) => {
+  const text = normalizeTodoText(input);
+  if (!text || !APP_TODAY_TODO_INTENT_RE.test(text)) return [];
+  if (APP_TODO_COMPLETION_RE.test(text) || APP_TODO_CANCEL_RE.test(text)) return [];
+  const seed = extractAppTodayTodoTitleSeed(text);
+  const titles = splitAppTodoTitleList(seed);
+  const todayKey = formatDateKey(now);
+  return titles.map((title, index) => ({
+    type: "today-todo",
+    title,
+    detail: "今日待办，完成后可以划掉",
+    sourceSpeaker: "user",
+    assignee: "user",
+    targetSpeaker: "user",
+    triggerKind: "manual",
+    triggerText: "今日待办",
+    dateKey: todayKey,
+    sourceText: text,
+    order: Date.now() + index,
+  }));
+};
+
+const extractAppUserAssignedRoleTodoTitle = (text = "") => {
+  const source = normalizeTodoText(text);
+  const colonMatch = source.match(/(?:你|角色|对方|他|她|ta)?\s*(?:的)?\s*(?:待办|todo|事项|清单)\s*[：:]\s*(.+)$/iu);
+  const base = colonMatch?.[1] || source;
+  const stripped = stripAppTodoTimingText(base)
+    .replace(/^(?:你|角色|对方|他|她|ta)[，,、\s]*/iu, "")
+    .replace(/^(?:的)?(?:待办|todo|事项|清单)[：:\s]*/iu, "")
+    .replace(/^(?:要|得|需要|记得|去|做|办|处理)\s*/u, "")
+    .trim();
+  return normalizeAppTodoTitle(stripped, source);
+};
+
+const parseAppUserAssignedRoleTodoRequests = (input = "", now = new Date()) => {
+  const text = normalizeTodoText(input);
+  if (!text || !APP_USER_ROLE_TODO_INTENT_RE.test(text)) return [];
+  if (APP_TODO_COMPLETION_RE.test(text) || APP_TODO_CANCEL_RE.test(text)) return [];
+  const due = parseAppReminderDueDate(text, now);
+  const titles = splitAppTodoTitleList(extractAppUserAssignedRoleTodoTitle(text));
+  return titles.map((title, index) => ({
+    type: "role-todo",
+    category: "角色",
+    title,
+    detail: "你交代角色等会要做的事",
+    sourceSpeaker: "user",
+    assignee: "role",
+    targetSpeaker: "role",
+    triggerKind: "time",
+    triggerText: due.triggerText,
+    dueAt: due.date.toISOString(),
+    dateKey: formatDateKey(due.date),
+    sourceText: text,
+    order: due.date.getTime() + index,
+  }));
+};
+
+const parseAppRolePromisedTodos = (input = "", now = new Date()) => {
+  const text = normalizeTodoText(input);
+  if (!text) return [];
+  const due = parseAppReminderDueDate(text, now);
+  const todos = [];
+  if (APP_ROLE_REMINDER_PROMISE_RE.test(text)) {
+    const title = extractAppRoleReminderTitle(text).replace(/^(?:你|用户)\s*/u, "") || "提醒你";
+    todos.push({
+      type: "reminder",
+      title,
+      detail: "角色承诺到点提醒你",
+      sourceSpeaker: "role",
+      assignee: "role",
+      targetSpeaker: "user",
+      triggerKind: "time",
+      triggerText: due.triggerText,
+      dueAt: due.date.toISOString(),
+      dateKey: formatDateKey(due.date),
+      sourceText: text,
+      order: due.date.getTime(),
+    });
+  }
+  if (APP_ROLE_PHOTO_PROMISE_RE.test(text) && FUTURE_PHOTO_TRIGGER_RE.test(text)) {
+    const triggerKind = inferDeferredPhotoTriggerKind(text);
+    const dueAt = triggerKind === "later" ? due.date.toISOString() : "";
+    todos.push({
+      type: "deferred-photo",
+      category: "照片",
+      title: buildDeferredPhotoTodoTitle(text, triggerKind),
+      detail: "角色承诺稍后补发照片",
+      sourceSpeaker: "role",
+      assignee: "role",
+      targetSpeaker: "user",
+      triggerKind,
+      triggerText: formatDeferredPhotoTriggerText(triggerKind),
+      dueAt,
+      dateKey: dueAt ? formatDateKey(dueAt) : "",
+      sourceText: text,
+      imageDescription: text,
+      order: dueAt ? new Date(dueAt).getTime() : Date.now(),
+    });
+  }
+  if (!todos.length && /(?:我|等我|到时候|晚点|待会儿?|一会儿?|回头|等下).{0,12}(?:会|要|去|来|先|再|帮你|给你).{1,32}/iu.test(text) && FUTURE_PHOTO_TRIGGER_RE.test(text)) {
+    const title = extractAppRoleSelfTodoTitle(text);
+    if (title && !/提醒你|叫你|喊你|拍照|照片|图片|自拍/u.test(title)) {
+      todos.push({
+        type: "role-todo",
+        category: "角色",
+        title,
+        detail: "角色自己等会要做的事",
+        sourceSpeaker: "role",
+        assignee: "role",
+        targetSpeaker: "role",
+        triggerKind: "time",
+        triggerText: due.triggerText,
+        dueAt: due.date.toISOString(),
+        dateKey: formatDateKey(due.date),
+        sourceText: text,
+        order: due.date.getTime(),
+      });
+    }
+  }
+  return todos.slice(0, 3);
+};
+
+const shouldMergeAppTodo = (todo = {}, payload = {}) => {
+  if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  const type = String(payload.type || "todo").trim();
+  if (String(todo.type || "todo").trim() !== type) return false;
+  const leftTitle = normalizeAppTodoCompareTitle(todo.title || todo.sourceText || "");
+  const rightTitle = normalizeAppTodoCompareTitle(payload.title || payload.sourceText || "");
+  if (!leftTitle || !rightTitle) return false;
+  const titleMatches = leftTitle === rightTitle || leftTitle.includes(rightTitle) || rightTitle.includes(leftTitle);
+  if (!titleMatches) return false;
+  if (type === "today-todo") return String(todo.dateKey || "") === String(payload.dateKey || "");
+  if (type === "reminder") return true;
+  return String(todo.triggerKind || "") === String(payload.triggerKind || "");
+};
+
+const upsertAppRoleTodo = (roleId = "", payload = {}) => {
+  if (!roleId || !payload?.title) return false;
+  const nowIsoText = new Date().toISOString();
+  let changed = false;
+  updateRole(roleId, (nextRole) => {
+    nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
+    const existing = nextRole.todos.find((todo) => shouldMergeAppTodo(todo, payload));
+    if (existing) {
+      const existingSourceSpeaker = normalizeAppTodoSourceSpeaker(existing.sourceSpeaker || "user");
+      const payloadSourceSpeaker = normalizeAppTodoSourceSpeaker(payload.sourceSpeaker || existingSourceSpeaker);
+      const roleAckForUserTodo = existingSourceSpeaker === "user" && payloadSourceSpeaker === "role";
+      Object.assign(existing, {
+        ...payload,
+        id: existing.id,
+        status: "pending",
+        sourceMessageId: roleAckForUserTodo ? String(existing.sourceMessageId || "").trim() : String(payload.sourceMessageId || existing.sourceMessageId || "").trim(),
+        sourceText: roleAckForUserTodo ? String(existing.sourceText || "").trim() : String(payload.sourceText || existing.sourceText || "").trim(),
+        sourceSpeaker: roleAckForUserTodo ? "user" : payloadSourceSpeaker,
+        assignee: normalizeAppTodoActor(payload.assignee || existing.assignee || "user", "user"),
+        targetSpeaker: normalizeAppTodoActor(payload.targetSpeaker || existing.targetSpeaker || payload.assignee || existing.assignee || "user", "user"),
+        ackSpeaker: roleAckForUserTodo ? "role" : String(payload.ackSpeaker || existing.ackSpeaker || "").trim(),
+        ackMessageId: roleAckForUserTodo ? String(payload.sourceMessageId || payload.ackMessageId || existing.ackMessageId || "").trim() : String(payload.ackMessageId || existing.ackMessageId || "").trim(),
+        ackText: roleAckForUserTodo ? String(payload.sourceText || payload.ackText || existing.ackText || "").trim() : String(payload.ackText || existing.ackText || "").trim(),
+        createdAt: existing.createdAt || nowIsoText,
+        updatedAt: nowIsoText,
+      });
+      changed = true;
+      return nextRole;
+    }
+    nextRole.todos.unshift({
+      id: createRoleTodoId(),
+      status: "pending",
+      detail: "",
+      category: "",
+      triggerKind: "manual",
+      triggerText: "待办",
+      sourceMessageId: "",
+      sourceText: "",
+      sourceSpeaker: "user",
+      assignee: "user",
+      targetSpeaker: "user",
+      createdAt: nowIsoText,
+      updatedAt: nowIsoText,
+      order: Date.now(),
+      ...payload,
+    });
+    nextRole.todos = nextRole.todos.slice(0, APP_ROLE_TODO_MAX_ITEMS);
+    changed = true;
+    return nextRole;
+  }, { paintNow: false });
+  return changed;
+};
+
+const upsertGeneralRoleTodosFromUserMessage = (roleId = "", { sourceMessageId = "", sourceText = "", now = new Date() } = {}) => {
+  const normalizedSourceText = normalizeTodoText(sourceText);
+  if (!roleId || !normalizedSourceText) return false;
+  const reminder = parseAppReminderTodoRequest(normalizedSourceText, now);
+  if (reminder) {
+    return upsertAppRoleTodo(roleId, {
+      ...reminder,
+      sourceMessageId,
+    });
+  }
+  const assignedRoleTodos = parseAppUserAssignedRoleTodoRequests(normalizedSourceText, now);
+  if (assignedRoleTodos.length) {
+    let assignedChanged = false;
+    assignedRoleTodos.forEach((todo) => {
+      assignedChanged = upsertAppRoleTodo(roleId, {
+        ...todo,
+        sourceMessageId,
+      }) || assignedChanged;
+    });
+    return assignedChanged;
+  }
+  const todayTodos = parseAppTodayTodoRequests(normalizedSourceText, now);
+  let changed = false;
+  todayTodos.forEach((todo) => {
+    changed = upsertAppRoleTodo(roleId, {
+      ...todo,
+      sourceMessageId,
+    }) || changed;
+  });
+  return changed;
+};
+
+const upsertRolePromisedTodosFromMessages = (roleId = "", messages = [], { now = new Date() } = {}) => {
+  if (!roleId || !Array.isArray(messages) || !messages.length) return false;
+  let changed = false;
+  messages
+    .filter((message) => message?.role === "ai" && ["text", "voice"].includes(String(message?.type || "")))
+    .forEach((message) => {
+      const sourceText = normalizeTodoText(typeof message.content === "string" ? message.content : "");
+      if (!sourceText) return;
+      parseAppRolePromisedTodos(sourceText, now).forEach((todo) => {
+        changed = upsertAppRoleTodo(roleId, {
+          ...todo,
+          sourceMessageId: message.id || "",
+        }) || changed;
+      });
+    });
+  return changed;
+};
+
+const markAppRoleTodoStatus = (role, todoId = "", status = "done", messageId = "", now = new Date(), extra = {}) => {
+  if (!role || !todoId) return null;
+  const todo = (Array.isArray(role.todos) ? role.todos : []).find((item) => item?.id === todoId);
+  if (!todo) return null;
+  todo.status = status === "cancelled" ? "cancelled" : "done";
+  todo.completedAt = now.toISOString();
+  todo.completedMessageId = messageId || "";
+  Object.assign(todo, extra || {});
+  return todo;
+};
+
+const selectAppTodoForCompletion = (role, sourceText = "") => {
+  const text = normalizeTodoText(sourceText);
+  const pending = getPendingRoleTodos(role);
+  if (!pending.length) return null;
+  const typeHint = /提醒/u.test(text)
+    ? "reminder"
+    : /照片|拍照|图片|自拍/u.test(text)
+      ? "deferred-photo"
+      : /今日|今天|待办|事项|任务/u.test(text)
+        ? "today-todo"
+        : "";
+  const candidates = typeHint ? pending.filter((todo) => String(todo.type || "") === typeHint) : pending;
+  const list = candidates.length ? candidates : pending;
+  const scored = list
+    .map((todo) => {
+      const title = normalizeTodoText(todo.title || todo.sourceText || "");
+      const detail = normalizeTodoText(todo.detail || todo.triggerText || "");
+      const score = [title, detail].reduce((total, item) => {
+        if (!item || Array.from(item).length < 2) return total;
+        if (text.includes(item)) return total + 5;
+        if (item.includes(text.replace(APP_TODO_COMPLETION_RE, "").trim())) return total + 2;
+        return total;
+      }, 0);
+      return { todo, score };
+    })
+    .sort((left, right) => right.score - left.score || Number(right.todo.order || 0) - Number(left.todo.order || 0));
+  if (scored[0]?.score > 0) return scored[0].todo;
+  return [...list].sort((left, right) => Number(right.order || 0) - Number(left.order || 0))[0] || null;
+};
+
+const applyRoleTodoCompletionCommand = (roleId = "", { sourceText = "", sourceMessageId = "" } = {}) => {
+  const text = normalizeTodoText(sourceText);
+  if (!roleId || !text || !APP_TODO_COMPLETION_RE.test(text)) return null;
+  const targetStatus = APP_TODO_CANCEL_RE.test(text) ? "cancelled" : "done";
+  let completedTodo = null;
+  updateRole(roleId, (nextRole) => {
+    const todo = selectAppTodoForCompletion(nextRole, text);
+    if (!todo) return nextRole;
+    completedTodo = markAppRoleTodoStatus(nextRole, todo.id, targetStatus, sourceMessageId, new Date());
+    return nextRole;
+  }, { paintNow: false });
+  return completedTodo;
+};
+
+const completeRoleTodoById = (roleId = "", todoId = "") => {
+  if (!roleId || !todoId) return false;
+  let completed = false;
+  updateRole(roleId, (nextRole) => {
+    completed = Boolean(markAppRoleTodoStatus(nextRole, todoId, "done", "", new Date()));
+    return nextRole;
+  }, { paintNow: false });
+  if (completed) {
+    syncPersistentState();
+    paint();
+  }
+  return completed;
+};
+
+const PHOTO_REQUEST_RE = /(?:发|来|拍|给我|让我|想看|看看).{0,12}(?:图|照|照片|自拍|现场照|图片)|(?:图|照|照片|自拍|现场照|图片).{0,12}(?:发|拍|给我|看看|看你)/i;
+const FUTURE_PHOTO_TRIGGER_RE = /(?:等|待会|一会|等会|晚点|稍后|到时候|之后|回头|回家|到家|到屋|进屋|下班|收工|洗完澡|睡前|上床|躺下)/i;
+const HOME_TRIGGER_RE = /(?:回家|到家|回屋|到屋|进屋|回房|回卧室|回公寓|回住处|回宿舍|回酒店|收工|下班|洗完澡|睡前|上床|躺下|家里|屋里|卧室|公寓|住处|宿舍|酒店房间)/i;
+const HOME_PLACE_RE = /(?:家|屋|房间|卧室|床|客厅|公寓|住处|宿舍|酒店|民宿|洗澡|睡前|休息|收工|下班|到家|回家)/i;
+
+const isDeferredPhotoRequest = (input = "") => {
+  const text = normalizeTodoText(input);
+  if (!text || !isExplicitImageRequest(text)) return false;
+  if (!PHOTO_REQUEST_RE.test(text)) return false;
+  return FUTURE_PHOTO_TRIGGER_RE.test(text);
+};
+
+const inferDeferredPhotoTriggerKind = (input = "") => (HOME_TRIGGER_RE.test(input) ? "home" : "later");
+
+const formatDeferredPhotoTriggerText = (kind = "later") => (kind === "home" ? "回家后" : "稍后");
+
+const buildDeferredPhotoTodoTitle = (sourceText = "", triggerKind = "later") => {
+  const triggerText = formatDeferredPhotoTriggerText(triggerKind);
+  const compact = normalizeTodoText(sourceText).replace(/^(?:老公|老婆|宝宝|宝贝|亲爱的)[，,、\s]*/u, "");
+  if (/拍|照|图|照片|自拍|现场/.test(compact)) {
+    return `${triggerText}拍照给你看`;
+  }
+  return `${triggerText}给你补一张照片`;
+};
+
+const upsertDeferredPhotoTodo = (roleId = "", { sourceMessageId = "", sourceText = "", imageDescription = "" } = {}) => {
+  const normalizedSourceText = normalizeTodoText(sourceText);
+  if (!roleId || !normalizedSourceText || !isDeferredPhotoRequest(normalizedSourceText)) return false;
+  const triggerKind = inferDeferredPhotoTriggerKind(normalizedSourceText);
+  const nowIsoText = new Date().toISOString();
+  const deferredPhotoDueAt = triggerKind === "later" ? new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString() : "";
+  updateRole(roleId, (nextRole) => {
+    nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
+    const existing = nextRole.todos.find(
+      (todo) =>
+        getAppRoleTodoStatus(todo) === "pending" &&
+        String(todo.type || "") === "deferred-photo" &&
+        String(todo.triggerKind || "") === triggerKind,
+    );
+    if (existing) {
+      existing.sourceMessageId = String(sourceMessageId || existing.sourceMessageId || "").trim();
+      existing.sourceText = normalizedSourceText || existing.sourceText || "";
+      existing.imageDescription = normalizeTodoText(imageDescription) || existing.imageDescription || "";
+      existing.title = buildDeferredPhotoTodoTitle(existing.sourceText, triggerKind);
+      existing.triggerText = formatDeferredPhotoTriggerText(triggerKind);
+      existing.dueAt = deferredPhotoDueAt || existing.dueAt || "";
+      existing.dateKey = deferredPhotoDueAt ? formatDateKey(deferredPhotoDueAt) : existing.dateKey || "";
+      existing.sourceSpeaker = normalizeAppTodoSourceSpeaker(existing.sourceSpeaker || "user");
+      existing.assignee = normalizeAppTodoActor(existing.assignee || "role", "role");
+      existing.targetSpeaker = normalizeAppTodoActor(existing.targetSpeaker || "user", "user");
+      existing.updatedAt = nowIsoText;
+      return nextRole;
+    }
+    nextRole.todos.unshift({
+      id: createRoleTodoId(),
+      type: "deferred-photo",
+      status: "pending",
+      category: "照片",
+      title: buildDeferredPhotoTodoTitle(normalizedSourceText, triggerKind),
+      detail: "等角色行程推进到对应状态后自动补发照片",
+      triggerKind,
+      triggerText: formatDeferredPhotoTriggerText(triggerKind),
+      dueAt: deferredPhotoDueAt,
+      dateKey: deferredPhotoDueAt ? formatDateKey(deferredPhotoDueAt) : "",
+      sourceSpeaker: "user",
+      assignee: "role",
+      targetSpeaker: "user",
+      sourceMessageId: String(sourceMessageId || "").trim(),
+      sourceText: normalizedSourceText,
+      imageDescription: normalizeTodoText(imageDescription),
+      createdAt: nowIsoText,
+      order: Date.now(),
+    });
+    nextRole.todos = nextRole.todos.slice(0, APP_ROLE_TODO_MAX_ITEMS);
+    return nextRole;
+  }, { paintNow: false });
+  return true;
+};
+
+const stripDeferredPhotoImagesFromMessages = (roleId = "", messages = [], userInput = "", sourceMessageId = "") => {
+  const list = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  if (!roleId || !isDeferredPhotoRequest(userInput)) return list;
+  const firstImage = list.find((item) => item?.role === "ai" && item?.type === "image");
+  const removedImage = Boolean(firstImage);
+  upsertDeferredPhotoTodo(roleId, {
+    sourceMessageId,
+    sourceText: userInput,
+    imageDescription:
+      firstImage?.content && typeof firstImage.content === "object"
+        ? firstImage.content.description || ""
+        : "",
+  });
+  const withoutImmediateImages = list.filter((item) => !(item?.role === "ai" && item?.type === "image"));
+  if (withoutImmediateImages.length || !removedImage) return withoutImmediateImages;
+  return [
+    createMessage({
+      role: "ai",
+      type: "text",
+      content: inferDeferredPhotoTriggerKind(userInput) === "home" ? "行，等我到家了再拍给你看" : "行，等我晚点拍给你看",
+      quotedMessageId: null,
+    }),
+  ];
+};
+
+const isDeferredPhotoTodoDue = (role, todo, now = new Date()) => {
+  if (!role || !todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  if (String(todo.type || "") !== "deferred-photo") return false;
+  const dueAt = parseValidTimestamp(todo.dueAt || "");
+  if (dueAt && dueAt.getTime() > now.getTime()) return false;
+  const triggerKind = String(todo.triggerKind || "later").trim() || "later";
+  if (triggerKind !== "home") return true;
+  const currentPlace = String(getRoleTimelineAwarePlace(role, now) || getRoleCurrentPlace(role, now) || "").trim();
+  const timeContext = buildRoleTimeContext(role, now);
+  const activeTimelineText = [
+    currentPlace,
+    timeContext?.currentTimeline?.title,
+    timeContext?.currentTimeline?.place,
+    timeContext?.currentTimeline?.detail,
+    timeContext?.previousTimeline?.title,
+    timeContext?.previousTimeline?.place,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return HOME_PLACE_RE.test(activeTimelineText);
+};
+
+const buildDeferredPhotoMessageFromTodo = (role, todo, now = new Date()) => {
+  const currentPlace = getRoleTimelineAwarePlace(role, now) || getRoleCurrentPlace(role, now) || todo?.place || "当前位置";
+  const descriptionSeed = normalizeTodoText(todo?.imageDescription || "");
+  const description = descriptionSeed || `${formatDeferredPhotoTriggerText(todo?.triggerKind)}补给你的一张照片，画面里能看见角色此刻所在的${currentPlace}和刚安顿下来的生活细节`;
+  return createMessage({
+    role: "ai",
+    type: "image",
+    content: {
+      description,
+      place: currentPlace,
+      sourceTodoId: todo.id || "",
+    },
+    timestamp: now.toISOString(),
+  });
+};
+
+const markDeferredPhotoTodoDone = (role, todoId = "", messageId = "", now = new Date()) => {
+  markAppRoleTodoStatus(role, todoId, "done", messageId, now);
+};
+
+const isReminderTodoDue = (todo, now = new Date()) => {
+  if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  if (String(todo.type || "") !== "reminder") return false;
+  const dueAt = parseValidTimestamp(todo.dueAt || "");
+  return Boolean(dueAt && dueAt.getTime() <= now.getTime());
+};
+
+const buildReminderMessageContent = (todo = {}) => {
+  const title = normalizeTodoText(todo.title || todo.sourceText || "这件事");
+  const prefix = /^(?:记得|别忘了|不要忘了)/u.test(title) ? "" : "记得";
+  const sourceSpeaker = normalizeAppTodoSourceSpeaker(todo.sourceSpeaker || "user");
+  return normalizeTodoText(sourceSpeaker === "role" ? `我来提醒你，${prefix}${title}` : `你让我提醒你，${prefix}${title}`);
+};
+
+const buildReminderMessageFromTodo = (todo, now = new Date()) =>
+  createMessage({
+    role: "ai",
+    type: "text",
+    content: buildReminderMessageContent(todo),
+    timestamp: now.toISOString(),
+  });
+
+const applyReminderTodosForRole = (role, now = new Date(), { notificationMessages = [] } = {}) => {
+  const dueTodos = getPendingRoleTodos(role, { type: "reminder" }).filter((todo) => isReminderTodoDue(todo, now));
+  if (!dueTodos.length) return false;
+  role.chats = role.chats || { messages: [] };
+  role.chats.messages = Array.isArray(role.chats.messages) ? role.chats.messages : [];
+  role.runtime = role.runtime || {};
+  role.usage = role.usage || {};
+  dueTodos.slice(0, 3).forEach((todo) => {
+    const message = buildReminderMessageFromTodo(todo, now);
+    role.chats.messages.push(message);
+    markAppRoleTodoStatus(role, todo.id, "done", message.id, now, {
+      remindedAt: now.toISOString(),
+      reminderMessageId: message.id,
+    });
+    role.runtime.lastReminderTodoAt = message.timestamp;
+    role.usage.totalMessages = Math.max(0, Number(role.usage.totalMessages || 0)) + 1;
+    role.usage.tokensToday = Math.max(0, Number(role.usage.tokensToday || 0)) + estimateMessageUsage(message);
+    if (shouldTrackUnreadForRole(role.id)) {
+      bumpUnreadCount(role, 1);
+    }
+    notificationMessages.push({ roleId: role.id, message });
+  });
+  return true;
+};
+
+const isRoleSelfTodoDue = (todo, now = new Date()) => {
+  if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  if (String(todo.type || "") !== "role-todo") return false;
+  if (normalizeAppTodoActor(todo.assignee || "role", "role") !== "role") return false;
+  const dueAt = parseValidTimestamp(todo.dueAt || "");
+  return Boolean(dueAt && dueAt.getTime() <= now.getTime());
+};
+
+const buildRoleSelfTodoMessageFromTodo = (todo, now = new Date()) => {
+  void now;
+  const title = normalizeTodoText(todo.title || todo.sourceText || "这件事");
+  const content = /^(?:我|先|去|继续|准备)/u.test(title) ? title : `我先去${title}`;
+  return createMessage({
+    role: "ai",
+    type: "text",
+    content: normalizeTodoText(content),
+    timestamp: now.toISOString(),
+  });
+};
+
+const applyRoleSelfTodosForRole = (role, now = new Date(), { notificationMessages = [] } = {}) => {
+  const dueTodos = getPendingRoleTodos(role, { type: "role-todo" }).filter((todo) => isRoleSelfTodoDue(todo, now));
+  if (!dueTodos.length) return false;
+  role.chats = role.chats || { messages: [] };
+  role.chats.messages = Array.isArray(role.chats.messages) ? role.chats.messages : [];
+  role.runtime = role.runtime || {};
+  role.usage = role.usage || {};
+  dueTodos.slice(0, 2).forEach((todo) => {
+    const message = buildRoleSelfTodoMessageFromTodo(todo, now);
+    role.chats.messages.push(message);
+    markAppRoleTodoStatus(role, todo.id, "done", message.id, now);
+    role.runtime.lastRoleSelfTodoAt = message.timestamp;
+    role.usage.totalMessages = Math.max(0, Number(role.usage.totalMessages || 0)) + 1;
+    role.usage.tokensToday = Math.max(0, Number(role.usage.tokensToday || 0)) + estimateMessageUsage(message);
+    if (shouldTrackUnreadForRole(role.id)) {
+      bumpUnreadCount(role, 1);
+    }
+    notificationMessages.push({ roleId: role.id, message });
+  });
+  return true;
+};
+
+const applyDeferredPhotoTodosForRole = (role, now = new Date(), { imageGenerationJobs = [], notificationMessages = [] } = {}) => {
+  const dueTodos = getPendingRoleTodos(role, { type: "deferred-photo" }).filter((todo) => isDeferredPhotoTodoDue(role, todo, now));
+  if (!dueTodos.length) return false;
+  role.chats = role.chats || { messages: [] };
+  role.chats.messages = Array.isArray(role.chats.messages) ? role.chats.messages : [];
+  role.runtime = role.runtime || {};
+  role.usage = role.usage || {};
+  dueTodos.slice(0, 2).forEach((todo) => {
+    const message = buildDeferredPhotoMessageFromTodo(role, todo, now);
+    role.chats.messages.push(message);
+    markDeferredPhotoTodoDone(role, todo.id, message.id, now);
+    role.runtime.lastAiImageAt = message.timestamp;
+    role.usage.totalMessages = Math.max(0, Number(role.usage.totalMessages || 0)) + 1;
+    role.usage.tokensToday = Math.max(0, Number(role.usage.tokensToday || 0)) + estimateMessageUsage(message);
+    if (shouldTrackUnreadForRole(role.id)) {
+      bumpUnreadCount(role, 1);
+    }
+    notificationMessages.push({ roleId: role.id, message });
+    if (shouldAutoGenerateAiImageForMessage(role, message)) {
+      imageGenerationJobs.push({ roleId: role.id, messageId: message.id });
+    }
+  });
+  return true;
 };
 
 const isExplicitImageRequest = (input = "") => {
@@ -70192,6 +71403,7 @@ const appendMessagesSequentially = async (
   const baseTimestamp = normalizeLooseTimestamp(messageTimestamp);
   const baseTimestampMs = baseTimestamp ? new Date(baseTimestamp).getTime() : Number.NaN;
   const imageGenerationJobs = [];
+  const appendedMessages = [];
 
   for (let index = 0; index < messages.length; index += 1) {
     const source = messages[index];
@@ -70210,6 +71422,7 @@ const appendMessagesSequentially = async (
       Number.isFinite(baseTimestampMs) ? new Date(baseTimestampMs + index * 15_000).toISOString() : "";
 
     let appendedImageMessageId = "";
+    let appendedMessage = null;
     updateRole(roleId, (nextRole) => {
       const appended = createMessage({
         role: source.role || "ai",
@@ -70222,6 +71435,7 @@ const appendMessagesSequentially = async (
         appended.mediaDebug = structuredClone(source.mediaDebug);
       }
       nextRole.chats.messages.push(appended);
+      appendedMessage = structuredClone(appended);
       if ((source.role || "ai") === "ai" && shouldTrackUnreadForRole(roleId)) {
         bumpUnreadCount(nextRole, 1);
       }
@@ -70245,6 +71459,9 @@ const appendMessagesSequentially = async (
       }
       return nextRole;
     }, { paintNow: paintStepNow });
+    if (appendedMessage) {
+      appendedMessages.push(appendedMessage);
+    }
     if (appendedImageMessageId) {
       imageGenerationJobs.push(appendedImageMessageId);
     }
@@ -70256,7 +71473,10 @@ const appendMessagesSequentially = async (
   if (!shouldPaintStep()) {
     paint();
   }
-  void maybeNotifyForRoleMessages(roleId, messages, { source: notificationSource });
+  upsertRolePromisedTodosFromMessages(roleId, appendedMessages, {
+    now: parseValidTimestamp(messageTimestamp || lastApiAt || "") || new Date(),
+  });
+  void maybeNotifyForRoleMessages(roleId, appendedMessages.length ? appendedMessages : messages, { source: notificationSource });
   queueAutoSummaryCheckForRole(roleId);
   queueLivingMemoryAutoDigestForRole(roleId, { delayMs: 1200, reason: "message-threshold" });
   imageGenerationJobs.forEach((messageId) => {
@@ -70511,8 +71731,9 @@ const requestAndAppendAiReply = async (
 
     const explicitVoiceDirective = resolveExplicitVoiceDirective(liveRole, normalizedInput);
     const explicitImageRequested = isExplicitImageRequest(normalizedInput);
+    const deferredPhotoRequested = isDeferredPhotoRequest(normalizedInput);
     const explicitStickerRequested = isExplicitStickerRequest(normalizedInput);
-    const messages = ensureRoleQuoteOnFirstReplyMessage(applyAiStickerPolicyToMessages(
+    const policyMessages = ensureRoleQuoteOnFirstReplyMessage(applyAiStickerPolicyToMessages(
       liveRole,
       applyAiImagePolicyToMessages(
         liveRole,
@@ -70523,7 +71744,7 @@ const requestAndAppendAiReply = async (
         }),
         {
           userInput: normalizedInput,
-          forceImage: explicitImageRequested,
+          forceImage: explicitImageRequested && !deferredPhotoRequested,
         },
       ),
       {
@@ -70531,6 +71752,12 @@ const requestAndAppendAiReply = async (
         forceSticker: explicitStickerRequested,
       },
     ), quoteCandidates);
+    const messages = stripDeferredPhotoImagesFromMessages(
+      liveRole.id,
+      policyMessages,
+      normalizedInput,
+      normalizedSourceMessageId,
+    );
     replyBatch = messages.length
       ? {
           messages,
@@ -75581,6 +76808,23 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
 
     return nextRole;
   }, { paintNow: false });
+  upsertDeferredPhotoTodo(role.id, {
+    sourceMessageId: sentMessageId,
+    sourceText: trimmed,
+  });
+  const completedTodo = applyRoleTodoCompletionCommand(role.id, {
+    sourceMessageId: sentMessageId,
+    sourceText: trimmed,
+  });
+  if (completedTodo) {
+    setToast(getAppRoleTodoStatus(completedTodo) === "cancelled" ? "已取消待办" : "已划掉待办");
+  } else {
+    upsertGeneralRoleTodosFromUserMessage(role.id, {
+      sourceMessageId: sentMessageId,
+      sourceText: trimmed,
+      now: new Date(roundStartedAtMs),
+    });
+  }
   queueChatSendMotion(role.id, sentMessageId);
   paint();
   void playMessageSoundEffect("user", { force: true });
@@ -76040,6 +77284,8 @@ const applyRuntime = async () => {
   const linkedJourneyJobs = [];
   const autonomousJobs = [];
   const autoMomentJobs = [];
+  const imageGenerationJobs = [];
+  const todoNotificationJobs = [];
   const shouldClearOfflineSession = isAppCurrentlyVisible() && Boolean(parseValidTimestamp(state.appPresence?.offlineSessionStartedAt));
   let shouldKeepOfflineSession = false;
 
@@ -76056,6 +77302,15 @@ const applyRuntime = async () => {
       changed = true;
     }
     if (syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now)) {
+      changed = true;
+    }
+    if (applyReminderTodosForRole(next, now, { notificationMessages: todoNotificationJobs })) {
+      changed = true;
+    }
+    if (applyRoleSelfTodosForRole(next, now, { notificationMessages: todoNotificationJobs })) {
+      changed = true;
+    }
+    if (applyDeferredPhotoTodosForRole(next, now, { imageGenerationJobs, notificationMessages: todoNotificationJobs })) {
       changed = true;
     }
 
@@ -76086,6 +77341,20 @@ const applyRuntime = async () => {
   if (changed) {
     syncPersistentState();
   }
+
+  imageGenerationJobs.forEach((job) => {
+    void generateAiImageForMessage(job.roleId, job.messageId, { silent: true });
+  });
+
+  const todoNotificationsByRole = todoNotificationJobs.reduce((map, item) => {
+    if (!item?.roleId || !item?.message) return map;
+    if (!map.has(item.roleId)) map.set(item.roleId, []);
+    map.get(item.roleId).push(item.message);
+    return map;
+  }, new Map());
+  todoNotificationsByRole.forEach((messages, roleId) => {
+    void maybeNotifyForRoleMessages(roleId, messages, { source: "todo" });
+  });
 
   for (const job of linkedJourneyJobs) {
     await syncLifeMonitorWithJourney({
@@ -76821,7 +78090,7 @@ eventRoot.addEventListener("click", async (event) => {
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
     state.imageViewer = {
       src: dataUrl,
-      alt: String(message?.content?.name || "图片"),
+      alt: String(message?.content?.description || message?.content?.caption || message?.content?.name || "图片"),
       filename: String(message?.content?.name || "generated-image.jpg"),
     };
     paint();
@@ -77113,6 +78382,16 @@ eventRoot.addEventListener("click", async (event) => {
     state.quickPlusMenuOpen = false;
     state.journeyActiveDate = getJourneyActiveDateKey();
     openPanel("journey-sheet");
+    return;
+  }
+
+  if (action === "complete-role-todo") {
+    const targetRoleId = String(button.dataset.roleId || state.activeChatRoleId || state.selectedRoleId || "").trim();
+    const todoId = String(button.dataset.todoId || "").trim();
+    if (!targetRoleId || !todoId) return;
+    if (completeRoleTodoById(targetRoleId, todoId)) {
+      setToast("已划掉待办");
+    }
     return;
   }
 
