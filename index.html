@@ -11729,6 +11729,23 @@ body {
   appearance: auto;
 }
 
+.journey-todo-editor-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.journey-todo-delete-btn {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 59, 48, 0.08);
+  color: #ff3b30;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 @media (max-width: 420px) {
   .journey-todo-editor-grid {
     grid-template-columns: 1fr;
@@ -13607,6 +13624,13 @@ html.chat-composer-focused .ref-chat-composer {
   line-height: 1.25;
 }
 
+.chat-screen.bubble-theme-default .wechat-message-quote {
+  padding: 4px 9px !important;
+  border: 1px solid rgba(17, 17, 17, 0.1) !important;
+  border-radius: var(--chat-bubble-radius) !important;
+  background: rgba(255, 255, 255, 0.58) !important;
+}
+
 .chat-screen.bubble-theme-default .chat-message-line.user-line .wechat-message-quote,
 .chat-screen.bubble-theme-custom .chat-message-line.user-line .wechat-message-quote,
 .chat-screen.bubble-theme-wechat .chat-message-line.user-line .wechat-message-quote {
@@ -13731,13 +13755,15 @@ html.chat-composer-focused .ref-chat-composer {
   transform: translateY(-50%) rotate(0deg);
 }
 
-.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .bubble-tail,
 .chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .bubble-tail,
 .chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .bubble-tail {
   display: none !important;
 }
 
-.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .chat-bubble::after,
+.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .bubble-tail {
+  display: block !important;
+}
+
 .chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .chat-bubble::after,
 .chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .chat-bubble::after {
   content: "" !important;
@@ -13753,14 +13779,12 @@ html.chat-composer-focused .ref-chat-composer {
   z-index: 2;
 }
 
-.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .ai-bubble::after,
 .chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .ai-bubble::after,
 .chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .ai-bubble::after {
   left: calc(-6px + var(--chat-tail-offset-x, 0px));
   background-image: var(--chat-tail-ai, none);
 }
 
-.chat-screen.bubble-theme-default .chat-bubble-wrap.has-external-quote > .user-bubble::after,
 .chat-screen.bubble-theme-custom .chat-bubble-wrap.has-external-quote > .user-bubble::after,
 .chat-screen.bubble-theme-wechat .chat-bubble-wrap.has-external-quote > .user-bubble::after {
   right: calc(-6px - var(--chat-tail-offset-x, 0px));
@@ -26907,7 +26931,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "5月28日-2";
+const APP_BUILD_VERSION_LABEL = "5月28日-4";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -28570,7 +28594,7 @@ const isBareMediaMessage = (message) => ["sticker", "photo", "image"].includes(m
 
 const shouldShowChatBubbleTail = (message, { chatSkin = "default", isPerMessageAvatarTheme = false, index = 0, firstIsTailless = false } = {}) => {
   if (message?.type === "voice") {
-    return chatSkin === "qq" || chatSkin === "wechat";
+    return chatSkin === "qq" || chatSkin === "wechat" || (chatSkin === "default" && index === 0);
   }
   return (isPerMessageAvatarTheme || (index === 0 && !firstIsTailless)) && !isTaillessBubbleMessage(message);
 };
@@ -35474,7 +35498,10 @@ const renderJourneyTodoEditorSheet = (state, role) => {
           <textarea class="soft-input soft-area" data-journey-todo-edit-field="detail" placeholder="可选">${escapeHtml(draft.detail || "")}</textarea>
         </label>
 
-        <button class="sheet-action-btn primary sheet-generate-btn" type="button" data-action="save-role-todo-edit">保存待办</button>
+        <div class="journey-todo-editor-actions">
+          <button class="sheet-action-btn primary sheet-generate-btn" type="button" data-action="save-role-todo-edit">保存待办</button>
+          ${draft.id ? '<button class="journey-todo-delete-btn" type="button" data-action="delete-role-todo-edit">删除待办</button>' : ""}
+        </div>
       </section>
     `,
     "journey-todo-editor-wrap",
@@ -55199,6 +55226,40 @@ const saveRoleTodoEditorDraft = () => {
     paint();
   }
   setToast(draft?.id ? "待办已更新" : "待办已新增");
+};
+
+const deleteRoleTodoFromEditorDraft = () => {
+  const draft = state.journeyTodoEditDraft;
+  const roleId = String(draft?._roleId || state.activeChatRoleId || state.selectedRoleId || "").trim();
+  const todoId = String(draft?.id || "").trim();
+  if (!roleId || !todoId) return false;
+  if (!window.confirm("删除这条待办吗？")) return false;
+  const now = new Date();
+  let deleted = false;
+  updateRole(roleId, (nextRole) => {
+    const todo = (Array.isArray(nextRole.todos) ? nextRole.todos : []).find((item) => item?.id === todoId);
+    if (!todo) return nextRole;
+    todo.status = "cancelled";
+    todo.completedAt = now.toISOString();
+    todo.completedMessageId = "";
+    todo.executionStartedAt = "";
+    todo.executionError = "";
+    todo.updatedAt = now.toISOString();
+    deleted = true;
+    return nextRole;
+  }, { paintNow: false });
+  if (!deleted) {
+    setToast("没找到这条待办");
+    return false;
+  }
+  state.journeyTodoEditDraft = null;
+  if (state.panelStack[state.panelStack.length - 1] === "journey-todo-editor") {
+    popPanel();
+  } else {
+    paint();
+  }
+  setToast("待办已删除");
+  return true;
 };
 
 const toggleRoleTodoDoneById = (roleId = "", todoId = "") => {
@@ -79331,6 +79392,11 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "save-role-todo-edit") {
     saveRoleTodoEditorDraft();
+    return;
+  }
+
+  if (action === "delete-role-todo-edit") {
+    deleteRoleTodoFromEditorDraft();
     return;
   }
 
