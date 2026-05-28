@@ -11561,6 +11561,35 @@ body {
   padding: 12px 14px !important;
 }
 
+.journey-todo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.journey-todo-add-btn,
+.journey-todo-edit-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(10, 132, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(10, 132, 255, 0.08);
+  color: #0a84ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.journey-todo-add-btn svg,
+.journey-todo-edit-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
 .journey-todo-list {
   display: grid;
   gap: 8px;
@@ -11568,7 +11597,7 @@ body {
 
 .journey-todo-item {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) 26px;
   gap: 9px;
   align-items: center;
   min-height: 34px;
@@ -11590,10 +11619,6 @@ body {
   padding: 0;
   cursor: pointer;
   flex: 0 0 auto;
-}
-
-.journey-todo-check:disabled {
-  cursor: default;
 }
 
 .journey-todo-copy {
@@ -11651,6 +11676,52 @@ body {
 .journey-todo-item.is-done .journey-todo-type {
   background: rgba(142, 142, 147, 0.12);
   color: #8e8e93;
+}
+
+.journey-todo-item.is-done .journey-todo-edit-btn {
+  border-color: #ececef;
+  background: #f7f7f8;
+  color: #8e8e93;
+}
+
+.journey-todo-editor-card {
+  gap: 12px;
+}
+
+.journey-todo-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.journey-todo-editor-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.journey-todo-editor-field.is-full {
+  grid-column: 1 / -1;
+}
+
+.journey-todo-editor-field span {
+  color: #6e747d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.journey-todo-editor-wrap .soft-input {
+  min-width: 0;
+}
+
+.journey-todo-editor-wrap select.soft-input {
+  appearance: auto;
+}
+
+@media (max-width: 420px) {
+  .journey-todo-editor-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .journey-sheet-wrap .journey-main strong,
@@ -26818,7 +26889,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "v2026.05.28-todo-speakers-assignees";
+const APP_BUILD_VERSION_LABEL = "5月28日-1";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -31911,6 +31982,7 @@ const renderPanelOverlay = (state, role) => {
   if (panel === "life-events") return renderArchivePage("往期事件簿", role.events, "event", state);
   if (panel === "life-resume") return renderArchivePage("人生履历", role.resume, "resume", state);
   if (panel === "journey-editor") return renderJourneyEditorSheet(state);
+  if (panel === "journey-todo-editor") return renderJourneyTodoEditorSheet(state, role);
   if (panel === "worldbook-role-binding") return renderWorldbookRoleBindingPanel(state, role);
   if (panel === "clear-chat-confirm") return renderClearChatConfirmSheet(state, role);
   if (panel === "delete-role-confirm") return renderDeleteRoleConfirmSheet(role);
@@ -35252,6 +35324,13 @@ const getJourneyTodoDetailText = (todo = {}, done = false) => {
   return [actionLabel, dueLabel || todo.triggerText || todo.detail || "等待触发"].filter(Boolean).join(" · ");
 };
 
+const formatJourneyTodoEditorDateTimeLocal = (value = "") => {
+  const parsed = new Date(value || "");
+  if (Number.isNaN(parsed.getTime())) return "";
+  const localDate = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
 const getRoleJourneyTodos = (role) =>
   (Array.isArray(role?.todos) ? role.todos : [])
     .filter((todo) => todo && getJourneyRoleTodoStatus(todo) !== "cancelled")
@@ -35264,10 +35343,23 @@ const getRoleJourneyTodos = (role) =>
 
 const renderJourneyTodoStrip = (role) => {
   const todos = getRoleJourneyTodos(role);
-  if (!todos.length) return "";
+  const roleId = escapeHtml(role?.id || "");
+  if (!todos.length) {
+    return `
+      <section class="sheet-card journey-mobile-card journey-todo-card">
+        <div class="journey-todo-head">
+          <div class="sheet-kicker">待办</div>
+          <button class="journey-todo-add-btn" type="button" data-action="open-role-todo-editor" data-role-id="${roleId}" aria-label="新增待办" title="新增待办">${icons.plus}</button>
+        </div>
+      </section>
+    `;
+  }
   return `
     <section class="sheet-card journey-mobile-card journey-todo-card">
-      <div class="sheet-kicker">待办</div>
+      <div class="journey-todo-head">
+        <div class="sheet-kicker">待办</div>
+        <button class="journey-todo-add-btn" type="button" data-action="open-role-todo-editor" data-role-id="${roleId}" aria-label="新增待办" title="新增待办">${icons.plus}</button>
+      </div>
       <div class="journey-todo-list">
         ${todos
           .map((todo) => {
@@ -35278,12 +35370,13 @@ const renderJourneyTodoStrip = (role) => {
             const sourceLabel = getJourneyTodoSourceLabel(todo, role);
             return `
               <div class="journey-todo-item ${done ? "is-done" : ""}">
-                <button class="journey-todo-check" type="button" data-action="complete-role-todo" data-role-id="${escapeHtml(role?.id || "")}" data-todo-id="${escapeHtml(todo.id || "")}" aria-label="${done ? "已完成" : "划掉待办"}" ${done ? "disabled" : ""}>${done ? "✓" : ""}</button>
+                <button class="journey-todo-check" type="button" data-action="toggle-role-todo-status" data-role-id="${roleId}" data-todo-id="${escapeHtml(todo.id || "")}" aria-label="${done ? "恢复未完成" : "划掉待办"}">${done ? "✓" : ""}</button>
                 <div class="journey-todo-copy">
                   <strong><span class="journey-todo-type">${escapeHtml(typeLabel)}</span>${escapeHtml(title)}</strong>
                   <small class="journey-todo-source">${escapeHtml(sourceLabel)}</small>
                   ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
                 </div>
+                <button class="journey-todo-edit-btn" type="button" data-action="open-role-todo-editor" data-role-id="${roleId}" data-todo-id="${escapeHtml(todo.id || "")}" aria-label="编辑待办" title="编辑待办">${icons.edit}</button>
               </div>
             `;
           })
@@ -35291,6 +35384,78 @@ const renderJourneyTodoStrip = (role) => {
       </div>
     </section>
   `;
+};
+
+const renderJourneyTodoEditorSheet = (state, role) => {
+  const draft = state.journeyTodoEditDraft;
+  if (!draft) return "";
+  const roleName = getJourneyTodoRoleName(role, draft);
+  const type = String(draft.type || "today-todo").trim();
+  const sourceSpeaker = getJourneyTodoActor(draft.sourceSpeaker || "user", "user");
+  const assignee = getJourneyTodoActor(draft.assignee || "user", "user");
+  const targetSpeaker = getJourneyTodoActor(draft.targetSpeaker || "user", "user");
+  const dueAtLocal = String(draft.dueAtLocal || "").trim() || formatJourneyTodoEditorDateTimeLocal(draft.dueAt || "");
+  const typeOptions = [
+    ["today-todo", "今日待办"],
+    ["role-todo", "角色要做"],
+    ["reminder", "提醒"],
+    ["deferred-photo", "补发图片"],
+  ];
+  const speakerOptions = [
+    ["user", "用户"],
+    ["role", roleName],
+  ];
+  return renderChatBottomSheet(
+    draft.id ? "编辑待办" : "新增待办",
+    `
+      <section class="sheet-card journey-todo-editor-card">
+        <label class="journey-todo-editor-field is-full">
+          <span>内容</span>
+          <input class="soft-input" data-journey-todo-edit-field="title" value="${escapeHtml(draft.title || "")}" placeholder="写下这条待办" />
+        </label>
+
+        <div class="journey-todo-editor-grid">
+          <label class="journey-todo-editor-field">
+            <span>类型</span>
+            <select class="soft-input" data-journey-todo-edit-field="type">
+              ${typeOptions.map(([value, label]) => `<option value="${value}" ${type === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="journey-todo-editor-field">
+            <span>谁说的</span>
+            <select class="soft-input" data-journey-todo-edit-field="sourceSpeaker">
+              ${speakerOptions.map(([value, label]) => `<option value="${value}" ${sourceSpeaker === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="journey-todo-editor-field">
+            <span>谁来做</span>
+            <select class="soft-input" data-journey-todo-edit-field="assignee">
+              ${speakerOptions.map(([value, label]) => `<option value="${value}" ${assignee === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="journey-todo-editor-field">
+            <span>提醒谁</span>
+            <select class="soft-input" data-journey-todo-edit-field="targetSpeaker">
+              ${speakerOptions.map(([value, label]) => `<option value="${value}" ${targetSpeaker === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+
+        <label class="journey-todo-editor-field is-full">
+          <span>完成时间</span>
+          <input class="soft-input" type="datetime-local" data-journey-todo-edit-field="dueAtLocal" value="${escapeHtml(dueAtLocal)}" />
+        </label>
+
+        <label class="journey-todo-editor-field is-full">
+          <span>补充</span>
+          <textarea class="soft-input soft-area" data-journey-todo-edit-field="detail" placeholder="可选">${escapeHtml(draft.detail || "")}</textarea>
+        </label>
+
+        <button class="sheet-action-btn primary sheet-generate-btn" type="button" data-action="save-role-todo-edit">保存待办</button>
+      </section>
+    `,
+    "journey-todo-editor-wrap",
+  );
 };
 
 const renderJourneySheetRefined = (state, role) => {
@@ -36244,6 +36409,7 @@ const renderPanelOverlayRefined = (state, role) => {
   if (panel === "journey-calendar") return renderJourneyCalendarSheet(state, role);
   if (panel === "video-session") return renderVideoSessionSheet(state, role);
   if (panel === "journey-editor") return renderJourneyEditorSheet(state);
+  if (panel === "journey-todo-editor") return renderJourneyTodoEditorSheet(state, role);
   if (panel === "clear-chat-confirm") return renderClearChatConfirmSheet(state, role);
   if (panel === "summary-refine-preview") return renderSummaryRefinePreviewSheet(state, role);
   if (panel === "important-memory-update-preview") return renderImportantMemoryUpdatePreviewSheet(state, role);
@@ -37244,6 +37410,7 @@ const createTransientState = () => ({
   journeyMonitorPreview: null,
   journeyEventPreview: null,
   journeyEditDraft: null,
+  journeyTodoEditDraft: null,
   goalEditModes: {
     short: false,
     long: false,
@@ -38884,6 +39051,7 @@ const serializeState = () => {
     journeyMonitorPreview,
     journeyEventPreview,
     journeyEditDraft,
+    journeyTodoEditDraft,
     goalEditModes,
     roleVoiceChanceEditing,
     modalRoleAvatarImage,
@@ -42293,6 +42461,7 @@ const clearTransient = () => {
   state.expandedVoiceMessageIds = [];
   state.expandedVideoCallMessageIds = [];
   state.videoCallSummaryBusyMessageIds = [];
+  state.journeyTodoEditDraft = null;
   clearSummaryRefinePreviewState();
   clearImportantMemoryUpdatePreviewState();
 };
@@ -42386,6 +42555,9 @@ const popPanel = () => {
   }
   if (closingPanel === "important-memory-update-preview") {
     clearImportantMemoryUpdatePreviewState();
+  }
+  if (closingPanel === "journey-todo-editor") {
+    state.journeyTodoEditDraft = null;
   }
   if (closingPanel === "worldbook-sheet" || closingPanel === "worldbook-role-binding") {
     state.worldbookBindingEntryId = "";
@@ -51883,6 +52055,7 @@ const generateAiImageForMessage = async (roleId, messageId, { silent = false } =
       ...content,
       name: `${String(liveRole?.profile?.note || "role").trim() || "role"}-generated-image.jpg`,
       dataUrl: result.dataUrl,
+      viewerDescription: content.viewerDescription || content.imageDescription || content.description || "",
       transferStatus: "ready",
       generationStatus: "ready",
       generationError: "",
@@ -54577,6 +54750,216 @@ const completeRoleTodoById = (roleId = "", todoId = "") => {
     paint();
   }
   return completed;
+};
+
+const normalizeAppTodoEditorType = (value = "") => {
+  const normalized = String(value || "").trim();
+  return ["today-todo", "role-todo", "reminder", "deferred-photo"].includes(normalized) ? normalized : "today-todo";
+};
+
+const getAppTodoEditorDefaultCategory = (type = "today-todo") => {
+  if (type === "deferred-photo") return "照片";
+  if (type === "role-todo") return "角色";
+  return "";
+};
+
+const getAppTodoEditorDefaultDetail = (type = "today-todo") => {
+  if (type === "reminder") return "到点后角色会在聊天里提醒你";
+  if (type === "deferred-photo") return "到点后角色会补发图片";
+  if (type === "role-todo") return "角色等会要做的事";
+  return "今日待办，完成后可以划掉";
+};
+
+const formatAppTodoEditorDateTimeLocal = (value = "") => {
+  const parsed = parseValidTimestamp(value || "");
+  if (!parsed) return "";
+  const localDate = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const parseAppTodoEditorDateTimeLocal = (value = "") => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
+};
+
+const createAppTodoEditorDueAt = (type = "today-todo", todo = null) => {
+  const existingDueAt = String(todo?.dueAt || "").trim();
+  if (existingDueAt) return existingDueAt;
+  if (todo) return "";
+  const normalizedType = normalizeAppTodoEditorType(type);
+  if (["reminder", "role-todo", "deferred-photo"].includes(normalizedType)) {
+    return new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString();
+  }
+  return "";
+};
+
+const createAppTodoEditorDraft = (role, todo = null) => {
+  const type = normalizeAppTodoEditorType(todo?.type || "today-todo");
+  const dueAt = createAppTodoEditorDueAt(type, todo);
+  const defaultAssignee = getAppTodoDefaultAssignee({ type });
+  const defaultTarget = getAppTodoDefaultTarget({ type });
+  return {
+    _roleId: String(role?.id || "").trim(),
+    id: String(todo?.id || "").trim(),
+    type,
+    title: String(todo?.title || "").trim(),
+    detail: String(todo?.detail || getAppTodoEditorDefaultDetail(type)).trim(),
+    sourceSpeaker: normalizeAppTodoSourceSpeaker(todo?.sourceSpeaker || "user"),
+    assignee: normalizeAppTodoActor(todo?.assignee || defaultAssignee, defaultAssignee),
+    targetSpeaker: normalizeAppTodoActor(todo?.targetSpeaker || defaultTarget, defaultTarget),
+    dueAtLocal: formatAppTodoEditorDateTimeLocal(dueAt),
+    status: getAppRoleTodoStatus(todo || {}),
+    sourceText: String(todo?.sourceText || "").trim(),
+    imageDescription: String(todo?.imageDescription || "").trim(),
+    category: String(todo?.category || getAppTodoEditorDefaultCategory(type)).trim(),
+    triggerKind: String(todo?.triggerKind || "").trim(),
+    createdAt: String(todo?.createdAt || "").trim(),
+  };
+};
+
+const openRoleTodoEditor = (roleId = "", todoId = "") => {
+  const role = getRoleById(state, String(roleId || "").trim()) || getActiveChatRole() || getCurrentRole();
+  if (!role) return;
+  const todo = String(todoId || "").trim()
+    ? (Array.isArray(role.todos) ? role.todos : []).find((item) => item?.id === String(todoId || "").trim())
+    : null;
+  if (todoId && !todo) {
+    setToast("没找到这条待办");
+    return;
+  }
+  state.journeyTodoEditDraft = createAppTodoEditorDraft(role, todo || null);
+  openPanel("journey-todo-editor");
+};
+
+const buildAppTodoPayloadFromEditorDraft = (draft = {}, existingTodo = null) => {
+  const type = normalizeAppTodoEditorType(draft.type);
+  const now = new Date();
+  const title = normalizeAppTodoTitle(draft.title, type === "reminder" ? "提醒事项" : type === "deferred-photo" ? "补发图片" : "待办事项");
+  const rawDueAt = parseAppTodoEditorDateTimeLocal(draft.dueAtLocal);
+  const needsTimeFallback = ["reminder", "role-todo", "deferred-photo"].includes(type);
+  const fallbackDueAt = needsTimeFallback ? new Date(now.getTime() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString() : "";
+  const dueAt = rawDueAt || fallbackDueAt;
+  const dueDate = parseValidTimestamp(dueAt || "");
+  const triggerKind = dueDate ? "time" : type === "deferred-photo" ? String(draft.triggerKind || existingTodo?.triggerKind || "home").trim() || "home" : "manual";
+  const triggerText = dueDate
+    ? formatAppTodoDueTriggerText(dueDate, now)
+    : type === "today-todo"
+      ? "今日待办"
+      : type === "deferred-photo"
+        ? formatDeferredPhotoTriggerText(triggerKind)
+        : "待办";
+  const defaultAssignee = getAppTodoDefaultAssignee({ type });
+  const defaultTarget = getAppTodoDefaultTarget({ type });
+  const detail = normalizeTodoText(draft.detail || getAppTodoEditorDefaultDetail(type));
+  return {
+    type,
+    title,
+    detail,
+    category: String(draft.category || getAppTodoEditorDefaultCategory(type)).trim(),
+    triggerKind,
+    triggerText,
+    dueAt,
+    dateKey: dueDate ? formatDateKey(dueDate) : type === "today-todo" ? formatDateKey(now) : "",
+    sourceSpeaker: normalizeAppTodoSourceSpeaker(draft.sourceSpeaker || existingTodo?.sourceSpeaker || "user"),
+    assignee: normalizeAppTodoActor(draft.assignee || existingTodo?.assignee || defaultAssignee, defaultAssignee),
+    targetSpeaker: normalizeAppTodoActor(draft.targetSpeaker || existingTodo?.targetSpeaker || defaultTarget, defaultTarget),
+    sourceText: normalizeTodoText(draft.sourceText || existingTodo?.sourceText || title),
+    imageDescription: normalizeTodoText(draft.imageDescription || existingTodo?.imageDescription || (type === "deferred-photo" ? detail || title : "")),
+    order: dueDate ? dueDate.getTime() : Number(existingTodo?.order || Date.now()),
+  };
+};
+
+const saveRoleTodoEditorDraft = () => {
+  const draft = state.journeyTodoEditDraft;
+  const roleId = String(draft?._roleId || state.activeChatRoleId || state.selectedRoleId || "").trim();
+  if (!roleId) return;
+  const rawTitle = String(draft?.title || "").trim();
+  if (!rawTitle) {
+    setToast("先写待办内容");
+    return;
+  }
+  const nowIsoText = new Date().toISOString();
+  let saved = false;
+  updateRole(roleId, (nextRole) => {
+    nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
+    const existing = draft?.id ? nextRole.todos.find((todo) => todo?.id === draft.id) : null;
+    const payload = buildAppTodoPayloadFromEditorDraft(draft, existing);
+    if (existing) {
+      Object.assign(existing, {
+        ...payload,
+        id: existing.id,
+        status: getAppRoleTodoStatus(existing),
+        createdAt: existing.createdAt || draft.createdAt || nowIsoText,
+        updatedAt: nowIsoText,
+      });
+    } else {
+      nextRole.todos.unshift({
+        id: createRoleTodoId(),
+        status: "pending",
+        sourceMessageId: "",
+        ackSpeaker: "",
+        ackMessageId: "",
+        ackText: "",
+        remindedAt: "",
+        reminderMessageId: "",
+        completedAt: "",
+        completedMessageId: "",
+        place: "",
+        createdAt: nowIsoText,
+        updatedAt: nowIsoText,
+        ...payload,
+      });
+      nextRole.todos = nextRole.todos.slice(0, APP_ROLE_TODO_MAX_ITEMS);
+    }
+    saved = true;
+    return nextRole;
+  }, { paintNow: false });
+  if (!saved) return;
+  state.journeyTodoEditDraft = null;
+  if (state.panelStack[state.panelStack.length - 1] === "journey-todo-editor") {
+    popPanel();
+  } else {
+    paint();
+  }
+  setToast(draft?.id ? "待办已更新" : "待办已新增");
+};
+
+const toggleRoleTodoDoneById = (roleId = "", todoId = "") => {
+  if (!roleId || !todoId) return "";
+  let nextStatus = "";
+  updateRole(roleId, (nextRole) => {
+    const todo = (Array.isArray(nextRole.todos) ? nextRole.todos : []).find((item) => item?.id === todoId);
+    if (!todo) return nextRole;
+    const now = new Date();
+    if (getAppRoleTodoStatus(todo) === "done") {
+      todo.status = "pending";
+      todo.completedAt = "";
+      todo.completedMessageId = "";
+      todo.remindedAt = "";
+      todo.reminderMessageId = "";
+      todo.updatedAt = now.toISOString();
+      const dueAt = parseValidTimestamp(todo.dueAt || "");
+      if (dueAt && dueAt.getTime() <= now.getTime()) {
+        const nextDueAt = new Date(now.getTime() + APP_REMINDER_DEFAULT_DELAY_MS);
+        todo.dueAt = nextDueAt.toISOString();
+        todo.dateKey = formatDateKey(nextDueAt);
+        todo.triggerText = formatAppTodoDueTriggerText(nextDueAt, now);
+        todo.order = nextDueAt.getTime();
+      }
+      nextStatus = "pending";
+      return nextRole;
+    }
+    const changedTodo = markAppRoleTodoStatus(nextRole, todoId, "done", "", now);
+    if (changedTodo) {
+      changedTodo.updatedAt = now.toISOString();
+      nextStatus = "done";
+    }
+    return nextRole;
+  }, { paintNow: false });
+  if (nextStatus) paint();
+  return nextStatus;
 };
 
 const PHOTO_REQUEST_RE = /(?:发|来|拍|给我|让我|想看|看看).{0,12}(?:图|照|照片|自拍|现场照|图片)|(?:图|照|照片|自拍|现场照|图片).{0,12}(?:发|拍|给我|看看|看你)/i;
@@ -77730,6 +78113,27 @@ eventRoot.addEventListener("input", (event) => {
     return;
   }
 
+  if (target.dataset.journeyTodoEditField) {
+    const field = target.dataset.journeyTodoEditField;
+    const nextDraft = {
+      ...(state.journeyTodoEditDraft || {}),
+      [field]: target.value,
+    };
+    if (field === "type") {
+      const type = normalizeAppTodoEditorType(target.value);
+      nextDraft.type = type;
+      nextDraft.assignee = getAppTodoDefaultAssignee({ type });
+      nextDraft.targetSpeaker = getAppTodoDefaultTarget({ type });
+      nextDraft.category = getAppTodoEditorDefaultCategory(type);
+      nextDraft.detail = nextDraft.detail || getAppTodoEditorDefaultDetail(type);
+      if (!String(nextDraft.dueAtLocal || "").trim() && ["reminder", "role-todo", "deferred-photo"].includes(type)) {
+        nextDraft.dueAtLocal = formatAppTodoEditorDateTimeLocal(new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString());
+      }
+    }
+    state.journeyTodoEditDraft = nextDraft;
+    return;
+  }
+
   if (target.dataset.clearChatRange != null) {
     state.clearChatDeleteCount = Number(target.value) || 1;
     syncClearChatDeletePreview();
@@ -77813,6 +78217,28 @@ eventRoot.addEventListener("change", (event) => {
 
   if (target.dataset.journeyDateField) {
     updateJourneyDateField(target.dataset.journeyDateField, target.value);
+    return;
+  }
+
+  if (target.dataset.journeyTodoEditField) {
+    const field = target.dataset.journeyTodoEditField;
+    const nextDraft = {
+      ...(state.journeyTodoEditDraft || {}),
+      [field]: target.value,
+    };
+    if (field === "type") {
+      const type = normalizeAppTodoEditorType(target.value);
+      nextDraft.type = type;
+      nextDraft.assignee = getAppTodoDefaultAssignee({ type });
+      nextDraft.targetSpeaker = getAppTodoDefaultTarget({ type });
+      nextDraft.category = getAppTodoEditorDefaultCategory(type);
+      nextDraft.detail = nextDraft.detail || getAppTodoEditorDefaultDetail(type);
+      if (!String(nextDraft.dueAtLocal || "").trim() && ["reminder", "role-todo", "deferred-photo"].includes(type)) {
+        nextDraft.dueAtLocal = formatAppTodoEditorDateTimeLocal(new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString());
+      }
+    }
+    state.journeyTodoEditDraft = nextDraft;
+    paint();
     return;
   }
 
@@ -78090,7 +78516,7 @@ eventRoot.addEventListener("click", async (event) => {
     if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return;
     state.imageViewer = {
       src: dataUrl,
-      alt: String(message?.content?.description || message?.content?.caption || message?.content?.name || "图片"),
+      alt: String(message?.content?.viewerDescription || message?.content?.imageDescription || message?.content?.description || message?.content?.caption || message?.content?.name || "图片"),
       filename: String(message?.content?.name || "generated-image.jpg"),
     };
     paint();
@@ -78389,9 +78815,32 @@ eventRoot.addEventListener("click", async (event) => {
     const targetRoleId = String(button.dataset.roleId || state.activeChatRoleId || state.selectedRoleId || "").trim();
     const todoId = String(button.dataset.todoId || "").trim();
     if (!targetRoleId || !todoId) return;
-    if (completeRoleTodoById(targetRoleId, todoId)) {
-      setToast("已划掉待办");
+    const nextStatus = toggleRoleTodoDoneById(targetRoleId, todoId);
+    if (nextStatus) {
+      setToast(nextStatus === "done" ? "已划掉待办" : "已恢复未完成");
     }
+    return;
+  }
+
+  if (action === "toggle-role-todo-status") {
+    const targetRoleId = String(button.dataset.roleId || state.activeChatRoleId || state.selectedRoleId || "").trim();
+    const todoId = String(button.dataset.todoId || "").trim();
+    if (!targetRoleId || !todoId) return;
+    const nextStatus = toggleRoleTodoDoneById(targetRoleId, todoId);
+    if (nextStatus) {
+      setToast(nextStatus === "done" ? "已划掉待办" : "已恢复未完成");
+    }
+    return;
+  }
+
+  if (action === "open-role-todo-editor") {
+    const targetRoleId = String(button.dataset.roleId || state.activeChatRoleId || state.selectedRoleId || "").trim();
+    openRoleTodoEditor(targetRoleId, button.dataset.todoId || "");
+    return;
+  }
+
+  if (action === "save-role-todo-edit") {
+    saveRoleTodoEditorDraft();
     return;
   }
 
