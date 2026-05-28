@@ -11684,6 +11684,17 @@ body {
   color: #8e8e93;
 }
 
+.journey-todo-item.is-busy .journey-todo-check {
+  border-color: rgba(255, 149, 0, 0.55);
+  color: #ff9500;
+  background: #fff8ec;
+}
+
+.journey-todo-item.is-busy .journey-todo-type {
+  background: rgba(255, 149, 0, 0.12);
+  color: #b86a00;
+}
+
 .journey-todo-editor-card {
   gap: 12px;
 }
@@ -24373,6 +24384,13 @@ const normalizeRoleTodoData = (todo = {}, index = 0) => {
     ackSpeaker: String(todo?.ackSpeaker || "").trim(),
     ackMessageId: String(todo?.ackMessageId || "").trim(),
     ackText: String(todo?.ackText || "").trim(),
+    actionText: String(todo?.actionText || "").trim(),
+    summaryStatus: String(todo?.summaryStatus || "").trim(),
+    summaryError: String(todo?.summaryError || "").trim(),
+    summarizedAt: String(todo?.summarizedAt || "").trim(),
+    executionStartedAt: String(todo?.executionStartedAt || "").trim(),
+    executionError: String(todo?.executionError || "").trim(),
+    lastExecutedAt: String(todo?.lastExecutedAt || "").trim(),
     imageDescription: String(todo?.imageDescription || todo?.description || "").trim(),
     place: String(todo?.place || "").trim(),
     createdAt: todo?.createdAt || nowIso(),
@@ -26889,7 +26907,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "5月28日-1";
+const APP_BUILD_VERSION_LABEL = "5月28日-2";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -35319,6 +35337,9 @@ const formatJourneyTodoDueLabel = (todo = {}) => {
 
 const getJourneyTodoDetailText = (todo = {}, done = false) => {
   if (done) return todo?.completedAt ? `已完成 ${formatShortDateTime(todo.completedAt)}` : "已完成";
+  if (String(todo?.executionError || "").trim()) return `执行失败 · ${String(todo.executionError).slice(0, 24)}`;
+  if (String(todo?.executionStartedAt || "").trim()) return "正在到点执行";
+  if (String(todo?.summaryStatus || "").trim() === "pending") return "正在提炼待办";
   const dueLabel = formatJourneyTodoDueLabel(todo);
   const actionLabel = getJourneyTodoActionLabel(todo);
   return [actionLabel, dueLabel || todo.triggerText || todo.detail || "等待触发"].filter(Boolean).join(" · ");
@@ -35364,12 +35385,14 @@ const renderJourneyTodoStrip = (role) => {
         ${todos
           .map((todo) => {
             const done = getJourneyRoleTodoStatus(todo) === "done";
+            const busy = !done && String(todo.executionStartedAt || "").trim();
+            const summaryPending = !done && String(todo.summaryStatus || "").trim() === "pending";
             const title = String(todo.title || todo.sourceText || "待办事项").trim();
             const detail = getJourneyTodoDetailText(todo, done);
             const typeLabel = getJourneyRoleTodoTypeLabel(todo);
             const sourceLabel = getJourneyTodoSourceLabel(todo, role);
             return `
-              <div class="journey-todo-item ${done ? "is-done" : ""}">
+              <div class="journey-todo-item ${done ? "is-done" : ""} ${busy || summaryPending ? "is-busy" : ""}">
                 <button class="journey-todo-check" type="button" data-action="toggle-role-todo-status" data-role-id="${roleId}" data-todo-id="${escapeHtml(todo.id || "")}" aria-label="${done ? "恢复未完成" : "划掉待办"}">${done ? "✓" : ""}</button>
                 <div class="journey-todo-copy">
                   <strong><span class="journey-todo-type">${escapeHtml(typeLabel)}</span>${escapeHtml(title)}</strong>
@@ -53436,7 +53459,13 @@ const MAX_OFFLINE_CATCH_UP_ROUNDS = 12;
 
 const isRoleBusyGenerating = (roleId) =>
   state.chatReplyBusyRoleId === roleId ||
-  toBusyList(state.apiGenerationBusy).some((token) => String(token || "").startsWith("auto:") && String(token || "").endsWith(`:${roleId}`));
+  toBusyList(state.apiGenerationBusy).some((token) => {
+    const text = String(token || "");
+    return (
+      (text.startsWith("auto:") && text.endsWith(`:${roleId}`)) ||
+      text.startsWith(`todo-exec:${roleId}:`)
+    );
+  });
 
 const isRoleChatReplyBusy = (roleId = "") => String(state.chatReplyBusyRoleId || "") === String(roleId || "").trim();
 
@@ -54127,6 +54156,7 @@ const normalizeTodoText = (value = "") => sanitizeChatLine(String(value || "").t
 
 const APP_ROLE_TODO_MAX_ITEMS = 40;
 const APP_REMINDER_DEFAULT_DELAY_MS = 30 * 60 * 1000;
+const APP_TODO_EXECUTION_RETRY_DELAY_MS = 5 * 60 * 1000;
 const APP_TODO_NUMBER_VALUES = Object.freeze({
   零: 0,
   〇: 0,
@@ -54199,6 +54229,42 @@ const normalizeAppTodoCompareTitle = (value = "") =>
     .replace(/^(?:我|你|角色|对方|ta|他|她|记得|别忘了|不要忘了|先|去|要|得|需要|会|帮你|给你)\s*/iu, "")
     .replace(/(?:一下|这件事)$/u, "")
     .trim();
+
+const normalizeAppTodoCompareText = (value = "") =>
+  normalizeTodoText(value)
+    .replace(/[\s。！？!?,，、；;：:「」『』“”"'（）()\[\]【】]+/gu, "")
+    .toLowerCase();
+
+const getAppTodoActionText = (todo = {}) =>
+  normalizeTodoText(todo?.actionText || todo?.title || todo?.sourceText || "待办事项");
+
+const shouldAiSummarizeAppTodo = (todo = {}) => {
+  const type = String(todo?.type || "").trim();
+  if (!["role-todo", "reminder"].includes(type)) return false;
+  if (String(todo?.summaryStatus || "").trim() === "ready") return false;
+  if (String(todo?.actionText || "").trim()) return false;
+  const sourceText = normalizeTodoText(todo?.sourceText || "");
+  const title = normalizeTodoText(todo?.title || "");
+  if (!sourceText) return false;
+  return sourceText === title || sourceText.includes(title) || title.length > 22 || sourceText.length > 22;
+};
+
+const markAppTodoForAiSummary = (payload = {}) => {
+  if (!shouldAiSummarizeAppTodo(payload)) return payload;
+  return {
+    ...payload,
+    summaryStatus: "pending",
+    summaryError: "",
+  };
+};
+
+const sanitizeAppTodoAiTitle = (value = "", fallback = "") => {
+  const cleaned = stripModelStopSentinel(value)
+    .split(/\n+/u)
+    .map((line) => line.replace(/^(?:待办|动作|事项|标题|结果|summary|todo)\s*[：:]\s*/iu, "").trim())
+    .filter(Boolean)[0] || "";
+  return normalizeAppTodoTitle(cleaned, fallback || "待办事项");
+};
 
 const parseAppTodoNumberToken = (value = "") => {
   const text = String(value || "")
@@ -54570,6 +54636,12 @@ const shouldMergeAppTodo = (todo = {}, payload = {}) => {
   if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
   const type = String(payload.type || "todo").trim();
   if (String(todo.type || "todo").trim() !== type) return false;
+  const existingMessageId = String(todo.sourceMessageId || "").trim();
+  const incomingMessageId = String(payload.sourceMessageId || "").trim();
+  if (existingMessageId && incomingMessageId && existingMessageId === incomingMessageId) return true;
+  const existingSource = normalizeAppTodoCompareText(todo.sourceText || "");
+  const incomingSource = normalizeAppTodoCompareText(payload.sourceText || "");
+  if (existingSource && incomingSource && (existingSource === incomingSource || existingSource.includes(incomingSource) || incomingSource.includes(existingSource))) return true;
   const leftTitle = normalizeAppTodoCompareTitle(todo.title || todo.sourceText || "");
   const rightTitle = normalizeAppTodoCompareTitle(payload.title || payload.sourceText || "");
   if (!leftTitle || !rightTitle) return false;
@@ -54580,29 +54652,65 @@ const shouldMergeAppTodo = (todo = {}, payload = {}) => {
   return String(todo.triggerKind || "") === String(payload.triggerKind || "");
 };
 
+const shouldSuppressAppTodoByExisting = (todo = {}, payload = {}) => {
+  if (!todo) return false;
+  const status = getAppRoleTodoStatus(todo);
+  if (!["done", "cancelled"].includes(status)) return false;
+  const type = String(payload.type || "todo").trim();
+  if (String(todo.type || "todo").trim() !== type) return false;
+  const existingMessageId = String(todo.sourceMessageId || "").trim();
+  const incomingMessageId = String(payload.sourceMessageId || "").trim();
+  if (existingMessageId && incomingMessageId && existingMessageId === incomingMessageId) return true;
+  const existingSource = normalizeAppTodoCompareText(todo.sourceText || todo.ackText || todo.title || "");
+  const incomingSource = normalizeAppTodoCompareText(payload.sourceText || payload.ackText || payload.title || "");
+  if (existingSource && incomingSource && (existingSource === incomingSource || existingSource.includes(incomingSource) || incomingSource.includes(existingSource))) return true;
+  const existingTitle = normalizeAppTodoCompareText(todo.actionText || todo.title || todo.sourceText || "");
+  const incomingTitle = normalizeAppTodoCompareText(payload.actionText || payload.title || payload.sourceText || "");
+  if (!existingTitle || !incomingTitle) return false;
+  const titleMatches = existingTitle === incomingTitle || existingTitle.includes(incomingTitle) || incomingTitle.includes(existingTitle);
+  if (!titleMatches) return false;
+  if (type === "today-todo") return String(todo.dateKey || "") === String(payload.dateKey || "");
+  if (type === "reminder") return true;
+  return String(todo.triggerKind || "") === String(payload.triggerKind || "");
+};
+
 const upsertAppRoleTodo = (roleId = "", payload = {}) => {
   if (!roleId || !payload?.title) return false;
   const nowIsoText = new Date().toISOString();
+  const normalizedPayload = markAppTodoForAiSummary(payload);
   let changed = false;
   updateRole(roleId, (nextRole) => {
     nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
-    const existing = nextRole.todos.find((todo) => shouldMergeAppTodo(todo, payload));
+    if (nextRole.todos.some((todo) => shouldSuppressAppTodoByExisting(todo, normalizedPayload))) {
+      return nextRole;
+    }
+    const existing = nextRole.todos.find((todo) => shouldMergeAppTodo(todo, normalizedPayload));
     if (existing) {
       const existingSourceSpeaker = normalizeAppTodoSourceSpeaker(existing.sourceSpeaker || "user");
-      const payloadSourceSpeaker = normalizeAppTodoSourceSpeaker(payload.sourceSpeaker || existingSourceSpeaker);
+      const payloadSourceSpeaker = normalizeAppTodoSourceSpeaker(normalizedPayload.sourceSpeaker || existingSourceSpeaker);
       const roleAckForUserTodo = existingSourceSpeaker === "user" && payloadSourceSpeaker === "role";
+      const existingActionText = String(existing.actionText || "").trim();
+      const incomingActionText = String(normalizedPayload.actionText || "").trim();
+      const resolvedActionText = incomingActionText || existingActionText;
       Object.assign(existing, {
-        ...payload,
+        ...normalizedPayload,
         id: existing.id,
         status: "pending",
-        sourceMessageId: roleAckForUserTodo ? String(existing.sourceMessageId || "").trim() : String(payload.sourceMessageId || existing.sourceMessageId || "").trim(),
-        sourceText: roleAckForUserTodo ? String(existing.sourceText || "").trim() : String(payload.sourceText || existing.sourceText || "").trim(),
+        title: existingActionText && !incomingActionText ? String(existing.title || existingActionText).trim() : String(normalizedPayload.title || existing.title || "待办事项").trim(),
+        actionText: resolvedActionText,
+        summaryStatus: resolvedActionText ? "ready" : String(normalizedPayload.summaryStatus || existing.summaryStatus || "").trim(),
+        summaryError: String(normalizedPayload.summaryError || existing.summaryError || "").trim(),
+        summarizedAt: String(normalizedPayload.summarizedAt || existing.summarizedAt || "").trim(),
+        sourceMessageId: roleAckForUserTodo ? String(existing.sourceMessageId || "").trim() : String(normalizedPayload.sourceMessageId || existing.sourceMessageId || "").trim(),
+        sourceText: roleAckForUserTodo ? String(existing.sourceText || "").trim() : String(normalizedPayload.sourceText || existing.sourceText || "").trim(),
         sourceSpeaker: roleAckForUserTodo ? "user" : payloadSourceSpeaker,
-        assignee: normalizeAppTodoActor(payload.assignee || existing.assignee || "user", "user"),
-        targetSpeaker: normalizeAppTodoActor(payload.targetSpeaker || existing.targetSpeaker || payload.assignee || existing.assignee || "user", "user"),
-        ackSpeaker: roleAckForUserTodo ? "role" : String(payload.ackSpeaker || existing.ackSpeaker || "").trim(),
-        ackMessageId: roleAckForUserTodo ? String(payload.sourceMessageId || payload.ackMessageId || existing.ackMessageId || "").trim() : String(payload.ackMessageId || existing.ackMessageId || "").trim(),
-        ackText: roleAckForUserTodo ? String(payload.sourceText || payload.ackText || existing.ackText || "").trim() : String(payload.ackText || existing.ackText || "").trim(),
+        assignee: normalizeAppTodoActor(normalizedPayload.assignee || existing.assignee || "user", "user"),
+        targetSpeaker: normalizeAppTodoActor(normalizedPayload.targetSpeaker || existing.targetSpeaker || normalizedPayload.assignee || existing.assignee || "user", "user"),
+        ackSpeaker: roleAckForUserTodo ? "role" : String(normalizedPayload.ackSpeaker || existing.ackSpeaker || "").trim(),
+        ackMessageId: roleAckForUserTodo ? String(normalizedPayload.sourceMessageId || normalizedPayload.ackMessageId || existing.ackMessageId || "").trim() : String(normalizedPayload.ackMessageId || existing.ackMessageId || "").trim(),
+        ackText: roleAckForUserTodo ? String(normalizedPayload.sourceText || normalizedPayload.ackText || existing.ackText || "").trim() : String(normalizedPayload.ackText || existing.ackText || "").trim(),
+        executionStartedAt: "",
+        executionError: "",
         createdAt: existing.createdAt || nowIsoText,
         updatedAt: nowIsoText,
       });
@@ -54624,7 +54732,14 @@ const upsertAppRoleTodo = (roleId = "", payload = {}) => {
       createdAt: nowIsoText,
       updatedAt: nowIsoText,
       order: Date.now(),
-      ...payload,
+      executionStartedAt: "",
+      executionError: "",
+      lastExecutedAt: "",
+      actionText: "",
+      summaryStatus: "",
+      summaryError: "",
+      summarizedAt: "",
+      ...normalizedPayload,
     });
     nextRole.todos = nextRole.todos.slice(0, APP_ROLE_TODO_MAX_ITEMS);
     changed = true;
@@ -54638,10 +54753,12 @@ const upsertGeneralRoleTodosFromUserMessage = (roleId = "", { sourceMessageId = 
   if (!roleId || !normalizedSourceText) return false;
   const reminder = parseAppReminderTodoRequest(normalizedSourceText, now);
   if (reminder) {
-    return upsertAppRoleTodo(roleId, {
+    const changed = upsertAppRoleTodo(roleId, {
       ...reminder,
       sourceMessageId,
     });
+    if (changed) queueAppTodoSummaryCheckForRole(roleId, { delayMs: 250 });
+    return changed;
   }
   const assignedRoleTodos = parseAppUserAssignedRoleTodoRequests(normalizedSourceText, now);
   if (assignedRoleTodos.length) {
@@ -54652,6 +54769,7 @@ const upsertGeneralRoleTodosFromUserMessage = (roleId = "", { sourceMessageId = 
         sourceMessageId,
       }) || assignedChanged;
     });
+    if (assignedChanged) queueAppTodoSummaryCheckForRole(roleId, { delayMs: 250 });
     return assignedChanged;
   }
   const todayTodos = parseAppTodayTodoRequests(normalizedSourceText, now);
@@ -54662,6 +54780,7 @@ const upsertGeneralRoleTodosFromUserMessage = (roleId = "", { sourceMessageId = 
       sourceMessageId,
     }) || changed;
   });
+  if (changed) queueAppTodoSummaryCheckForRole(roleId, { delayMs: 250 });
   return changed;
 };
 
@@ -54680,7 +54799,136 @@ const upsertRolePromisedTodosFromMessages = (roleId = "", messages = [], { now =
         }) || changed;
       });
     });
+  if (changed) queueAppTodoSummaryCheckForRole(roleId, { delayMs: 250 });
   return changed;
+};
+
+const requestAppTodoActionSummary = async (role, todo, { signal = null } = {}) => {
+  const type = String(todo?.type || "").trim();
+  const sourceText = normalizeTodoText(todo?.sourceText || todo?.title || "");
+  const fallbackTitle = normalizeTodoText(todo?.title || sourceText || "待办事项");
+  if (!role || !sourceText) return fallbackTitle;
+  const dueText = String(todo?.triggerText || "").trim();
+  const assigneeLabel = getAppTodoAssigneeLabel(todo, role);
+  const targetLabel = getAppTodoTargetLabel(todo, role);
+  const response = await requestPrimaryModelText({
+    systemPrompt: `你只负责把一句聊天里的承诺或提醒提炼成待办动作短标题。
+只输出一行中文短句，不要 JSON，不要解释，不要编号，不要引号。
+必须保留真正要做的事，必要时保留时间或条件。
+不要复述整句，不要把玩笑、威胁、寒暄、原因塞进去。
+不要写“我先去”“我来”“你让我”“提醒你”这种聊天口吻。
+长度 6 到 24 个汉字左右。
+例子：等我晚上把琴修好回去了再说，这会儿真得干活了，不然谢鸣要动手了 -> 晚上把琴修好再回去聊
+直接输出短标题。`,
+    payload: {
+      task: type === "reminder" ? "提炼角色承诺提醒用户的待办标题" : "提炼角色自己要做的待办标题",
+      sourceText,
+      currentTitle: fallbackTitle,
+      dueText,
+      assigneeLabel,
+      targetLabel,
+      sourceSpeaker: normalizeAppTodoSourceSpeaker(todo?.sourceSpeaker || "role"),
+      outputRules: {
+        contextFormat: "plain-text",
+        oneLineOnly: true,
+        maxChars: 24,
+      },
+    },
+    includeMeta: true,
+    primaryFallbackConfig: getChatFallbackApiConfig(),
+    fallbackLane: "todo-summary-chat-fallback",
+    rejectFinishReasonLength: false,
+    temperatureOverride: 0.15,
+    taskKind: MODEL_REQUEST_TASK_KIND.TEXT_PLAIN,
+    modelRequestStrategy: resolveModelRequestStrategy(getPrimaryApiConfig(), {
+      taskKind: MODEL_REQUEST_TASK_KIND.TEXT_PLAIN,
+      contextFormat: "plain-text",
+      singleVariant: true,
+    }),
+    signal,
+  });
+  const title = sanitizeAppTodoAiTitle(response?.text || "", fallbackTitle);
+  return title || fallbackTitle;
+};
+
+const summarizePendingAppTodosForRole = async (roleId = "") => {
+  const role = getRoleById(state, roleId);
+  if (!role) return false;
+  if (!hasPrimaryApiConfig()) {
+    const failedAt = new Date().toISOString();
+    updateRole(roleId, (nextRole) => {
+      (Array.isArray(nextRole.todos) ? nextRole.todos : [])
+        .filter((item) => getAppRoleTodoStatus(item) === "pending" && String(item.summaryStatus || "").trim() === "pending")
+        .forEach((item) => {
+          item.summaryStatus = "error";
+          item.summaryError = "主 API 未配置完整，未提炼待办";
+          item.updatedAt = failedAt;
+        });
+      return nextRole;
+    }, { paintNow: false });
+    syncPersistentState();
+    paint();
+    return false;
+  }
+  const todo = (Array.isArray(role.todos) ? role.todos : []).find(
+    (item) => getAppRoleTodoStatus(item) === "pending" && String(item.summaryStatus || "").trim() === "pending" && shouldAiSummarizeAppTodo(item),
+  );
+  if (!todo) return false;
+  const token = `todo-summary:${roleId}:${todo.id}`;
+  if (toBusyList(state.apiGenerationBusy).includes(token)) return false;
+  const startedAtMs = Date.now();
+  addBusyToken("apiGenerationBusy", token);
+  try {
+    const freshRole = getRoleById(state, roleId) || role;
+    const freshTodo = (Array.isArray(freshRole.todos) ? freshRole.todos : []).find((item) => item?.id === todo.id) || todo;
+    if (getAppRoleTodoStatus(freshTodo) !== "pending") return false;
+    const title = await requestAppTodoActionSummary(freshRole, freshTodo);
+    updateRole(roleId, (nextRole) => {
+      const target = (Array.isArray(nextRole.todos) ? nextRole.todos : []).find((item) => item?.id === todo.id);
+      if (!target || getAppRoleTodoStatus(target) !== "pending") return nextRole;
+      target.title = title;
+      target.actionText = title;
+      target.summaryStatus = "ready";
+      target.summaryError = "";
+      target.summarizedAt = new Date().toISOString();
+      target.updatedAt = target.summarizedAt;
+      return nextRole;
+    }, { paintNow: false });
+    return true;
+  } catch (error) {
+    updateRole(roleId, (nextRole) => {
+      const target = (Array.isArray(nextRole.todos) ? nextRole.todos : []).find((item) => item?.id === todo.id);
+      if (!target) return nextRole;
+      target.summaryStatus = "error";
+      target.summaryError = error?.message || "AI 提炼失败";
+      target.updatedAt = new Date().toISOString();
+      return nextRole;
+    }, { paintNow: false });
+    persistPrimaryChatUsageSnapshot(roleId, {
+      mode: "todo-summary",
+      status: "error",
+      meta: withRoundWallClockMeta(error?.modelMeta || null, startedAtMs, Date.now()),
+      errorMessage: error?.message || "AI 提炼失败",
+    });
+    return false;
+  } finally {
+    removeBusyToken("apiGenerationBusy", token);
+    syncPersistentState();
+    paint();
+    const latestRole = getRoleById(state, roleId);
+    const hasMorePending = (Array.isArray(latestRole?.todos) ? latestRole.todos : []).some(
+      (item) => getAppRoleTodoStatus(item) === "pending" && String(item.summaryStatus || "").trim() === "pending" && shouldAiSummarizeAppTodo(item),
+    );
+    if (hasMorePending) queueAppTodoSummaryCheckForRole(roleId, { delayMs: 250 });
+  }
+};
+
+const queueAppTodoSummaryCheckForRole = (roleId = "", { delayMs = 0 } = {}) => {
+  const normalizedRoleId = String(roleId || "").trim();
+  if (!normalizedRoleId) return;
+  window.setTimeout(() => {
+    void summarizePendingAppTodosForRole(normalizedRoleId);
+  }, Math.max(0, Number(delayMs) || 0));
 };
 
 const markAppRoleTodoStatus = (role, todoId = "", status = "done", messageId = "", now = new Date(), extra = {}) => {
@@ -54692,6 +54940,22 @@ const markAppRoleTodoStatus = (role, todoId = "", status = "done", messageId = "
   todo.completedMessageId = messageId || "";
   Object.assign(todo, extra || {});
   return todo;
+};
+
+const markMatchingPendingAppTodosStatus = (role, sourceTodo = null, status = "done", messageId = "", now = new Date()) => {
+  if (!role || !sourceTodo) return 0;
+  let count = 0;
+  (Array.isArray(role.todos) ? role.todos : []).forEach((todo) => {
+    if (!todo || todo.id === sourceTodo.id || getAppRoleTodoStatus(todo) !== "pending") return;
+    if (!shouldMergeAppTodo(todo, sourceTodo)) return;
+    markAppRoleTodoStatus(role, todo.id, status, messageId, now, {
+      executionStartedAt: "",
+      executionError: "",
+      updatedAt: now.toISOString(),
+    });
+    count += 1;
+  });
+  return count;
 };
 
 const selectAppTodoForCompletion = (role, sourceText = "") => {
@@ -54732,7 +54996,9 @@ const applyRoleTodoCompletionCommand = (roleId = "", { sourceText = "", sourceMe
   updateRole(roleId, (nextRole) => {
     const todo = selectAppTodoForCompletion(nextRole, text);
     if (!todo) return nextRole;
-    completedTodo = markAppRoleTodoStatus(nextRole, todo.id, targetStatus, sourceMessageId, new Date());
+    const now = new Date();
+    completedTodo = markAppRoleTodoStatus(nextRole, todo.id, targetStatus, sourceMessageId, now);
+    if (completedTodo) markMatchingPendingAppTodosStatus(nextRole, completedTodo, targetStatus, sourceMessageId, now);
     return nextRole;
   }, { paintNow: false });
   return completedTodo;
@@ -54856,6 +55122,10 @@ const buildAppTodoPayloadFromEditorDraft = (draft = {}, existingTodo = null) => 
   return {
     type,
     title,
+    actionText: title,
+    summaryStatus: "ready",
+    summaryError: "",
+    summarizedAt: String(existingTodo?.summarizedAt || "").trim(),
     detail,
     category: String(draft.category || getAppTodoEditorDefaultCategory(type)).trim(),
     triggerKind,
@@ -54891,6 +55161,8 @@ const saveRoleTodoEditorDraft = () => {
         ...payload,
         id: existing.id,
         status: getAppRoleTodoStatus(existing),
+        executionStartedAt: "",
+        executionError: "",
         createdAt: existing.createdAt || draft.createdAt || nowIsoText,
         updatedAt: nowIsoText,
       });
@@ -54906,6 +55178,9 @@ const saveRoleTodoEditorDraft = () => {
         reminderMessageId: "",
         completedAt: "",
         completedMessageId: "",
+        executionStartedAt: "",
+        executionError: "",
+        lastExecutedAt: "",
         place: "",
         createdAt: nowIsoText,
         updatedAt: nowIsoText,
@@ -54954,6 +55229,9 @@ const toggleRoleTodoDoneById = (roleId = "", todoId = "") => {
     const changedTodo = markAppRoleTodoStatus(nextRole, todoId, "done", "", now);
     if (changedTodo) {
       changedTodo.updatedAt = now.toISOString();
+      changedTodo.executionStartedAt = "";
+      changedTodo.executionError = "";
+      markMatchingPendingAppTodosStatus(nextRole, changedTodo, "done", "", now);
       nextStatus = "done";
     }
     return nextRole;
@@ -54995,6 +55273,15 @@ const upsertDeferredPhotoTodo = (roleId = "", { sourceMessageId = "", sourceText
   const deferredPhotoDueAt = triggerKind === "later" ? new Date(Date.now() + APP_REMINDER_DEFAULT_DELAY_MS).toISOString() : "";
   updateRole(roleId, (nextRole) => {
     nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
+    const suppressed = nextRole.todos.some(
+      (todo) =>
+        getAppRoleTodoStatus(todo) !== "pending" &&
+        String(todo.type || "") === "deferred-photo" &&
+        String(todo.triggerKind || "") === triggerKind &&
+        (String(todo.sourceMessageId || "").trim() === String(sourceMessageId || "").trim() ||
+          normalizeAppTodoCompareText(todo.sourceText || "") === normalizeAppTodoCompareText(normalizedSourceText)),
+    );
+    if (suppressed) return nextRole;
     const existing = nextRole.todos.find(
       (todo) =>
         getAppRoleTodoStatus(todo) === "pending" &&
@@ -55032,6 +55319,7 @@ const upsertDeferredPhotoTodo = (roleId = "", { sourceMessageId = "", sourceText
       sourceMessageId: String(sourceMessageId || "").trim(),
       sourceText: normalizedSourceText,
       imageDescription: normalizeTodoText(imageDescription),
+      actionText: buildDeferredPhotoTodoTitle(normalizedSourceText, triggerKind),
       createdAt: nowIsoText,
       order: Date.now(),
     });
@@ -55097,6 +55385,8 @@ const buildDeferredPhotoMessageFromTodo = (role, todo, now = new Date()) => {
     type: "image",
     content: {
       description,
+      imageDescription: description,
+      viewerDescription: description,
       place: currentPlace,
       sourceTodoId: todo.id || "",
     },
@@ -55108,93 +55398,289 @@ const markDeferredPhotoTodoDone = (role, todoId = "", messageId = "", now = new 
   markAppRoleTodoStatus(role, todoId, "done", messageId, now);
 };
 
+const hasAppTodoExecutionStarted = (todo = {}, now = new Date()) => {
+  const startedAt = parseValidTimestamp(todo?.executionStartedAt || "");
+  if (!startedAt) return false;
+  return now.getTime() - startedAt.getTime() < APP_TODO_EXECUTION_RETRY_DELAY_MS;
+};
+
 const isReminderTodoDue = (todo, now = new Date()) => {
   if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  if (hasAppTodoExecutionStarted(todo, now)) return false;
   if (String(todo.type || "") !== "reminder") return false;
   const dueAt = parseValidTimestamp(todo.dueAt || "");
   return Boolean(dueAt && dueAt.getTime() <= now.getTime());
 };
 
-const buildReminderMessageContent = (todo = {}) => {
-  const title = normalizeTodoText(todo.title || todo.sourceText || "这件事");
-  const prefix = /^(?:记得|别忘了|不要忘了)/u.test(title) ? "" : "记得";
-  const sourceSpeaker = normalizeAppTodoSourceSpeaker(todo.sourceSpeaker || "user");
-  return normalizeTodoText(sourceSpeaker === "role" ? `我来提醒你，${prefix}${title}` : `你让我提醒你，${prefix}${title}`);
-};
-
-const buildReminderMessageFromTodo = (todo, now = new Date()) =>
-  createMessage({
-    role: "ai",
-    type: "text",
-    content: buildReminderMessageContent(todo),
-    timestamp: now.toISOString(),
-  });
-
-const applyReminderTodosForRole = (role, now = new Date(), { notificationMessages = [] } = {}) => {
-  const dueTodos = getPendingRoleTodos(role, { type: "reminder" }).filter((todo) => isReminderTodoDue(todo, now));
-  if (!dueTodos.length) return false;
-  role.chats = role.chats || { messages: [] };
-  role.chats.messages = Array.isArray(role.chats.messages) ? role.chats.messages : [];
-  role.runtime = role.runtime || {};
-  role.usage = role.usage || {};
-  dueTodos.slice(0, 3).forEach((todo) => {
-    const message = buildReminderMessageFromTodo(todo, now);
-    role.chats.messages.push(message);
-    markAppRoleTodoStatus(role, todo.id, "done", message.id, now, {
-      remindedAt: now.toISOString(),
-      reminderMessageId: message.id,
-    });
-    role.runtime.lastReminderTodoAt = message.timestamp;
-    role.usage.totalMessages = Math.max(0, Number(role.usage.totalMessages || 0)) + 1;
-    role.usage.tokensToday = Math.max(0, Number(role.usage.tokensToday || 0)) + estimateMessageUsage(message);
-    if (shouldTrackUnreadForRole(role.id)) {
-      bumpUnreadCount(role, 1);
-    }
-    notificationMessages.push({ roleId: role.id, message });
-  });
-  return true;
-};
-
 const isRoleSelfTodoDue = (todo, now = new Date()) => {
   if (!todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  if (hasAppTodoExecutionStarted(todo, now)) return false;
   if (String(todo.type || "") !== "role-todo") return false;
   if (normalizeAppTodoActor(todo.assignee || "role", "role") !== "role") return false;
   const dueAt = parseValidTimestamp(todo.dueAt || "");
   return Boolean(dueAt && dueAt.getTime() <= now.getTime());
 };
 
-const buildRoleSelfTodoMessageFromTodo = (todo, now = new Date()) => {
-  void now;
-  const title = normalizeTodoText(todo.title || todo.sourceText || "这件事");
-  const content = /^(?:我|先|去|继续|准备)/u.test(title) ? title : `我先去${title}`;
-  return createMessage({
-    role: "ai",
-    type: "text",
-    content: normalizeTodoText(content),
-    timestamp: now.toISOString(),
-  });
-};
-
-const applyRoleSelfTodosForRole = (role, now = new Date(), { notificationMessages = [] } = {}) => {
-  const dueTodos = getPendingRoleTodos(role, { type: "role-todo" }).filter((todo) => isRoleSelfTodoDue(todo, now));
+const markDueTextTodosForApiExecution = (role, now = new Date(), { executionJobs = [] } = {}) => {
+  const dueTodos = [
+    ...getPendingRoleTodos(role, { type: "reminder" }).filter((todo) => isReminderTodoDue(todo, now)),
+    ...getPendingRoleTodos(role, { type: "role-todo" }).filter((todo) => isRoleSelfTodoDue(todo, now)),
+  ].slice(0, 3);
   if (!dueTodos.length) return false;
-  role.chats = role.chats || { messages: [] };
-  role.chats.messages = Array.isArray(role.chats.messages) ? role.chats.messages : [];
-  role.runtime = role.runtime || {};
-  role.usage = role.usage || {};
-  dueTodos.slice(0, 2).forEach((todo) => {
-    const message = buildRoleSelfTodoMessageFromTodo(todo, now);
-    role.chats.messages.push(message);
-    markAppRoleTodoStatus(role, todo.id, "done", message.id, now);
-    role.runtime.lastRoleSelfTodoAt = message.timestamp;
-    role.usage.totalMessages = Math.max(0, Number(role.usage.totalMessages || 0)) + 1;
-    role.usage.tokensToday = Math.max(0, Number(role.usage.tokensToday || 0)) + estimateMessageUsage(message);
-    if (shouldTrackUnreadForRole(role.id)) {
-      bumpUnreadCount(role, 1);
-    }
-    notificationMessages.push({ roleId: role.id, message });
+  const startedAt = now.toISOString();
+  dueTodos.forEach((todo) => {
+    todo.executionStartedAt = startedAt;
+    todo.executionError = "";
+    todo.updatedAt = startedAt;
+    executionJobs.push({ roleId: role.id, todoId: todo.id, type: String(todo.type || ""), scheduledAt: startedAt });
   });
   return true;
+};
+
+const buildRoleTodoExecutionPromptSeed = (role, todo, now = new Date()) => {
+  const actionText = getAppTodoActionText(todo);
+  const dueAt = parseValidTimestamp(todo?.dueAt || "");
+  const dueText = dueAt ? formatAppTodoDueTriggerText(dueAt, now) : String(todo?.triggerText || "").trim();
+  if (String(todo?.type || "") === "reminder") {
+    return `现在到了待办提醒时间。角色要自然提醒用户：${actionText}${dueText ? `。约定时间：${dueText}` : ""}`;
+  }
+  return `现在到了角色自己待办的触发时间。角色要自然主动告诉用户自己正在处理或已经推进：${actionText}${dueText ? `。约定时间：${dueText}` : ""}`;
+};
+
+const requestRoleTodoExecutionReply = async (role, todo, { scheduledAt = "", signal = null } = {}) => {
+  const syntheticNow = parseValidTimestamp(scheduledAt) || new Date();
+  const taskIsReminder = String(todo?.type || "") === "reminder";
+  const actionText = getAppTodoActionText(todo);
+  const sourceText = normalizeTodoText(todo?.sourceText || "");
+  const promptSeed = buildRoleTodoExecutionPromptSeed(role, todo, syntheticNow);
+  const requestStrategy = resolveModelRequestStrategy(getPrimaryApiConfig(), {
+    taskKind: MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
+    contextFormat: "plain-text",
+    singleVariant: true,
+  });
+  const dailyLifeMemoryPrompt = buildChatDailyLifeMemoryPromptBlock(role, syntheticNow);
+  const rawRoleContext = applyRoleContextCompression(await buildChatFullRoleContextAsync(role, {
+    userInput: promptSeed,
+    now: syntheticNow,
+    generationMode: "proactive",
+    signal,
+  }), requestStrategy.contextLevel);
+  const { roleContext, plainTextContext } = buildBudgetedChatPlainTextContext({
+    task: taskIsReminder ? "角色到点提醒用户待办" : "角色到点执行自己的待办并主动发消息",
+    userInput: promptSeed,
+    roleContext: rawRoleContext,
+    outputIntent: "到点待办消息协议文本，第一行状态，后面 1 到 3 行消息",
+  });
+  const response = await requestPrimaryModelText({
+    systemPrompt: `你现在只负责生成角色到点待办消息，输出纯文本协议。
+第一行固定写：状态：10字内状态
+后面写1到3行消息，每行一条，像角色本人自然发给用户。
+不要 JSON、解释、编号、旁白、括号动作、emoji、在线状态播报。
+不要复读原始聊天句子，也不要把待办标题机械拼进“我先去...”模板。
+必须理解待办真正要做什么：${actionText}
+${sourceText ? `原始聊天只供理解，不准照抄：${sourceText}` : ""}
+${taskIsReminder ? "这是提醒用户的待办：语气要像角色按约叫用户一下，提醒清楚但不机械。" : "这是角色自己要做/正在做/已推进的事：语气要像角色从自己的生活里抽空告诉用户，不要像系统通知。"}
+如果用户已经把待办划掉，前端不会调用你；你不需要讨论是否完成。
+每条消息行尾不要出现中文句号
+问号和感叹号只在语气自然需要时使用
+绝对不要说自己是 AI、模型、程序、助手、文本工具、没有实体。
+必须读取下方纯文本参考上下文里的角色资料、最近聊天、当前时间、行程、生活轨迹、事件和记忆。
+${ROLE_REAL_TIME_PROGRESS_CHAT_RULE}
+${buildBlockedTermsPrompt(role)}
+${dailyLifeMemoryPrompt}
+写完最后一条消息后必须单独输出 ${CHAT_REPLY_STOP_SENTINEL} 并立刻停止；不要继续补充、解释、翻译、重复上下文或再生成第二轮
+直接输出协议文本。`,
+    payload: {
+      task: taskIsReminder ? "角色到点提醒用户待办" : "角色到点执行自己的待办并主动发消息",
+      promptSeed,
+      todo: {
+        type: String(todo?.type || "").trim(),
+        title: String(todo?.title || "").trim(),
+        actionText,
+        triggerText: String(todo?.triggerText || "").trim(),
+        dueAt: String(todo?.dueAt || "").trim(),
+        sourceSpeaker: normalizeAppTodoSourceSpeaker(todo?.sourceSpeaker || "role"),
+        assignee: normalizeAppTodoActor(todo?.assignee || "role", "role"),
+        targetSpeaker: normalizeAppTodoActor(todo?.targetSpeaker || (taskIsReminder ? "user" : "role"), taskIsReminder ? "user" : "role"),
+        sourceText,
+      },
+      scheduledAt: normalizeLooseTimestamp(scheduledAt) || syntheticNow.toISOString(),
+      roleContext,
+      plainTextContext,
+      outputRules: {
+        contextFormat: "plain-text",
+        minMessages: 1,
+        maxMessages: 3,
+        statusMaxLength: 10,
+        maxOutputTokens: CHAT_REPLY_OUTPUT_TOKEN_BUDGET,
+        forceMaxOutputTokens: true,
+        noLocalFallback: true,
+      },
+    },
+    includeMeta: true,
+    primaryFallbackConfig: getChatFallbackApiConfig(),
+    fallbackLane: "todo-execution-chat-fallback",
+    rejectFinishReasonLength: false,
+    temperatureOverride: 0.35,
+    taskKind: MODEL_REQUEST_TASK_KIND.AUTONOMOUS_REPLY_PLAIN,
+    modelRequestStrategy: requestStrategy,
+    signal,
+  });
+  const parsed = parsePrimaryChatPlainTextFallback(role, response?.text || "", {
+    referenceCatalog: buildRoleReferenceCatalog(role),
+    skipSemanticInterception: true,
+  });
+  if (!parsed) {
+    throw attachModelMetaToError(new Error("待办到点消息无效"), response?.meta || null, {
+      rawResponseText: response?.text || "",
+    });
+  }
+  return {
+    result: parsed,
+    meta: {
+      ...(response?.meta || {}),
+      usedPlainTextFallback: true,
+      todoId: String(todo?.id || ""),
+    },
+  };
+};
+
+const finalizeExecutedRoleTodo = (roleId = "", todoId = "", messages = [], now = new Date()) => {
+  let changed = false;
+  const lastMessage = [...(Array.isArray(messages) ? messages : [])].reverse().find(Boolean) || null;
+  updateRole(roleId, (nextRole) => {
+    const todo = (Array.isArray(nextRole.todos) ? nextRole.todos : []).find((item) => item?.id === todoId);
+    if (!todo || getAppRoleTodoStatus(todo) !== "pending") return nextRole;
+    const extra = String(todo.type || "") === "reminder"
+      ? {
+          remindedAt: now.toISOString(),
+          reminderMessageId: lastMessage?.id || "",
+        }
+      : {};
+    markAppRoleTodoStatus(nextRole, todoId, "done", lastMessage?.id || "", now, {
+      ...extra,
+      executionStartedAt: "",
+      executionError: "",
+      lastExecutedAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    nextRole.runtime = nextRole.runtime || {};
+    if (String(todo.type || "") === "reminder") {
+      nextRole.runtime.lastReminderTodoAt = now.toISOString();
+    } else {
+      nextRole.runtime.lastRoleSelfTodoAt = now.toISOString();
+    }
+    changed = true;
+    return nextRole;
+  }, { paintNow: false });
+  return changed;
+};
+
+const markRoleTodoExecutionFailed = (roleId = "", todoId = "", errorMessage = "") => {
+  const failedAt = new Date().toISOString();
+  updateRole(roleId, (nextRole) => {
+    const todo = (Array.isArray(nextRole.todos) ? nextRole.todos : []).find((item) => item?.id === todoId);
+    if (!todo || getAppRoleTodoStatus(todo) !== "pending") return nextRole;
+    todo.executionStartedAt = failedAt;
+    todo.executionError = String(errorMessage || "待办执行失败").slice(0, 160);
+    todo.updatedAt = failedAt;
+    return nextRole;
+  }, { paintNow: false });
+};
+
+const executeDueRoleTodoViaApi = async ({ roleId = "", todoId = "", scheduledAt = "" } = {}) => {
+  const role = getRoleById(state, roleId);
+  const todo = (Array.isArray(role?.todos) ? role.todos : []).find((item) => item?.id === todoId);
+  if (!role || !todo || getAppRoleTodoStatus(todo) !== "pending") return false;
+  if (!hasPrimaryApiConfig()) {
+    markRoleTodoExecutionFailed(roleId, todoId, "主 API 未配置完整，未执行待办");
+    syncPersistentState();
+    paint();
+    return false;
+  }
+  const token = `todo-exec:${roleId}:${todoId}`;
+  if (toBusyList(state.apiGenerationBusy).includes(token)) return false;
+  if (isRoleBusyGenerating(roleId)) {
+    markRoleTodoExecutionFailed(roleId, todoId, "角色正在生成消息，稍后重试待办");
+    syncPersistentState();
+    paint();
+    return false;
+  }
+  const startedAtMs = Date.now();
+  const abortController = new AbortController();
+  let timedOut = false;
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true;
+    if (!abortController.signal.aborted) abortController.abort();
+  }, CHAT_REPLY_TIMEOUT_MS);
+  addBusyToken("apiGenerationBusy", token);
+  try {
+    const freshRole = getRoleById(state, roleId) || role;
+    const freshTodo = (Array.isArray(freshRole.todos) ? freshRole.todos : []).find((item) => item?.id === todoId) || todo;
+    if (getAppRoleTodoStatus(freshTodo) !== "pending") return false;
+    const apiResponse = await requestRoleTodoExecutionReply(freshRole, freshTodo, {
+      scheduledAt,
+      signal: abortController.signal,
+    });
+    const messages = buildMessagesFromChatResult(freshRole, apiResponse.result, {
+      enforceNaturalMultiReply: false,
+    });
+    if (!messages.length) {
+      throw attachModelMetaToError(new Error("待办到点消息没有可显示内容"), apiResponse?.meta || null);
+    }
+    const messageTimestamp = normalizeLooseTimestamp(scheduledAt) || new Date().toISOString();
+    await appendMessagesSequentially(roleId, messages, {
+      statusText: rewriteVideoReferenceCityLeak(freshRole, sanitizeChatLine(apiResponse.result?.status || "")) || deriveCurrentStatus(freshRole, getAppTodoActionText(freshTodo)),
+      lastApiAt: apiResponse?.meta?.timestamp || new Date().toISOString(),
+      messageTimestamp,
+      notificationSource: "todo",
+      skipTodoExtraction: true,
+      signal: abortController.signal,
+    });
+    const latestRole = getRoleById(state, roleId);
+    const appendedMessages = (latestRole?.chats?.messages || []).slice(-messages.length).filter((message) => message?.role === "ai");
+    finalizeExecutedRoleTodo(roleId, todoId, appendedMessages, parseValidTimestamp(messageTimestamp) || new Date());
+    persistPrimaryChatUsageSnapshot(roleId, {
+      mode: "todo-execution",
+      status: "success",
+      meta: withRoundWallClockMeta(apiResponse?.meta || null, startedAtMs, Date.now()),
+    });
+    syncPersistentState();
+    paint();
+    return true;
+  } catch (error) {
+    const message = timedOut || isAbortRequestError(error)
+      ? "待办到点消息生成超时，未发送本地兜底"
+      : error?.message || "主 API 调用失败，未执行待办";
+    markRoleTodoExecutionFailed(roleId, todoId, message);
+    persistPrimaryChatUsageSnapshot(roleId, {
+      mode: "todo-execution",
+      status: timedOut || isAbortRequestError(error) ? "timeout" : "error",
+      meta: withRoundWallClockMeta(
+        error?.modelMeta
+          ? {
+              ...error.modelMeta,
+              timedOut: timedOut || error.modelMeta.timedOut,
+            }
+          : timedOut
+            ? { timedOut: true, latencyMs: CHAT_REPLY_TIMEOUT_MS }
+            : null,
+        startedAtMs,
+        Date.now(),
+      ),
+      errorMessage: message,
+    });
+    syncPersistentState();
+    paint();
+    if (state.activeChatRoleId === roleId || state.selectedRoleId === roleId) {
+      setToast(message);
+    }
+    return false;
+  } finally {
+    window.clearTimeout(timeoutId);
+    removeBusyToken("apiGenerationBusy", token);
+    paint();
+  }
 };
 
 const applyDeferredPhotoTodosForRole = (role, now = new Date(), { imageGenerationJobs = [], notificationMessages = [] } = {}) => {
@@ -71775,7 +72261,7 @@ const getSequentialRevealDelay = (message, index) => {
 const appendMessagesSequentially = async (
   roleId,
   messages,
-  { statusText = "", lastApiAt = "", messageTimestamp = "", notificationSource = "reply", signal = null } = {},
+  { statusText = "", lastApiAt = "", messageTimestamp = "", notificationSource = "reply", signal = null, skipTodoExtraction = false } = {},
 ) => {
   const normalizedStatus = sanitizeChatLine(statusText || "").slice(0, 10);
   const shouldPaintStep = () =>
@@ -71856,9 +72342,11 @@ const appendMessagesSequentially = async (
   if (!shouldPaintStep()) {
     paint();
   }
-  upsertRolePromisedTodosFromMessages(roleId, appendedMessages, {
-    now: parseValidTimestamp(messageTimestamp || lastApiAt || "") || new Date(),
-  });
+  if (!skipTodoExtraction) {
+    upsertRolePromisedTodosFromMessages(roleId, appendedMessages, {
+      now: parseValidTimestamp(messageTimestamp || lastApiAt || "") || new Date(),
+    });
+  }
   void maybeNotifyForRoleMessages(roleId, appendedMessages.length ? appendedMessages : messages, { source: notificationSource });
   queueAutoSummaryCheckForRole(roleId);
   queueLivingMemoryAutoDigestForRole(roleId, { delayMs: 1200, reason: "message-threshold" });
@@ -77668,6 +78156,7 @@ const applyRuntime = async () => {
   const autonomousJobs = [];
   const autoMomentJobs = [];
   const imageGenerationJobs = [];
+  const todoExecutionJobs = [];
   const todoNotificationJobs = [];
   const shouldClearOfflineSession = isAppCurrentlyVisible() && Boolean(parseValidTimestamp(state.appPresence?.offlineSessionStartedAt));
   let shouldKeepOfflineSession = false;
@@ -77687,10 +78176,7 @@ const applyRuntime = async () => {
     if (syncRoleLiveHeaderStatus(next, next.status?.headerText || "", now)) {
       changed = true;
     }
-    if (applyReminderTodosForRole(next, now, { notificationMessages: todoNotificationJobs })) {
-      changed = true;
-    }
-    if (applyRoleSelfTodosForRole(next, now, { notificationMessages: todoNotificationJobs })) {
+    if (markDueTextTodosForApiExecution(next, now, { executionJobs: todoExecutionJobs })) {
       changed = true;
     }
     if (applyDeferredPhotoTodosForRole(next, now, { imageGenerationJobs, notificationMessages: todoNotificationJobs })) {
@@ -77727,6 +78213,10 @@ const applyRuntime = async () => {
 
   imageGenerationJobs.forEach((job) => {
     void generateAiImageForMessage(job.roleId, job.messageId, { silent: true });
+  });
+
+  todoExecutionJobs.forEach((job) => {
+    void executeDueRoleTodoViaApi(job);
   });
 
   const todoNotificationsByRole = todoNotificationJobs.reduce((map, item) => {
@@ -77778,7 +78268,7 @@ const applyRuntime = async () => {
     changed = true;
   }
 
-  return changed || linkedJourneyJobs.length > 0 || autonomousJobs.length > 0 || autoMomentJobs.length > 0;
+  return changed || linkedJourneyJobs.length > 0 || autonomousJobs.length > 0 || autoMomentJobs.length > 0 || todoExecutionJobs.length > 0;
 };
 
 const shouldDeferInputCommit = (target) => {
