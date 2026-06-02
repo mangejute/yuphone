@@ -2513,12 +2513,16 @@ select {
   justify-items: end;
 }
 
+.chat-screen.bubble-theme-default .chat-message-line.voice-line,
+.chat-screen.bubble-theme-qq .chat-message-line.voice-line,
 .chat-screen.bubble-theme-wechat .chat-message-line.voice-line,
 .chat-screen.bubble-theme-custom .chat-message-line.voice-line {
   row-gap: 3px;
   align-items: start;
 }
 
+.chat-screen.bubble-theme-default .chat-message-line.voice-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-qq .chat-message-line.voice-line .chat-bubble-wrap,
 .chat-screen.bubble-theme-wechat .chat-message-line.voice-line .theme-message-avatar-slot,
 .chat-screen.bubble-theme-custom .chat-message-line.voice-line .theme-message-avatar-slot {
   align-self: start !important;
@@ -2526,12 +2530,16 @@ select {
   overflow: visible;
 }
 
+.chat-screen.bubble-theme-default .chat-message-line.voice-line .chat-bubble-wrap,
+.chat-screen.bubble-theme-qq .chat-message-line.voice-line .chat-bubble-wrap,
 .chat-screen.bubble-theme-wechat .chat-message-line.voice-line .chat-bubble-wrap,
 .chat-screen.bubble-theme-custom .chat-message-line.voice-line .chat-bubble-wrap {
   align-self: start !important;
   grid-row: 1;
 }
 
+.chat-screen.bubble-theme-default .chat-voice-transcript-slot,
+.chat-screen.bubble-theme-qq .chat-voice-transcript-slot,
 .chat-screen.bubble-theme-wechat .chat-voice-transcript-slot,
 .chat-screen.bubble-theme-custom .chat-voice-transcript-slot {
   display: grid;
@@ -2548,16 +2556,36 @@ select {
   margin-top: 3px;
 }
 
+.chat-screen.bubble-theme-default .chat-voice-transcript-slot.ai-voice-transcript-slot {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.chat-screen.bubble-theme-qq .chat-voice-transcript-slot.ai-voice-transcript-slot,
 .chat-screen.bubble-theme-wechat .chat-voice-transcript-slot.ai-voice-transcript-slot,
 .chat-screen.bubble-theme-custom .chat-voice-transcript-slot.ai-voice-transcript-slot {
   grid-column: 2;
   justify-self: start;
 }
 
+.chat-screen.bubble-theme-default .chat-voice-transcript-slot.user-voice-transcript-slot {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.chat-screen.bubble-theme-qq .chat-voice-transcript-slot.user-voice-transcript-slot,
 .chat-screen.bubble-theme-wechat .chat-voice-transcript-slot.user-voice-transcript-slot,
 .chat-screen.bubble-theme-custom .chat-voice-transcript-slot.user-voice-transcript-slot {
   grid-column: 1;
   justify-self: end;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.ai-line.with-selection .chat-voice-transcript-slot {
+  grid-column: 3;
+}
+
+.chat-screen.bubble-theme-qq .chat-message-line.user-line.with-selection .chat-voice-transcript-slot {
+  grid-column: 2;
 }
 
 .chat-screen.bubble-theme-wechat .voice-card .voice-pill,
@@ -2566,6 +2594,8 @@ select {
   z-index: 1;
 }
 
+.chat-screen.bubble-theme-default .voice-card > .voice-transcript,
+.chat-screen.bubble-theme-qq .voice-card > .voice-transcript,
 .chat-screen.bubble-theme-wechat .voice-card > .voice-transcript,
 .chat-screen.bubble-theme-custom .voice-card > .voice-transcript {
   display: none !important;
@@ -26931,7 +26961,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "6月3日-1";
+const APP_BUILD_VERSION_LABEL = "6月3日-2";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
