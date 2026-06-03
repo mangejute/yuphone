@@ -26961,7 +26961,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "6月3日-2";
+const APP_BUILD_VERSION_LABEL = "6月3日-3";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -37951,12 +37951,16 @@ const CHAT_TODO_DIRECTIVE_PROMPT_RULE = `待办判断:
 - 这一轮你要顺手判断“本轮用户输入 + 你本轮回复”是否真的形成待办。不要额外解释，不要输出 JSON。
 - 普通聊天、撒娇、调情、玩笑、口头记账、想好再讨回来、等会儿再说、回头聊、情绪话、只是顺嘴提到的可能性，都不是待办。
 - 只有正事、明确提醒用户的约定、角色自己马上/稍后确实准备做的具体动作，才可以成为待办。
+- 先读取纯文本上下文里的“待执行事项”。如果已有未完成待办已经覆盖同一件事（同一目的/动作、同一时间段或条件、同一执行人/提醒对象），本轮只是再次提到、确认、闲聊或延续它，一律写“待办：无”，不要新增重复项。
+- 例：已有“今天 20:00 去按摩放松腰部”，后续又提“晚上去按摩”“下班后按摩店”“记得按摩腰”，除非明确新增另一次、改时间、改地点或改任务，否则都写“待办：无”。
+- 如果本轮明确修改已有待办的时间、地点、标题或提醒方式，只能使用它在“待执行事项”里的待办 ID 输出更新，不要新增一条相似待办。
 - 待办短标题由你在本轮直接优化成 6 到 24 个汉字左右的自然动作短句，不要另起模型调用提炼。
 - 在最后一条聊天消息之后、结束标记之前，额外输出且只输出 1 行待办元信息。格式只能是以下之一：
   待办：无
-  待办：角色自己要做｜短标题｜触发时间或条件
-  待办：提醒用户｜短标题｜触发时间或条件
-  待办：用户今日待办｜短标题｜今天
+  待办：新增｜角色自己要做｜短标题｜触发时间或条件
+  待办：新增｜提醒用户｜短标题｜触发时间或条件
+  待办：新增｜用户今日待办｜短标题｜今天
+  待办：更新｜已有待办ID｜新短标题｜新触发时间或条件
 - 待办元信息不是聊天内容，不要把它写成角色会说出口的话；如果不确定，就写“待办：无”。`;
 const CHAT_REPLY_RUNAWAY_COMPLETION_TOKENS = 12000;
 const CHAT_REPLY_RUNAWAY_REASONING_TOKENS = 12000;
@@ -45255,9 +45259,12 @@ const buildRoleGenerationContext = (
     ? getLivingMemorySummaryForContext(role, { userInput, monthKey: getMonthKeyFromDateKey(roleTimeContext.dateKey || now) })
     : "";
   const pendingTodos = getPendingRoleTodos(role).slice(0, 6).map((todo) => ({
+    id: String(todo.id || "").trim(),
+    status: getAppRoleTodoStatus(todo),
     type: String(todo.type || "todo").trim(),
     category: String(todo.category || "").trim(),
     title: truncateContextText(todo.title || todo.sourceText || "待办事项", 80),
+    actionText: truncateContextText(getAppTodoActionText(todo), 80),
     triggerText: truncateContextText(todo.triggerText || todo.detail || "", 80),
     sourceSpeaker: normalizeAppTodoSourceSpeaker(todo.sourceSpeaker || "user"),
     sourceLabel: getAppTodoSourceLabel(todo, role),
@@ -47134,7 +47141,7 @@ const buildChatSubjectiveAwarenessBlock = ({ userInput = "", roleContext = null 
     recentEvents.length ? `事件余波：${recentEvents.map(formatSubjectiveContextEvent).filter(Boolean).join("；")}` : "",
     pendingTodos.length
       ? `待执行事项：${pendingTodos
-          .map((todo) => [todo?.category || todo?.type, todo?.sourceLabel, todo?.assigneeLabel, todo?.title, todo?.triggerText].filter(Boolean).join(" "))
+          .map((todo) => [todo?.id, todo?.category || todo?.type, todo?.sourceLabel, todo?.assigneeLabel, todo?.title, todo?.triggerText || todo?.dueAt].filter(Boolean).join(" "))
           .filter(Boolean)
           .join("；")}`
       : "",
@@ -47571,7 +47578,10 @@ const slimChatRoleContextForPlainText = (roleContext = null, { targetChars = PRI
   next.pendingTodos = Array.isArray(roleContext.pendingTodos)
     ? roleContext.pendingTodos.slice(0, 6).map((todo) => ({
         ...todo,
+        id: truncateContextText(todo?.id || "", 48),
+        status: truncateContextText(todo?.status || "", 20),
         title: truncateContextText(todo?.title || "", 80),
+        actionText: truncateContextText(todo?.actionText || "", 80),
         triggerText: truncateContextText(todo?.triggerText || "", 80),
         sourceLabel: truncateContextText(todo?.sourceLabel || "", 40),
         assigneeLabel: truncateContextText(todo?.assigneeLabel || "", 40),
@@ -52558,23 +52568,83 @@ const normalizeChatTodoDirectiveParts = (body = "") =>
     .map((item) => sanitizeChatLine(item))
     .filter(Boolean);
 
+const isChatTodoDirectiveAddActionText = (value = "") => /^(?:新增|添加|新建|加入|add|create)$/iu.test(String(value || "").trim());
+
+const isChatTodoDirectiveUpdateActionText = (value = "") => /^(?:更新|修改|改成|变更|update)$/iu.test(String(value || "").trim());
+
+const isChatTodoDirectiveKindText = (value = "") => {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  return /^(?:角色自己要做|提醒用户|提醒你|叫用户|叫你|用户今日待办|用户待办|今日待办|今天待办)$/iu.test(text);
+};
+
 const parseChatTodoDirective = (body = "", now = new Date()) => {
   const normalizedBody = sanitizeChatLine(body);
   if (!normalizedBody || /^(?:无|没有|不添加|无需|不用|none|no)$/iu.test(normalizedBody)) return null;
   const parts = normalizeChatTodoDirectiveParts(normalizedBody);
-  const kindText = parts[0] || "";
-  const titleText = parts[1] || normalizedBody.replace(/^(?:角色自己要做|提醒用户|用户今日待办)\s*[｜|：:]?\s*/u, "");
+  let directiveAction = "add";
+  let partIndex = 0;
+  if (isChatTodoDirectiveAddActionText(parts[0])) {
+    partIndex = 1;
+  } else if (isChatTodoDirectiveUpdateActionText(parts[0])) {
+    directiveAction = "update";
+    partIndex = 1;
+  }
+  const safeNow = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+
+  if (directiveAction === "update") {
+    const targetTodoId = sanitizeChatLine(parts[partIndex] || "");
+    if (!targetTodoId) return null;
+    let titleIndex = partIndex + 1;
+    let kindText = "";
+    if (isChatTodoDirectiveKindText(parts[titleIndex]) && parts[titleIndex + 1]) {
+      kindText = parts[titleIndex] || "";
+      titleIndex += 1;
+    }
+    const titleText = parts[titleIndex] || "";
+    const title = normalizeAppTodoTitle(titleText, "");
+    if (!title || /^(?:无|没有|不添加|无需|不用)$/u.test(title)) return null;
+    const triggerSeed = sanitizeChatLine(parts[titleIndex + 1] || "");
+    const titleHasTime = Boolean(parseAppTodoRelativeDueDate(title, safeNow) || parseAppTodoClockInText(title));
+    const dueSeed = triggerSeed || (titleHasTime ? title : "");
+    const due = dueSeed ? parseAppReminderDueDate(dueSeed, safeNow) : null;
+    const dueDate = due?.date || null;
+    const isReminder = /提醒用户|提醒你|叫用户|叫你/u.test(kindText);
+    const isUserTodayTodo = /用户|今日|今天/u.test(kindText) && /待办|todo|事项/u.test(kindText);
+    const type = isUserTodayTodo ? "today-todo" : isReminder ? "reminder" : "";
+    return {
+      _todoDirectiveAction: "update",
+      _todoDirectiveHasTrigger: Boolean(dueSeed),
+      targetTodoId,
+      ...(type ? { type } : {}),
+      title,
+      actionText: title,
+      triggerKind: dueDate ? "time" : "",
+      triggerText: due?.triggerText || triggerSeed || "",
+      dueAt: dueDate ? dueDate.toISOString() : "",
+      dateKey: dueDate ? formatDateKey(dueDate) : "",
+      sourceText: title,
+      summaryStatus: "ready",
+      summaryError: "",
+      order: dueDate ? dueDate.getTime() : Date.now(),
+    };
+  }
+
+  const kindText = parts[partIndex] || "";
+  const titleText =
+    parts[partIndex + 1] ||
+    normalizedBody.replace(/^(?:(?:新增|添加|新建|加入|add|create)\s*[｜|：:]?\s*)?(?:角色自己要做|提醒用户|用户今日待办)\s*[｜|：:]?\s*/iu, "");
   const title = normalizeAppTodoTitle(titleText, "");
   if (!title || /^(?:无|没有|不添加|无需|不用)$/u.test(title)) return null;
-  const triggerSeed = sanitizeChatLine(parts[2] || "");
+  const triggerSeed = sanitizeChatLine(parts[partIndex + 2] || "");
   const isReminder = /提醒用户|提醒你|叫用户|叫你/u.test(kindText);
   const isUserTodayTodo = /用户|今日|今天/u.test(kindText) && /待办|todo|事项/u.test(kindText);
-  const safeNow = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
   const type = isUserTodayTodo ? "today-todo" : isReminder ? "reminder" : "role-todo";
   const due = ["reminder", "role-todo"].includes(type) ? parseAppReminderDueDate([triggerSeed, title].filter(Boolean).join(" "), safeNow) : null;
   const dueDate = due?.date || null;
   const triggerText = type === "today-todo" ? "今日待办" : due?.triggerText || triggerSeed || "稍后";
   return {
+    _todoDirectiveAction: "add",
     type,
     category: "",
     title,
@@ -54973,7 +55043,81 @@ const upsertRolePromisedTodosFromMessages = (roleId = "", messages = [], { now =
           sourceMessageId: message.id || "",
         }) || changed;
       });
-    });
+  });
+  return changed;
+};
+
+const stripModelDeclaredTodoDirectiveFields = (todo = {}) => {
+  if (!todo || typeof todo !== "object") return {};
+  const { _todoDirectiveAction, _todoDirectiveHasTrigger, targetTodoId, todoId, id, ...payload } = todo;
+  return payload;
+};
+
+const updateModelDeclaredTodoFromDirective = (
+  roleId = "",
+  todo = {},
+  { sourceMessageId = "", sourceText = "", now = new Date() } = {},
+) => {
+  const targetTodoId = String(todo?.targetTodoId || todo?.todoId || "").trim();
+  const title = normalizeAppTodoTitle(todo?.title || todo?.actionText || "", "");
+  if (!roleId || !targetTodoId || !title) return false;
+  const safeNow = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+  const nowIsoText = new Date().toISOString();
+  const payload = stripModelDeclaredTodoDirectiveFields(todo);
+  const actionText = normalizeTodoText(payload.actionText || title);
+  const triggerText = normalizeTodoText(payload.triggerText || "");
+  const incomingDueAt = String(payload.dueAt || "").trim();
+  const incomingDueDate = parseValidTimestamp(incomingDueAt || "");
+  const hasTriggerUpdate = Boolean(todo?._todoDirectiveHasTrigger || triggerText || incomingDueDate);
+  let changed = false;
+  updateRole(roleId, (nextRole) => {
+    nextRole.todos = Array.isArray(nextRole.todos) ? nextRole.todos : [];
+    const existing = nextRole.todos.find((item) => item?.id === targetTodoId && getAppRoleTodoStatus(item) === "pending");
+    if (!existing) return nextRole;
+    const nextType = String(payload.type || existing.type || "todo").trim() || "todo";
+    const nextFields = {
+      type: nextType,
+      title,
+      actionText,
+      summaryStatus: "ready",
+      summaryError: "",
+      summarizedAt: String(payload.summarizedAt || existing.summarizedAt || "").trim(),
+      ackSpeaker: "role",
+      ackMessageId: String(sourceMessageId || payload.ackMessageId || existing.ackMessageId || "").trim(),
+      ackText: normalizeTodoText(sourceText || payload.ackText || existing.ackText || ""),
+      executionStartedAt: "",
+      executionError: "",
+      updatedAt: nowIsoText,
+    };
+    if (payload.detail) nextFields.detail = normalizeTodoText(payload.detail);
+    if (payload.category) nextFields.category = String(payload.category || "").trim();
+    if (payload.assignee) nextFields.assignee = normalizeAppTodoActor(payload.assignee, existing.assignee || getAppTodoDefaultAssignee({ ...existing, type: nextType }));
+    if (payload.targetSpeaker) {
+      nextFields.targetSpeaker = normalizeAppTodoActor(
+        payload.targetSpeaker,
+        existing.targetSpeaker || getAppTodoDefaultTarget({ ...existing, type: nextType }),
+      );
+    }
+    if (!String(existing.sourceMessageId || "").trim() && sourceMessageId) nextFields.sourceMessageId = String(sourceMessageId || "").trim();
+    if (!String(existing.sourceText || "").trim()) nextFields.sourceText = normalizeTodoText(payload.sourceText || sourceText || title);
+    if (!String(existing.sourceSpeaker || "").trim()) nextFields.sourceSpeaker = normalizeAppTodoSourceSpeaker(payload.sourceSpeaker || "role");
+    if (nextType === "today-todo") {
+      nextFields.triggerKind = "manual";
+      nextFields.triggerText = triggerText || "今日待办";
+      nextFields.dueAt = "";
+      nextFields.dateKey = String(payload.dateKey || existing.dateKey || formatDateKey(safeNow)).trim();
+      nextFields.order = Number.isFinite(Number(payload.order)) ? Number(payload.order) : Number(existing.order || safeNow.getTime());
+    } else if (hasTriggerUpdate) {
+      nextFields.triggerKind = incomingDueDate ? "time" : String(payload.triggerKind || existing.triggerKind || "manual").trim() || "manual";
+      nextFields.triggerText = triggerText || (incomingDueDate ? formatAppTodoDueTriggerText(incomingDueDate, safeNow) : String(existing.triggerText || "待办").trim());
+      nextFields.dueAt = incomingDueDate ? incomingDueDate.toISOString() : "";
+      nextFields.dateKey = incomingDueDate ? formatDateKey(incomingDueDate) : String(payload.dateKey || existing.dateKey || "").trim();
+      nextFields.order = incomingDueDate ? incomingDueDate.getTime() : Number(existing.order || safeNow.getTime());
+    }
+    Object.assign(existing, nextFields);
+    changed = true;
+    return nextRole;
+  }, { paintNow: false });
   return changed;
 };
 
@@ -54989,12 +55133,22 @@ const upsertModelDeclaredTodosFromMessages = (roleId = "", todoActions = [], mes
   todoActions.slice(0, 3).forEach((todo, index) => {
     const title = normalizeAppTodoTitle(todo?.title || todo?.actionText || "", "");
     if (!title) return;
+    if (String(todo?._todoDirectiveAction || "").trim() === "update") {
+      changed =
+        updateModelDeclaredTodoFromDirective(roleId, todo, {
+          sourceMessageId,
+          sourceText,
+          now,
+        }) || changed;
+      return;
+    }
+    const todoPayload = stripModelDeclaredTodoDirectiveFields(todo);
     changed = upsertAppRoleTodo(roleId, {
-      ...todo,
+      ...todoPayload,
       title,
-      actionText: normalizeTodoText(todo?.actionText || title),
+      actionText: normalizeTodoText(todoPayload?.actionText || title),
       sourceMessageId,
-      sourceText: normalizeTodoText(todo?.sourceText || sourceText || title),
+      sourceText: normalizeTodoText(todoPayload?.sourceText || sourceText || title),
       ackSpeaker: "role",
       ackMessageId: sourceMessageId,
       ackText: sourceText,
