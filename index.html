@@ -5027,6 +5027,40 @@ body {
   flex: 0 0 auto;
 }
 
+.composer-plain.has-app-send {
+  grid-template-columns: minmax(0, 1fr) 40px 40px !important;
+}
+
+.composer-send-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 14px;
+  background: #111111;
+  color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(17, 17, 17, 0.06),
+    0 6px 14px rgba(17, 17, 17, 0.1);
+  flex: 0 0 auto;
+}
+
+.composer-send-btn:active {
+  background: #2b2b2f;
+  transform: scale(0.988);
+}
+
+.composer-send-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.composer-plain.has-app-send .composer-cancel-reply-btn {
+  right: 104px !important;
+}
+
 .composer-cancel-reply-btn {
   display: grid;
   place-items: center;
@@ -13881,7 +13915,7 @@ html.chat-composer-focused .ref-chat-composer {
 
 .wechat-composer-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 42px 42px;
+  grid-template-columns: 42px minmax(0, 1fr) 42px 42px 42px;
   align-items: center;
   gap: 4px;
 }
@@ -13908,6 +13942,18 @@ html.chat-composer-focused .ref-chat-composer {
   width: 30px;
   height: 30px;
   stroke-width: 1.45;
+}
+
+.wechat-send-btn {
+  border-radius: 8px;
+  background: #07c160;
+  color: #ffffff;
+}
+
+.wechat-send-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.6;
 }
 
 .wechat-composer-pill {
@@ -26961,7 +27007,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "6月4日-3";
+const APP_BUILD_VERSION_LABEL = "6月5日-1";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -30269,6 +30315,7 @@ const renderChatComposerByTheme = (state, role) => {
             ${cancelButton}
           </div>
           <button class="wechat-side-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
+          <button class="wechat-side-btn wechat-send-btn" type="button" data-action="send-message" aria-label="发送消息" title="发送">${icons.send}</button>
           <button class="wechat-side-btn ${state.quickPlusMenuOpen ? "is-active" : ""}" type="button" data-action="toggle-quick-plus-menu" aria-label="更多功能">${icons.plus}</button>
         </div>
         ${renderQuickPlusMenu(state, role)}
@@ -30292,10 +30339,11 @@ const renderChatComposerByTheme = (state, role) => {
   return `
     <div class="chat-composer ref-chat-composer">
       ${renderComposerQuotePreview(role)}
-      <div class="chat-input-pill composer-plain${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
+      <div class="chat-input-pill composer-plain has-app-send${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
         <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
         ${cancelButton}
         <button class="composer-emoji-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
+        <button class="composer-send-btn" type="button" data-action="send-message" aria-label="发送消息" title="发送">${icons.send}</button>
       </div>
     </div>
   `;
@@ -41643,6 +41691,10 @@ const COMPOSER_DRAFT_SYNC_DELAY_MS = 900;
 const COMPOSER_COMPOSITION_STALE_MS = 1400;
 const COMPOSER_ENTER_COMPOSITION_GRACE_MS = 520;
 const COMPOSER_KEYBOARD_SEND_DEDUPE_MS = 120;
+const COMPOSER_DRAFT_QUICK_STORAGE_KEY = "lifetalk-composer-drafts-v1";
+const COMPOSER_DRAFT_QUICK_MAX_ROLES = 24;
+const COMPOSER_DRAFT_QUICK_MAX_CHARS = 4000;
+const COMPOSER_DRAFT_QUICK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const ROLE_PROFILE_SYNC_DELAY_MS = 320;
 const MOBILE_KEYBOARD_MIN_OVERLAY_PX = 72;
 const ACTIVE_SCROLL_PAINT_DEFER_MS = 260;
@@ -41752,16 +41804,169 @@ const hydrateTargetedChatMotion = () => {
   }
 };
 
+const getComposerDraftQuickStorageTargets = () => {
+  const targets = [];
+  ["localStorage", "sessionStorage"].forEach((key) => {
+    try {
+      const storage = window?.[key];
+      if (storage) targets.push(storage);
+    } catch {
+      // Storage access can throw in private modes or locked WebViews.
+    }
+  });
+  return targets;
+};
+
+const normalizeComposerQuickDraftText = (draft = "") =>
+  String(draft ?? "").slice(0, COMPOSER_DRAFT_QUICK_MAX_CHARS);
+
+const normalizeComposerQuickDraftEntry = (entry) => {
+  if (typeof entry === "string") {
+    const value = normalizeComposerQuickDraftText(entry);
+    return value ? { value, updatedAt: 0 } : null;
+  }
+  if (!entry || typeof entry !== "object") return null;
+  const value = normalizeComposerQuickDraftText(entry.value ?? entry.draft ?? "");
+  if (!value) return null;
+  const updatedAt = Number(entry.updatedAt || 0);
+  return {
+    value,
+    updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0,
+  };
+};
+
+const pruneComposerQuickDrafts = (drafts = {}) => {
+  const now = Date.now();
+  return Object.fromEntries(
+    Object.entries(drafts)
+      .map(([roleId, entry]) => [String(roleId || "").trim(), normalizeComposerQuickDraftEntry(entry)])
+      .filter(([roleId, entry]) => {
+        if (!roleId || !entry) return false;
+        return !entry.updatedAt || now - entry.updatedAt <= COMPOSER_DRAFT_QUICK_MAX_AGE_MS;
+      })
+      .sort((left, right) => Number(right[1].updatedAt || 0) - Number(left[1].updatedAt || 0))
+      .slice(0, COMPOSER_DRAFT_QUICK_MAX_ROLES),
+  );
+};
+
+const readComposerQuickDrafts = () => {
+  const merged = {};
+  getComposerDraftQuickStorageTargets().forEach((storage) => {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(storage.getItem(COMPOSER_DRAFT_QUICK_STORAGE_KEY) || "{}");
+    } catch {
+      parsed = null;
+    }
+    if (!parsed || typeof parsed !== "object") return;
+    Object.entries(parsed).forEach(([roleId, rawEntry]) => {
+      const normalizedRoleId = String(roleId || "").trim();
+      const entry = normalizeComposerQuickDraftEntry(rawEntry);
+      if (!normalizedRoleId || !entry) return;
+      const existing = merged[normalizedRoleId];
+      if (!existing || Number(entry.updatedAt || 0) >= Number(existing.updatedAt || 0)) {
+        merged[normalizedRoleId] = entry;
+      }
+    });
+  });
+  return pruneComposerQuickDrafts(merged);
+};
+
+const persistComposerQuickDrafts = (drafts = {}) => {
+  const normalized = pruneComposerQuickDrafts(drafts);
+  const hasDrafts = Object.keys(normalized).length > 0;
+  const payload = hasDrafts ? JSON.stringify(normalized) : "";
+  getComposerDraftQuickStorageTargets().forEach((storage) => {
+    try {
+      if (hasDrafts) {
+        storage.setItem(COMPOSER_DRAFT_QUICK_STORAGE_KEY, payload);
+      } else {
+        storage.removeItem(COMPOSER_DRAFT_QUICK_STORAGE_KEY);
+      }
+    } catch {
+      // Draft backup is best-effort; typing must stay responsive.
+    }
+  });
+};
+
+const writeComposerQuickDraft = (roleId, draft = "") => {
+  const normalizedRoleId = String(roleId || "").trim();
+  if (!normalizedRoleId) return;
+  const drafts = readComposerQuickDrafts();
+  const value = normalizeComposerQuickDraftText(draft);
+  if (value) {
+    drafts[normalizedRoleId] = {
+      value,
+      updatedAt: Date.now(),
+    };
+  } else {
+    delete drafts[normalizedRoleId];
+  }
+  persistComposerQuickDrafts(drafts);
+};
+
+const removeComposerQuickDraft = (roleId) => {
+  const normalizedRoleId = String(roleId || "").trim();
+  if (!normalizedRoleId) return;
+  const drafts = readComposerQuickDrafts();
+  if (!Object.prototype.hasOwnProperty.call(drafts, normalizedRoleId)) return;
+  delete drafts[normalizedRoleId];
+  persistComposerQuickDrafts(drafts);
+};
+
+const getComposerQuickDraftSnapshot = () => {
+  const role = getActiveChatRole() || getCurrentRole();
+  const roleId = String(role?.id || "").trim();
+  if (!roleId) return null;
+  const input = document.getElementById("composer-input");
+  const draft = input instanceof HTMLTextAreaElement ? input.value : role?.chats?.draft || "";
+  return {
+    roleId,
+    draft: normalizeComposerQuickDraftText(draft),
+  };
+};
+
+const restoreComposerQuickDraftsIntoState = () => {
+  const drafts = readComposerQuickDrafts();
+  if (!Object.keys(drafts).length || !Array.isArray(state.roles)) return false;
+  let changed = false;
+  const liveDrafts = {};
+
+  state.roles.forEach((role) => {
+    const roleId = String(role?.id || "").trim();
+    const entry = roleId ? drafts[roleId] : null;
+    if (!roleId || !entry) return;
+    liveDrafts[roleId] = entry;
+    role.chats = {
+      ...(role.chats || {}),
+      draft: entry.value,
+    };
+    changed = true;
+  });
+
+  if (Object.keys(liveDrafts).length !== Object.keys(drafts).length) {
+    persistComposerQuickDrafts(liveDrafts);
+  }
+
+  return changed;
+};
+
+const clearComposerDraftSyncTimer = () => {
+  if (!composerRuntime.draftSyncTimer) return;
+  window.clearTimeout(composerRuntime.draftSyncTimer);
+  composerRuntime.draftSyncTimer = 0;
+};
+
 const queueComposerDraftSync = ({ flush = false } = {}) => {
+  const snapshot = getComposerQuickDraftSnapshot();
   const runSync = () => {
     composerRuntime.draftSyncTimer = 0;
-    syncPersistentState();
+    if (snapshot) {
+      writeComposerQuickDraft(snapshot.roleId, snapshot.draft);
+    }
   };
 
-  if (composerRuntime.draftSyncTimer) {
-    window.clearTimeout(composerRuntime.draftSyncTimer);
-    composerRuntime.draftSyncTimer = 0;
-  }
+  clearComposerDraftSyncTimer();
 
   if (flush) {
     runSync();
@@ -78116,6 +78321,8 @@ const handleSendMessage = ({ triggerAi = true } = {}) => {
   }
 
   releaseComposerCompositionForCommittedAction();
+  clearComposerDraftSyncTimer();
+  removeComposerQuickDraft(role.id);
   if (input) {
     input.value = "";
     syncComposerTextarea();
@@ -81904,6 +82111,7 @@ const restoreNewerIndexedDbState = async () => {
   pendingAiReply = null;
   refreshGlobalFeatureStatus({ paintNow: false });
   void syncBackgroundKeepAliveMode({ silent: true });
+  restoreComposerQuickDraftsIntoState();
   saveState(serializeState());
   paint();
   void restorePersistedAssets();
@@ -81921,6 +82129,7 @@ window.addEventListener("storage", () => {
   pendingAiReply = null;
   refreshGlobalFeatureStatus({ paintNow: false });
   void syncBackgroundKeepAliveMode({ silent: true });
+  restoreComposerQuickDraftsIntoState();
   paint();
   void restoreNewerIndexedDbState().finally(() => {
     queueAutoSummaryChecksForAllRoles({ delayMs: 500 });
@@ -82052,6 +82261,7 @@ markAppForegrounded({ sync: false });
 refreshGlobalFeatureStatus({ paintNow: false });
 primeSystemChromeStatus({ paintNow: true });
 void syncBackgroundKeepAliveMode({ silent: true });
+restoreComposerQuickDraftsIntoState();
 paint();
 queueMobileViewportScaleGuardSync();
 queueVisibleViewportHeightSync();
