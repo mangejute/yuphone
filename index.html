@@ -26961,7 +26961,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "6月3日-3";
+const APP_BUILD_VERSION_LABEL = "6月4日-2";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -30265,7 +30265,7 @@ const renderChatComposerByTheme = (state, role) => {
         <div class="wechat-composer-row">
           <button class="wechat-side-btn wechat-voice-toggle" type="button" aria-label="语音模式占位">${icons.wechatVoice}</button>
           <div class="chat-input-pill composer-plain wechat-composer-pill${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
-            <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+            <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
             ${cancelButton}
           </div>
           <button class="wechat-side-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
@@ -30281,7 +30281,7 @@ const renderChatComposerByTheme = (state, role) => {
         ${renderComposerQuotePreview(role)}
         <div class="qq-composer-row">
           <div class="chat-input-pill composer-plain qq-composer-pill${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
-            <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+            <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
             ${cancelButton}
           </div>
           <button class="qq-send-btn" type="button" data-action="send-message" data-send-mode="direct-ai" aria-label="发送并让角色回复">发送</button>
@@ -30293,7 +30293,7 @@ const renderChatComposerByTheme = (state, role) => {
     <div class="chat-composer ref-chat-composer">
       ${renderComposerQuotePreview(role)}
       <div class="chat-input-pill composer-plain${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
-        <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+        <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
         ${cancelButton}
         <button class="composer-emoji-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
       </div>
@@ -30512,7 +30512,7 @@ const renderChatModal = (role) => `
 
       <div class="chat-composer ref-chat-composer">
         <div class="chat-input-pill composer-plain">
-          <textarea id="composer-input" rows="1" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
+          <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
           <button class="send-main-btn" type="button" data-action="send-message">发送</button>
         </div>
       </div>
@@ -32378,7 +32378,7 @@ const renderChatModalModern = (role) => `
 
       <div class="chat-composer ref-chat-composer">
         <div class="chat-input-pill composer-plain">
-          <textarea id="composer-input" rows="1" placeholder="杈撳叆娑堟伅...">${escapeHtml(role.chats.draft)}</textarea>
+          <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="杈撳叆娑堟伅...">${escapeHtml(role.chats.draft)}</textarea>
           <button class="send-main-btn" type="button" data-action="send-message">鍙戦€?/button>
         </div>
       </div>
@@ -38316,7 +38316,11 @@ const normalizePresetEntries = ({ presetEntries = [], presetNames = [], primaryC
   return normalizedEntries;
 };
 
-const normalizeSessionState = () => {
+const normalizeSessionState = ({ clearRuntimeBusy = false } = {}) => {
+  if (clearRuntimeBusy) {
+    state.apiGenerationBusy = [];
+    state.modelFetchBusy = [];
+  }
   state.roles = (state.roles || []).map((role) => ({
     ...role,
     chats: {
@@ -38396,7 +38400,7 @@ const normalizeSessionState = () => {
   state.recentStickerIds = [...new Set((Array.isArray(state.recentStickerIds) ? state.recentStickerIds : []).map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 30);
 };
 
-normalizeSessionState();
+normalizeSessionState({ clearRuntimeBusy: true });
 
 let backgroundKeepAliveRuntime = {
   audio: null,
@@ -41635,7 +41639,10 @@ const isTouchLikeDevice = () => {
   );
 };
 
-const COMPOSER_DRAFT_SYNC_DELAY_MS = 180;
+const COMPOSER_DRAFT_SYNC_DELAY_MS = 900;
+const COMPOSER_COMPOSITION_STALE_MS = 1400;
+const COMPOSER_ENTER_COMPOSITION_GRACE_MS = 520;
+const COMPOSER_KEYBOARD_SEND_DEDUPE_MS = 120;
 const ROLE_PROFILE_SYNC_DELAY_MS = 320;
 const MOBILE_KEYBOARD_MIN_OVERLAY_PX = 72;
 const ACTIVE_SCROLL_PAINT_DEFER_MS = 260;
@@ -41645,6 +41652,11 @@ const composerRuntime = {
   keyboardSyncFrame: 0,
   viewportSyncFrame: 0,
   mobileViewportFrame: 0,
+  compositionStaleTimer: 0,
+  compositionStartedAt: 0,
+  compositionUpdatedAt: 0,
+  lastKeyboardSendAt: 0,
+  allowLineBreakUntil: 0,
   isComposing: false,
   pendingPaint: false,
   suppressNextFocusRestore: false,
@@ -41757,6 +41769,58 @@ const queueComposerDraftSync = ({ flush = false } = {}) => {
   }
 
   composerRuntime.draftSyncTimer = window.setTimeout(runSync, COMPOSER_DRAFT_SYNC_DELAY_MS);
+};
+
+const clearComposerCompositionStaleTimer = () => {
+  if (!composerRuntime.compositionStaleTimer) return;
+  window.clearTimeout(composerRuntime.compositionStaleTimer);
+  composerRuntime.compositionStaleTimer = 0;
+};
+
+const finishComposerComposition = ({ flushDraft = true, paintPending = true } = {}) => {
+  clearComposerCompositionStaleTimer();
+  composerRuntime.isComposing = false;
+  composerRuntime.compositionStartedAt = 0;
+  composerRuntime.compositionUpdatedAt = 0;
+  if (flushDraft) {
+    queueComposerDraftSync({ flush: true });
+  }
+  queueChatKeyboardViewportStateSync();
+  if (paintPending && composerRuntime.pendingPaint) {
+    composerRuntime.pendingPaint = false;
+    paint();
+  }
+};
+
+const isComposerCompositionStale = () => {
+  if (!composerRuntime.isComposing) return false;
+  const active = document.activeElement;
+  if (!(active instanceof HTMLTextAreaElement) || active.id !== "composer-input") return true;
+  const lastActiveAt = Math.max(
+    Number(composerRuntime.compositionUpdatedAt || 0),
+    Number(composerRuntime.compositionStartedAt || 0),
+  );
+  return Boolean(lastActiveAt && Date.now() - lastActiveAt > COMPOSER_COMPOSITION_STALE_MS);
+};
+
+const queueComposerCompositionStaleRelease = () => {
+  if (!composerRuntime.isComposing) return;
+  clearComposerCompositionStaleTimer();
+  composerRuntime.compositionStaleTimer = window.setTimeout(() => {
+    composerRuntime.compositionStaleTimer = 0;
+    if (isComposerCompositionStale()) {
+      finishComposerComposition({ flushDraft: false, paintPending: true });
+    }
+  }, COMPOSER_COMPOSITION_STALE_MS + 80);
+};
+
+const markComposerCompositionActivity = () => {
+  if (!composerRuntime.isComposing) {
+    composerRuntime.compositionStartedAt = Date.now();
+  }
+  composerRuntime.isComposing = true;
+  composerRuntime.compositionUpdatedAt = Date.now();
+  queueComposerCompositionStaleRelease();
 };
 
 const queueRoleProfileSync = ({ flush = false } = {}) => {
@@ -41934,6 +41998,10 @@ const queueChatKeyboardViewportStateSync = () => {
 };
 
 const shouldDeferPaintForComposerComposition = () => {
+  if (isComposerCompositionStale()) {
+    finishComposerComposition({ flushDraft: false, paintPending: false });
+    return false;
+  }
   const active = document.activeElement;
   return (
     composerRuntime.isComposing &&
@@ -41945,9 +42013,56 @@ const shouldDeferPaintForComposerComposition = () => {
 };
 
 const releaseComposerCompositionForCommittedAction = () => {
-  if (!composerRuntime.isComposing || document.activeElement?.id !== "composer-input") return;
-  composerRuntime.isComposing = false;
-  queueChatKeyboardViewportStateSync();
+  if (!composerRuntime.isComposing) return;
+  finishComposerComposition({ flushDraft: false, paintPending: false });
+};
+
+const getComposerSubmitText = () => {
+  const role = getActiveChatRole() || getCurrentRole();
+  const input = document.getElementById("composer-input");
+  return String(input?.value ?? role?.chats?.draft ?? "").trim();
+};
+
+const isComposerKeyboardSendDuplicate = () => Date.now() - Number(composerRuntime.lastKeyboardSendAt || 0) < COMPOSER_KEYBOARD_SEND_DEDUPE_MS;
+
+const submitComposerFromKeyboard = (event = null) => {
+  const target = event?.target;
+  if (!(target instanceof HTMLTextAreaElement) || target.id !== "composer-input") return false;
+  if (isComposerKeyboardSendDuplicate()) {
+    event.preventDefault();
+    return true;
+  }
+  const hasText = getComposerSubmitText().length > 0;
+  const isEnterKey = event?.type === "keydown" && event.key === "Enter";
+  const isLineBreakInput = event?.type === "beforeinput" && event.inputType === "insertLineBreak";
+  const composingByEvent = Boolean(event?.isComposing);
+  const composingByRuntime = composerRuntime.isComposing;
+  const compositionAge = Math.max(0, Date.now() - Number(composerRuntime.compositionStartedAt || 0));
+  const allowComposingEnterSend =
+    hasText &&
+    (isEnterKey || isLineBreakInput) &&
+    isTouchLikeDevice() &&
+    (composingByEvent || composingByRuntime) &&
+    composingByRuntime &&
+    compositionAge >= COMPOSER_ENTER_COMPOSITION_GRACE_MS;
+
+  if (isLineBreakInput && Date.now() < Number(composerRuntime.allowLineBreakUntil || 0)) {
+    return false;
+  }
+  if (isEnterKey && event.shiftKey) {
+    composerRuntime.allowLineBreakUntil = Date.now() + 260;
+    return false;
+  }
+  if (!isEnterKey && !isLineBreakInput) return false;
+  if (composingByRuntime && !allowComposingEnterSend && !isComposerCompositionStale()) {
+    return false;
+  }
+
+  event.preventDefault();
+  releaseComposerCompositionForCommittedAction();
+  composerRuntime.lastKeyboardSendAt = Date.now();
+  handleComposerPrimaryAction();
+  return true;
 };
 
 const shouldDeferPaintForFocusedTextEditor = () =>
@@ -53834,15 +53949,23 @@ const getMonitorPlannedTimelineForDate = (role, targetDateKey = formatJourneyDay
   const snapshot = getJourneyLinkedSnapshotForDateApp(role, normalizedTargetDate);
   const monitorPreview = snapshot?.monitorPreview && typeof snapshot.monitorPreview === "object" ? snapshot.monitorPreview : null;
   const fortune = monitorPreview?.fortune && typeof monitorPreview.fortune === "object" ? monitorPreview.fortune : null;
-  if (monitorPreview?.explicitOnly && !fortune?.eventTriggered) return [];
-  if (fortune && !fortune.eventTriggered) return [];
+  const directPlannedTimeline = (Array.isArray(role?.monitor?.plannedTimeline) ? role.monitor.plannedTimeline : []).filter(
+    (item) => getRoleMonitorEntryDateKey(item) === normalizedTargetDate,
+  );
+  if (monitorPreview?.explicitOnly && !fortune?.eventTriggered) {
+    return directPlannedTimeline;
+  }
+  if (fortune && !fortune.eventTriggered) {
+    return directPlannedTimeline;
+  }
   const plannedSource =
     Array.isArray(monitorPreview?.plannedTimeline) && monitorPreview.plannedTimeline.length
       ? monitorPreview.plannedTimeline
       : Array.isArray(monitorPreview?.timeline)
         ? monitorPreview.timeline
         : [];
-  return plannedSource
+  const seen = new Set();
+  return [...directPlannedTimeline, ...plannedSource]
     .map((item, index) => {
       const text = String(item?.text || item?.summary || "").trim();
       if (!text) return null;
@@ -53858,6 +53981,17 @@ const getMonitorPlannedTimelineForDate = (role, targetDateKey = formatJourneyDay
       };
     })
     .filter(Boolean)
+    .filter((item) => {
+      const key = [
+        String(item?.createdAt || "").trim(),
+        String(item?.time || "").trim(),
+        String(item?.title || "").trim(),
+        String(item?.text || "").trim(),
+      ].join("|");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .sort((left, right) => getChatLifeMemorySortValue(left, normalizedTargetDate) - getChatLifeMemorySortValue(right, normalizedTargetDate));
 };
 
@@ -65204,6 +65338,7 @@ const JOURNEY_SINGLE_RESCUE_TIMEOUT_MS = 30_000;
 const JOURNEY_SINGLE_TIMELINE_ONLY_TIMEOUT_MS = 240_000;
 const JOURNEY_STABLE_SINGLE_TEXT_TIMEOUT_MS = 240_000;
 const JOURNEY_STABLE_SINGLE_TEXT_RESCUE_TIMEOUT_MS = 120_000;
+const JOURNEY_LINKED_AUTO_TIMEOUT_MS = 240_000;
 const JOURNEY_STABLE_WEEK_TEXT_TIMEOUT_MS = 32_000;
 const JOURNEY_STABLE_WEEK_TEXT_RESCUE_TIMEOUT_MS = 18_000;
 const JOURNEY_STABLE_WEEK_MISSING_DAY_TIMEOUT_MS = 16_000;
@@ -68855,7 +68990,7 @@ const requestJourneyStableWeekTextPreviewData = async (role, raw, startDateKey =
   };
 };
 
-const requestJourneyPreviewData = async (role, raw, targetDateKey = formatDateKey()) => {
+const requestJourneyPreviewData = async (role, raw, targetDateKey = formatDateKey(), { signal = null } = {}) => {
   const normalizedTargetDate = formatDateKey(targetDateKey);
   const targetDateLabel = formatJourneyDateLabel(normalizedTargetDate);
   try {
@@ -68866,6 +69001,7 @@ const requestJourneyPreviewData = async (role, raw, targetDateKey = formatDateKe
       targetHoliday: getChinaHolidayInfo(normalizedTargetDate),
       mealTimes: Array.isArray(role?.settings?.mealTimes) ? role.settings.mealTimes : ["10:30", "14:00", "20:00"],
       referenceCatalog: buildRoleReferenceCatalog(role),
+      signal,
     });
     const journeyData = decorateJourneyDataWithLinkedState(
       role,
@@ -69026,30 +69162,12 @@ const mergeJourneyLinkedMonitor = (role, journeyData) => {
   const nextPlannedEntries = getJourneyLinkedMonitorPlannedEntries(journeyData);
   const existingTimeline = Array.isArray(role.monitor?.timeline) ? role.monitor.timeline : [];
   const existingPlannedTimeline = Array.isArray(role.monitor?.plannedTimeline) ? role.monitor.plannedTimeline : [];
-  const mergedTimeline = [
-    ...nextEntries,
-    ...existingTimeline.filter((item) => formatDateKey(item?.journeyDateKey || item?.createdAt || "") !== targetDate),
-  ]
-    .sort((left, right) => {
-      const leftTime = new Date(left?.createdAt || normalizeLooseTimestamp(left?.time) || 0).getTime();
-      const rightTime = new Date(right?.createdAt || normalizeLooseTimestamp(right?.time) || 0).getTime();
-      return rightTime - leftTime;
-    })
-    .slice(0, 28);
+  const mergedTimeline = mergeMonitorTimelineEntries(existingTimeline, nextEntries);
 
   role.monitor = {
     ...(role.monitor || {}),
     timeline: mergedTimeline,
-    plannedTimeline: [
-      ...nextPlannedEntries,
-      ...existingPlannedTimeline.filter((item) => formatDateKey(item?.journeyDateKey || item?.createdAt || "") !== targetDate),
-    ]
-      .sort((left, right) => {
-        const leftTime = new Date(left?.createdAt || normalizeLooseTimestamp(left?.time) || 0).getTime();
-        const rightTime = new Date(right?.createdAt || normalizeLooseTimestamp(right?.time) || 0).getTime();
-        return rightTime - leftTime;
-      })
-      .slice(0, 28),
+    plannedTimeline: mergeMonitorTimelineEntries(existingPlannedTimeline, nextPlannedEntries),
   };
 };
 
@@ -69057,7 +69175,14 @@ const mergeJourneyLinkedEvent = (role, journeyData) => {
   const nextEvent = buildJourneyLinkedEvent(journeyData);
   if (!nextEvent) return;
   const currentEvents = Array.isArray(role.events) ? role.events : [];
-  role.events = [nextEvent, ...currentEvents.filter((item) => String(item?.journeyDateKey || "") !== nextEvent.journeyDateKey)].slice(0, 24);
+  role.events = [
+    nextEvent,
+    ...currentEvents.filter((item) => {
+      const source = String(item?.source || "").trim();
+      if (source !== "journey-link") return true;
+      return String(item?.journeyDateKey || "") !== nextEvent.journeyDateKey;
+    }),
+  ].slice(0, 24);
 };
 
 const applyJourneyPreviewToRole = (
@@ -69085,6 +69210,13 @@ const applyJourneyPreviewToRole = (
   }
 
   if (updateCurrentMonitor && journeyData.monitorPreview) {
+    const monitorTargetDate = formatDateKey(journeyData.targetDate || new Date());
+    const monitorTimelinePreview = Array.isArray(journeyData.monitorPreview.timeline)
+      ? journeyData.monitorPreview.timeline
+      : [];
+    const monitorPlannedPreview = Array.isArray(journeyData.monitorPreview.plannedTimeline)
+      ? journeyData.monitorPreview.plannedTimeline
+      : [];
     const monitorFortune =
       journeyData.monitorPreview.fortune && typeof journeyData.monitorPreview.fortune === "object"
         ? {
@@ -69098,34 +69230,18 @@ const applyJourneyPreviewToRole = (
       headline: monitorTriggered ? journeyData.monitorPreview.headline || role.monitor.headline : "",
       summary: monitorTriggered ? journeyData.monitorPreview.summary || role.monitor.summary : "",
       fortune: monitorFortune,
-      timeline: monitorTriggered && Array.isArray(journeyData.monitorPreview.timeline)
-        ? journeyData.monitorPreview.timeline.map((item, index) => ({
-            id: item?.id || `mon-${Date.now()}-${index}`,
-            time: String(item?.time || "").trim(),
-            title: String(item?.title || "").trim(),
-            text: String(item?.text || "").trim(),
-            tag: String(item?.tag || "").trim(),
-            journeyDateKey: formatDateKey(journeyData.targetDate),
-            createdAt:
-              item?.createdAt || buildMonitorBeatCreatedAt(formatDateKey(journeyData.targetDate), item?.time || "", index),
-          }))
-        : monitorTriggered
-          ? role.monitor.timeline
-          : [],
-      plannedTimeline: monitorTriggered && Array.isArray(journeyData.monitorPreview.plannedTimeline)
-        ? journeyData.monitorPreview.plannedTimeline.map((item, index) => ({
-            id: item?.id || `mon-plan-${Date.now()}-${index}`,
-            time: String(item?.time || "").trim(),
-            title: String(item?.title || "").trim(),
-            text: String(item?.text || "").trim(),
-            tag: String(item?.tag || "").trim(),
-            journeyDateKey: formatDateKey(journeyData.targetDate),
-            createdAt:
-              item?.createdAt || buildMonitorBeatCreatedAt(formatDateKey(journeyData.targetDate), item?.time || "", index),
-          }))
-        : monitorTriggered
-          ? role.monitor.plannedTimeline
-          : [],
+      timeline: monitorTriggered && monitorTimelinePreview.length
+        ? mergeMonitorTimelineEntries(
+            role.monitor?.timeline || [],
+            buildMonitorTimelineItems(monitorTimelinePreview, monitorTargetDate),
+          )
+        : role.monitor?.timeline || [],
+      plannedTimeline: monitorTriggered && monitorPlannedPreview.length
+        ? mergeMonitorTimelineEntries(
+            role.monitor?.plannedTimeline || [],
+            normalizeLifeMonitorPlannedTimelineItems(monitorPlannedPreview, monitorTargetDate),
+          )
+        : role.monitor?.plannedTimeline || [],
     };
   }
 
@@ -69219,8 +69335,6 @@ const saveJourneyPreviewToRole = () => {
     ...(role.runtime || {}),
     lastLinkedJourneyDateKey: previewDate,
     lastLinkedJourneyAttemptAt: new Date().toISOString(),
-    lastLifeMonitorAt: shouldUpdateCurrentMonitor ? new Date().toISOString() : role.runtime?.lastLifeMonitorAt || "",
-    lastLifeMonitorAttemptAt: shouldUpdateCurrentMonitor ? new Date().toISOString() : role.runtime?.lastLifeMonitorAttemptAt || "",
   };
   queueWalletAutoGenerationAfterJourney(role.id, { targetDateKey: previewDate, delayMs: 2200 });
   state.journeyActiveDate = previewDate;
@@ -69260,8 +69374,6 @@ const saveJourneyWeekPreviewToRole = () => {
         ...(nextRole.runtime || {}),
         lastLinkedJourneyDateKey: formatDateKey(focusJourney.targetDate || new Date()),
         lastLinkedJourneyAttemptAt: new Date().toISOString(),
-        lastLifeMonitorAt: isTodayDateKey(focusJourney.targetDate) ? new Date().toISOString() : nextRole.runtime?.lastLifeMonitorAt || "",
-        lastLifeMonitorAttemptAt: isTodayDateKey(focusJourney.targetDate) ? new Date().toISOString() : nextRole.runtime?.lastLifeMonitorAttemptAt || "",
       };
     }
     return nextRole;
@@ -70052,6 +70164,21 @@ const shouldScheduleLifeMonitorAuto = (role, now = new Date()) => {
   return getMinutesSince(lastGeneratedAt, now) >= LIFE_MONITOR_AUTO_INTERVAL_MINUTES;
 };
 
+const normalizeLifeMonitorPlannedTimelineItems = (items = [], targetDateKey = formatDateKey()) =>
+  buildMonitorTimelineItems(items, targetDateKey).map((item) => ({
+    ...item,
+    journeyDateKey: formatDateKey(item?.journeyDateKey || targetDateKey),
+  }));
+
+const mergeLifeMonitorPlannedTimelineEntries = (existing = [], incoming = [], targetDateKey = formatDateKey()) => {
+  const normalizedTargetDate = formatDateKey(targetDateKey || new Date());
+  const targetExisting = (Array.isArray(existing) ? existing : []).filter(
+    (item) => getRoleMonitorEntryDateKey(item) !== normalizedTargetDate,
+  );
+  const plannedIncoming = normalizeLifeMonitorPlannedTimelineItems(incoming, normalizedTargetDate);
+  return mergeMonitorTimelineEntries(targetExisting, plannedIncoming);
+};
+
 const shouldSkipLifeMonitorAttempt = (role, now = new Date()) =>
   getMinutesSince(role?.runtime?.lastLifeMonitorAttemptAt, now) < LIFE_MONITOR_RETRY_MINUTES;
 
@@ -70145,6 +70272,10 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       (generalCooldownReady && segmentChanged && hourlyHit) ||
       (generalCooldownReady && hourlyHit && Number(fortuneRoll.variationScore || 0) >= 70));
   const retryReady = !shouldSkipLifeMonitorAttempt(role, now);
+  const intervalReady = shouldScheduleLifeMonitorAuto(role, now);
+  const hasExistingTimelineToday = getLifeMonitorTimelineItemsForDate(role, targetDateKey).length > 0;
+  const canAutoCallModel = retryReady && (intervalReady || eventMissing || activeEventCooldownReady);
+  const finalShouldCallModel = shouldCallModel && canAutoCallModel;
 
   if (dailyNodeLimitReached) {
     return {
@@ -70164,11 +70295,11 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
     };
   }
 
-  if (alreadyCheckedThisHour && !(shouldCallModel && retryReady)) {
+  if (alreadyCheckedThisHour && !finalShouldCallModel) {
     return {
       shouldCheck: false,
       shouldCallModel: false,
-      reason: shouldCallModel ? "waiting-retry-cooldown" : "checked-this-hour",
+      reason: shouldCallModel && !retryReady ? "waiting-retry-cooldown" : "checked-this-hour",
       targetDateKey,
       hourKey,
       segmentKey,
@@ -70184,15 +70315,19 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
 
   return {
     shouldCheck: true,
-    shouldCallModel,
+    shouldCallModel: finalShouldCallModel,
     reason: activeEventCooldownReady
       ? "active-event"
       : eventMissing
         ? "fate-event-hit"
-        : shouldCallModel
+        : finalShouldCallModel
           ? segmentChanged
             ? "segment-changed-hit"
             : "hourly-story-hit"
+          : shouldCallModel && !retryReady
+            ? "waiting-retry-cooldown"
+            : shouldCallModel && !intervalReady && hasExistingTimelineToday
+              ? "waiting-model-interval"
           : "local-only",
     targetDateKey,
     hourKey,
@@ -70202,6 +70337,8 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
     hourlyChance,
     hourlyHit,
     cooldownReady: generalCooldownReady,
+    intervalReady,
+    retryReady,
     dailyNodeCount,
     plannedNodeCount,
   };
@@ -70577,6 +70714,16 @@ const buildJourneyProvidedMonitorTimeline = (monitorPreview = null, targetDateKe
   }));
 };
 
+const buildJourneyProvidedPlannedMonitorTimeline = (monitorPreview = null, targetDateKey = formatDateKey()) => {
+  const plannedSource =
+    Array.isArray(monitorPreview?.plannedTimeline) && monitorPreview.plannedTimeline.length
+      ? monitorPreview.plannedTimeline
+      : Array.isArray(monitorPreview?.timeline)
+        ? monitorPreview.timeline
+        : [];
+  return normalizeLifeMonitorPlannedTimelineItems(plannedSource, targetDateKey);
+};
+
 const pickJourneyMonitorAnchorEntry = (entries = [], targetDateKey = formatDateKey(), cutoffDate = new Date()) => {
   const activeEntry = entries.find((entry) => isJourneyEntryActiveAtCutoff(entry, targetDateKey, cutoffDate)) || null;
   if (activeEntry) return activeEntry;
@@ -70673,6 +70820,7 @@ const decorateJourneyDataWithLinkedState = (role, journeyData, syntheticNow = ne
   const hasExplicitLifeTrack = hasMeaningfulJourneyMonitorPreview(safeMonitorPreview);
   const disableAutoLifeTrack = Boolean(journeyData?.disableAutoLifeTrack || safeMonitorPreview?.explicitOnly || !hasExplicitLifeTrack);
   const providedMonitorTimeline = buildJourneyProvidedMonitorTimeline(safeMonitorPreview, normalizedTargetDate, cutoffDate);
+  const providedPlannedMonitorTimeline = buildJourneyProvidedPlannedMonitorTimeline(safeMonitorPreview, normalizedTargetDate);
   const baseEventPreview =
     journeyData?.eventPreview && typeof journeyData.eventPreview === "object" ? { ...journeyData.eventPreview } : null;
   const allowJourneyEventPreview =
@@ -70715,11 +70863,9 @@ const decorateJourneyDataWithLinkedState = (role, journeyData, syntheticNow = ne
         ? providedMonitorTimeline
         : [],
       plannedTimeline:
-        Array.isArray(safeMonitorPreview?.plannedTimeline) && safeMonitorPreview.plannedTimeline.length
-          ? safeMonitorPreview.plannedTimeline
-          : Array.isArray(safeMonitorPreview?.timeline)
-            ? safeMonitorPreview.timeline
-            : [],
+        providedPlannedMonitorTimeline.length
+          ? providedPlannedMonitorTimeline
+          : [],
       fortune: {
         dateKey: normalizedTargetDate,
         tierKey: fortuneRoll.tierKey,
@@ -71432,7 +71578,14 @@ const generateLifeMonitorFromApi = async ({
       meta: apiResponse?.meta,
     });
 
-    const result = constrainMonitorResultToCutoff(apiResponse?.result || null, normalizedTargetDate, cutoffDate, fortuneRoll);
+    const rawMonitorResult = apiResponse?.result || null;
+    const plannedTimelineSource =
+      Array.isArray(rawMonitorResult?.plannedTimeline) && rawMonitorResult.plannedTimeline.length
+        ? rawMonitorResult.plannedTimeline
+        : Array.isArray(rawMonitorResult?.timeline)
+          ? rawMonitorResult.timeline
+          : [];
+    const result = constrainMonitorResultToCutoff(rawMonitorResult, normalizedTargetDate, cutoffDate, fortuneRoll);
     const hasExplicitMonitorEvent =
       allowMonitorEvent &&
       (Boolean(String(result?.event?.title || "").trim()) ||
@@ -71515,6 +71668,13 @@ const generateLifeMonitorFromApi = async ({
             ? removeLifeMonitorEntriesForDate(nextRole.monitor?.timeline || [], normalizedTargetDate)
             : nextRole.monitor?.timeline || [],
           [...eventTimeline, ...apiTimeline],
+        ),
+        plannedTimeline: mergeLifeMonitorPlannedTimelineEntries(
+          forceRegenerate
+            ? removeLifeMonitorEntriesForDate(nextRole.monitor?.plannedTimeline || [], normalizedTargetDate)
+            : nextRole.monitor?.plannedTimeline || [],
+          plannedTimelineSource,
+          normalizedTargetDate,
         ),
       };
 
@@ -71653,7 +71813,15 @@ const syncLifeMonitorWithJourney = async ({
           "天气刷新超时",
         ).catch(() => null);
         liveRole = getRoleById(state, role.id) || liveRole;
-        journeyData = await requestJourneyPreviewData(liveRole, promptText, normalizedTargetDate);
+        const timeoutMs = isAutoSource ? JOURNEY_LINKED_AUTO_TIMEOUT_MS : JOURNEY_SINGLE_TIMELINE_ONLY_TIMEOUT_MS;
+        journeyData = await runAbortableTaskWithTimeout(
+          async (timeoutSignal) =>
+            requestJourneyPreviewData(liveRole, promptText, normalizedTargetDate, {
+              signal: timeoutSignal,
+            }),
+          timeoutMs,
+          isAutoSource ? "后台自动行程联动超时，已停止本次自动生成" : "行程生成超时，请稍后重试",
+        );
         generatedJourney = true;
       } finally {
         removeBusyToken("apiGenerationBusy", "journey");
@@ -71678,10 +71846,6 @@ const syncLifeMonitorWithJourney = async ({
         ...(nextRole.runtime || {}),
         lastLinkedJourneyDateKey: normalizedTargetDate,
         lastLinkedJourneyAttemptAt: now.toISOString(),
-        lastLifeMonitorAt: shouldUpdateCurrentMonitor
-          ? buildLifeMonitorCutoffDate(normalizedTargetDate, now).toISOString()
-          : nextRole.runtime?.lastLifeMonitorAt || "",
-        lastLifeMonitorAttemptAt: shouldUpdateCurrentMonitor ? now.toISOString() : nextRole.runtime?.lastLifeMonitorAttemptAt || "",
       };
       return nextRole;
     });
@@ -71697,6 +71861,15 @@ const syncLifeMonitorWithJourney = async ({
     }
     return true;
   } catch (error) {
+    persistSecondaryTaskUsageSnapshot(role.id, {
+      feature: "journey",
+      status: "error",
+      meta: {
+        apiLane: isAutoSource ? "journey-auto-linked" : "journey-linked",
+        source,
+      },
+      errorMessage: error?.message || "行程与生活轨迹联动失败",
+    });
     if (!silent) {
       setToast(error?.message || "行程与生活轨迹联动失败");
     }
@@ -78552,7 +78725,7 @@ const handleImport = async (event) => {
 
   try {
     state = buildStateFromPersistent(importData(serializeState(), JSON.parse(text)));
-    normalizeSessionState();
+    normalizeSessionState({ clearRuntimeBusy: true });
     reconcileSharedStickerMoodAssignments();
     repairVisibleStickerProtocolMessages();
     pendingAiReply = null;
@@ -78572,6 +78745,7 @@ const applyRuntime = async () => {
   const now = new Date();
   let changed = false;
   const linkedJourneyJobs = [];
+  const lifeMonitorJobs = [];
   const autonomousJobs = [];
   const autoMomentJobs = [];
   const imageGenerationJobs = [];
@@ -78632,6 +78806,21 @@ const applyRuntime = async () => {
       changed = true;
     }
 
+    const lifeMonitorDecision = buildLifeMonitorLocalDecision(next, now);
+    if (applyLifeMonitorLocalCheck(next, lifeMonitorDecision, now)) {
+      changed = true;
+    }
+    if (
+      lifeMonitorDecision.shouldCallModel &&
+      hasPlannerApiConfig() &&
+      !toBusyList(state.apiGenerationBusy).includes("monitor") &&
+      !toBusyList(state.apiGenerationBusy).includes(`monitor-auto:${next.id}`)
+    ) {
+      markLifeMonitorAttempt(next, now);
+      lifeMonitorJobs.push({ roleId: next.id, targetDateKey: lifeMonitorDecision.targetDateKey });
+      changed = true;
+    }
+
     return next;
   });
 
@@ -78666,6 +78855,15 @@ const applyRuntime = async () => {
     });
   }
 
+  for (const job of lifeMonitorJobs) {
+    await generateLifeMonitorFromApi({
+      roleId: job.roleId,
+      targetDateKey: job.targetDateKey,
+      source: "monitor-auto",
+      silent: true,
+    });
+  }
+
   // 先把生活轨迹推进到当前时刻 再补离线/主动消息 最后再让朋友圈读取最新聊天和状态
   for (const job of autonomousJobs) {
     if (job.mode === "offline" && Array.isArray(job.scheduledAtList) && job.scheduledAtList.length) {
@@ -78696,7 +78894,12 @@ const applyRuntime = async () => {
     changed = true;
   }
 
-  return changed || linkedJourneyJobs.length > 0 || autonomousJobs.length > 0 || autoMomentJobs.length > 0 || todoExecutionJobs.length > 0;
+  return changed ||
+    linkedJourneyJobs.length > 0 ||
+    lifeMonitorJobs.length > 0 ||
+    autonomousJobs.length > 0 ||
+    autoMomentJobs.length > 0 ||
+    todoExecutionJobs.length > 0;
 };
 
 const shouldDeferInputCommit = (target) => {
@@ -78714,6 +78917,10 @@ eventRoot.addEventListener("input", (event) => {
   const target = event.target;
 
   if (target.id === "composer-input") {
+    if (composerRuntime.isComposing) {
+      composerRuntime.compositionUpdatedAt = Date.now();
+      queueComposerCompositionStaleRelease();
+    }
     const role = getActiveChatRole();
     if (!role) return;
     role.chats.draft = target.value;
@@ -79385,6 +79592,7 @@ eventRoot.addEventListener("click", async (event) => {
   }
 
   if (action === "send-message") {
+    releaseComposerCompositionForCommittedAction();
     if (button.dataset.sendMode === "direct-ai") {
       const role = getActiveChatRole() || getCurrentRole();
       const input = document.getElementById("composer-input");
@@ -81622,21 +81830,28 @@ eventRoot.addEventListener("click", async (event) => {
   }
 });
 
+eventRoot.addEventListener("beforeinput", (event) => {
+  if (event.target?.id !== "composer-input") return;
+  if (event.inputType !== "insertLineBreak") return;
+  submitComposerFromKeyboard(event);
+});
+
 eventRoot.addEventListener("compositionstart", (event) => {
   if (event.target?.id !== "composer-input") return;
-  composerRuntime.isComposing = true;
+  markComposerCompositionActivity();
+  queueChatKeyboardViewportStateSync();
+});
+
+eventRoot.addEventListener("compositionupdate", (event) => {
+  if (event.target?.id !== "composer-input") return;
+  markComposerCompositionActivity();
   queueChatKeyboardViewportStateSync();
 });
 
 eventRoot.addEventListener("compositionend", (event) => {
   if (event.target?.id !== "composer-input") return;
-  composerRuntime.isComposing = false;
-  queueComposerDraftSync({ flush: true });
-  queueChatKeyboardViewportStateSync();
-  if (composerRuntime.pendingPaint) {
-    composerRuntime.pendingPaint = false;
-    paint();
-  }
+  finishComposerComposition({ flushDraft: false, paintPending: true });
+  queueComposerDraftSync();
 });
 
 eventRoot.addEventListener("focusin", (event) => {
@@ -81648,8 +81863,7 @@ eventRoot.addEventListener("focusin", (event) => {
 eventRoot.addEventListener("focusout", (event) => {
   if (!isDeferredTextEditor(event.target)) return;
   if (event.target.id === "composer-input") {
-    composerRuntime.isComposing = false;
-    queueComposerDraftSync({ flush: true });
+    finishComposerComposition({ flushDraft: true, paintPending: false });
   }
   if (event.target?.dataset?.roleProfile) {
     queueRoleProfileSync({ flush: true });
@@ -81679,12 +81893,10 @@ eventRoot.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (event.target.id !== "composer-input" || event.key !== "Enter" || event.shiftKey || event.isComposing) {
+  if (event.target.id !== "composer-input" || event.key !== "Enter") {
     return;
   }
-
-  event.preventDefault();
-  handleComposerPrimaryAction();
+  submitComposerFromKeyboard(event);
 });
 
 eventRoot.addEventListener("pointerdown", (event) => {
@@ -81821,7 +82033,7 @@ const restoreNewerIndexedDbState = async () => {
     },
     state,
   );
-  normalizeSessionState();
+  normalizeSessionState({ clearRuntimeBusy: true });
   reconcileSharedStickerMoodAssignments();
   repairVisibleStickerProtocolMessages();
   repairPersistedReferenceCityStatusLeaks();
@@ -81839,7 +82051,7 @@ window.addEventListener("storage", () => {
   const currentPersistent = serializeState();
   const mergedPersistent = mergePersistentChatMessages(loadedPersistent, currentPersistent);
   state = preserveCurrentNavigationState(buildStateFromPersistent(mergedPersistent), state);
-  normalizeSessionState();
+  normalizeSessionState({ clearRuntimeBusy: true });
   reconcileSharedStickerMoodAssignments();
   repairVisibleStickerProtocolMessages();
   pendingAiReply = null;
