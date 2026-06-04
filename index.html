@@ -26961,7 +26961,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "6月4日-2";
+const APP_BUILD_VERSION_LABEL = "6月4日-3";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -61863,6 +61863,8 @@ const sanitizeJourneyWeekTextField = (value = "") =>
     .trim();
 
 const JOURNEY_RESCUE_PATTERN_RE = /(救|营救|求助|撑场|搅局|避难|侦察|接他|接人|车坏|抛锚|爆胎|相亲|前任|赔罪|狐朋狗友|连环夺命call|被迫|强行|硬拉|拉着)/i;
+const JOURNEY_MODEL_VISIBLE_TEXT_RULE =
+  "标题和详情只能写角色当天真实会做的具体安排；禁止写元话术或提示词痕迹，例如“临时换个节奏”“避开最近重复”“按提示词”“保存的行程提示词”“回到生活和事业节奏”“换题材”“不要重复”。";
 
 const normalizeJourneyDiversityText = (value = "") =>
   sanitizeJourneyWeekTextField(value).replace(/\s+/g, "").toLowerCase();
@@ -61922,6 +61924,7 @@ const buildJourneyDiversityPromptLines = (diversity = null) => {
   const lines = [
     `最近${diversity.lookbackDays || 7}天行程摘要：${diversity.recentExamples.slice(0, 8).join("；")}`,
     "今天必须主动换题材、换冲突来源、换主要陪伴对象；昨天和前几天只当连续性背景，不能照着再来一遍。",
+    "避重规则只是内部约束，不能把“避开重复”“换题材”“按提示词”这类规则话术写进标题或详情。",
   ];
   if (diversity.hasRescueLoop) {
     lines.push("最近已经多次出现朋友求助/救场/被迫陪同/相亲或前任避难/车辆故障这类桥段；今天禁止再把主线写成同类营救、撑场、被拉走或赔罪饭。");
@@ -62943,6 +62946,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - slotKey 只能写 morning / midday / afternoon / night
 - 不要输出 time，前端会自己套用时间
 - 标题控制在 2 到 8 个字，地点控制在 2 到 10 个字，详情控制在 ${compact ? "8 到 14" : "10 到 18"} 个字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - 字段里不要出现 | 或 ｜ 符号
 - morning 带起床早餐感，midday 带白天主线或午餐，afternoon 带下午安排，${buildJourneyNightSlotRuleText(role)}
 - 短期目标应像 ${SHORT_GOAL_MIN_DAYS} 到 ${SHORT_GOAL_MAX_DAYS} 天内能收尾的阶段，不要把同一件短事拖成整周
@@ -63115,6 +63119,7 @@ YYYY-MM-DD||早标题##早地点##早详情||午标题##午地点##午详情||�
 - 日期必须严格使用给定 YYYY-MM-DD
 - 每个 bundle 必须是 标题##地点##详情
 - 标题控制在 2 到 8 个字 地点控制在 2 到 10 个字 详情控制在 6 到 12 个字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - 字段里不要出现 | ｜ # ＃
 - 早段要带起床 早餐 或清晨状态 午段要带白天主线或午餐 下段要带下午推进 ${buildJourneyNightBundleRuleText(role)}
 - 多天内容要有轻微推进感 不要每天都像复制粘贴
@@ -63778,6 +63783,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 日期必须严格使用 payload.dayPlans 里的 YYYY-MM-DD
 - slotKey 只能是 morning / midday / afternoon / night
 - 标题控制在 2 到 8 个字，地点控制在 2 到 10 个字，详情控制在 ${compact ? "8 到 14" : "10 到 18"} 个字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - 字段里不要出现 | ｜ # ＃
 - morning 对应起床早餐，midday 对应白天主线或午餐，afternoon 对应下午推进，${buildJourneyNightSlotRuleText(role)}
 - 标题只能写“正在做什么”，不能写城市名、天气、温度、时间或人名
@@ -64104,6 +64110,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 规则：
 - 只能输出 payload.missingSlots 里列出的日期和 slotKey，一槽一行，不能多写
 - 标题只写动作，2 到 8 个字；地点只写地点，2 到 10 个字；详情 8 到 18 个字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - slotKey 只能写 morning / midday / afternoon / night
 - morning 要有起床早餐感，midday 要有白天主线或午餐，afternoon 要有下午推进，${buildJourneyNightSlotRuleText(role)}
 - 短期目标应像 ${SHORT_GOAL_MIN_DAYS} 到 ${SHORT_GOAL_MAX_DAYS} 天内能收尾的阶段，不要把同一件短事拖成整周
@@ -64122,6 +64129,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 规则：
 - 必须覆盖 payload.dayPlans 里的所有日期和所有 slotKey，不能缺行，不能解释
 - 标题只写动作，2 到 8 个字；地点只写地点，2 到 10 个字；详情 8 到 18 个字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - slotKey 只能写 morning / midday / afternoon / night
 - morning 要有起床早餐感，midday 要有白天主线或午餐，afternoon 要有下午推进，${buildJourneyNightSlotRuleText(role)}
 - 多天之间要有轻微推进感，但不要写成长篇小说
@@ -65045,6 +65053,7 @@ YYYY-MM-DD||slotKey||标题||地点||详情
 - 一共严格 28 行，7 天 * 每天 4 行，不能缺天，不能缺槽位，不能多写解释
 - 不要输出 time，前端会自己套用对应时间
 - 标题控制在 2 到 8 个字，地点控制在 2 到 10 个字，详情控制在 10 到 18 个字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - 字段里不要出现 | 或 ｜ 符号
 - morning 要有起床/早餐感，midday 要有白天主线或午餐，afternoon 要有下午安排，${buildJourneyNightSlotRuleText(role)}
 - 7 天要有轻微推进感，但不要写得臃肿，不要 7 天完全重复
@@ -65477,165 +65486,18 @@ const buildJourneyTimelineOnlyTextTimeSeeds = (role, preferredEntryCount = JOURN
   });
 };
 
-const buildJourneyTimelineOnlyTextCompletedTimeline = (
-  role,
-  parsedTimeline = [],
-  {
-    preferredEntryCount = JOURNEY_DYNAMIC_ENTRY_MIN,
-    timeSeeds = [],
-    allowedPlaces = [],
-    currentPlace = "",
-    goalTitles = [],
-    mealTimes = [],
-    targetDateKey = formatDateKey(),
-    diversityContext = null,
-  } = {},
-) => {
-  const normalizedParsedTimeline = normalizeJourneyTimelineItems(parsedTimeline);
-  const totalCount = Math.max(
-    JOURNEY_DYNAMIC_ENTRY_MIN,
-    Number(preferredEntryCount) || JOURNEY_DYNAMIC_ENTRY_MIN,
-    normalizedParsedTimeline.length,
-  );
-  const safeCurrentPlace =
-    sanitizeJourneyWeekTextField(currentPlace || getRoleCurrentPlace(role) || role?.profile?.location || "当前地点") || "当前地点";
-  const morningPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, "morning") || safeCurrentPlace) || safeCurrentPlace;
-  const middayPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, "midday") || morningPlace) || morningPlace;
-  const afternoonPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, "afternoon") || middayPlace) || middayPlace;
-  const nightPlace = sanitizeJourneyWeekTextField(pickJourneySlotFallbackPlace(role, "night") || safeCurrentPlace) || safeCurrentPlace;
-  const placePool = normalizeReferenceItems(
-    [morningPlace, middayPlace, afternoonPlace, nightPlace, ...allowedPlaces, safeCurrentPlace].map((item) =>
-      sanitizeJourneyWeekTextField(item),
-    ),
-    8,
-  ).filter(Boolean);
-  const goalSnippet = sanitizeJourneyWeekTextField(goalTitles[0] || goalTitles[1] || "").slice(0, 8);
-  const sleepConfig = getJourneySleepConfig(role);
-  const toAbsoluteMealMinutes = (value, fallbackMinutes) => {
-    let minutes = journeyWeekParseClockMinutes(value, fallbackMinutes);
-    if (sleepConfig.crossesMidnight && minutes < sleepConfig.wakeMinutes) {
-      minutes += 1440;
-    }
-    return minutes;
-  };
-  const breakfastAbsolute = toAbsoluteMealMinutes(mealTimes[0] || "10:30", 10 * 60 + 30);
-  const lunchAbsolute = toAbsoluteMealMinutes(mealTimes[1] || "14:00", 14 * 60);
-  const dinnerAbsolute = toAbsoluteMealMinutes(mealTimes[2] || "20:00", 20 * 60);
-  const nightSlotDisplay = getJourneyNightSlotDisplay(role);
-  const isMealRange = (startAbsolute, endAbsolute, mealAbsolute) =>
-    startAbsolute <= mealAbsolute + 20 && endAbsolute >= mealAbsolute - 35;
-  const buildSupplementEntry = (index, timeText) => {
-    const parsedRange = parseJourneyPreviewTimeRange(timeText);
-    const absoluteRange = resolveJourneyPreviewAbsoluteRange(parsedRange, sleepConfig);
-    const startAbsolute = absoluteRange?.startAbsolute ?? sleepConfig.wakeMinutes + index * 90;
-    const endAbsolute = absoluteRange?.endAbsolute ?? startAbsolute + 90;
-    const isBreakfastSlot = isMealRange(startAbsolute, endAbsolute, breakfastAbsolute);
-    const isLunchSlot = isMealRange(startAbsolute, endAbsolute, lunchAbsolute);
-    const isDinnerSlot = isMealRange(startAbsolute, endAbsolute, dinnerAbsolute) || index === Math.max(0, totalCount - 3);
-    let slotKey =
-      index === 0
-        ? "morning"
-        : index === totalCount - 1
-          ? "night"
-          : startAbsolute < lunchAbsolute
-            ? "midday"
-            : startAbsolute < dinnerAbsolute
-              ? "afternoon"
-              : "night";
-    if (isBreakfastSlot) {
-      slotKey = "morning";
-    } else if (isLunchSlot) {
-      slotKey = "midday";
-    } else if (isDinnerSlot || index >= totalCount - 2) {
-      slotKey = "night";
-    }
-
-    let title = "补上进度";
-    let place = slotKey === "morning" ? morningPlace : slotKey === "midday" ? middayPlace : slotKey === "afternoon" ? afternoonPlace : nightPlace;
-    let mood = slotKey === "night" ? "夜里" : "在线";
-    let detail = "把前面卡住的一段重新接起来";
-
-    if (isBreakfastSlot) {
-      title = index === 0 ? "起床早餐" : "早餐补给";
-      place = morningPlace;
-      mood = "清醒";
-      detail = goalSnippet ? `边吃边把${goalSnippet}的节奏先顺一遍` : "先吃点东西，把今天前半段节奏顺一下";
-    } else if (isLunchSlot) {
-      title = "午间简餐";
-      place = placePool[1] || middayPlace;
-      mood = "补给";
-      detail = "先简单吃口饭，顺手理一下下午安排";
-    } else if (isDinnerSlot) {
-      title = "晚饭时间";
-      place = nightPlace;
-      mood = "补给";
-      detail = "先按作息吃晚饭，再把夜里的节奏接起来";
-    } else if (slotKey === "morning") {
-      title = goalSnippet ? `${goalSnippet}清单` : "出门前清单";
-      place = morningPlace;
-      detail = goalSnippet ? `把${goalSnippet}相关消息先捋出优先级` : "把今天要办的几件事先排出顺序";
-    } else if (slotKey === "midday") {
-      title = goalSnippet ? `${goalSnippet}推进` : "白天办事";
-      place = middayPlace;
-      detail = goalSnippet ? `围着${goalSnippet}先啃掉最急的一段` : "把白天最要紧的一件事往前推";
-    } else if (slotKey === "afternoon") {
-      title = goalSnippet ? `补${goalSnippet}` : "下午补进度";
-      place = placePool[2] || afternoonPlace;
-      detail = goalSnippet ? `顺着前面的节奏把${goalSnippet}补细` : "把前半天留下的小尾巴逐个补掉";
-    } else if (index === totalCount - 1) {
-      title = nightSlotDisplay.exampleTitle;
-      place = nightPlace;
-      mood = "夜里";
-      detail = nightSlotDisplay.exampleDetail;
-    } else {
-      title = goalSnippet ? `夜里补${goalSnippet}` : "夜里补进度";
-      place = nightPlace;
-      mood = "在线";
-      detail = goalSnippet ? `晚饭后换个安静角落把${goalSnippet}补完` : "晚饭后换个安静角落补完剩下进度";
-    }
-
-    return {
-      time: timeText,
-      title: sanitizeJourneyWeekTextField(title) || "继续处理",
-      place: sanitizeJourneyWeekTextField(place) || safeCurrentPlace,
-      mood: sanitizeJourneyWeekTextField(mood),
-      detail: sanitizeJourneyWeekTextField(detail) || "顺着前面的节奏继续往下做",
-    };
-  };
-
-  const completedTimeline = Array.from({ length: totalCount }, (_, index) => {
-    const source = normalizedParsedTimeline[index] || null;
-    const fallbackTime =
-      sanitizeJourneyWeekTextField(timeSeeds[index]?.time || "") ||
-      sanitizeJourneyWeekTextField(source?.time || "") ||
-      buildJourneyPreviewTimeRangeText(sleepConfig.wakeMinutes + index * 90, sleepConfig.wakeMinutes + (index + 1) * 90);
-    if (source) {
-      return {
-        ...source,
-        time: parseJourneyPreviewTimeRange(source?.time || "") ? String(source.time || "").trim() : fallbackTime,
-      };
-    }
-    return buildSupplementEntry(index, fallbackTime);
-  });
-  const diversity = diversityContext || collectJourneyRecentDiversityContext(role, targetDateKey, 7);
-  const shouldAvoidRescueLoop = Boolean(diversity?.hasRescueLoop);
-  const overusedNpcNames = normalizeArray(diversity?.overusedNpcNames);
-  if (!shouldAvoidRescueLoop && !overusedNpcNames.length) return completedTimeline;
-
-  return completedTimeline.map((entry) => {
-    const text = compactLivingText(entry?.title, entry?.detail);
-    const hitsRescue = shouldAvoidRescueLoop && JOURNEY_RESCUE_PATTERN_RE.test(text);
-    const hitsNpc = overusedNpcNames.some((name) => name && text.includes(name));
-    if (!hitsRescue && !hitsNpc) return entry;
-    return {
-      ...entry,
-      npcNames: normalizeArray(entry?.npcNames).filter((name) => !overusedNpcNames.includes(name)),
-      title: hitsRescue ? "临时换个节奏" : sanitizeJourneyWeekTextField(String(entry?.title || "").replace(/陈谦文/g, "朋友")),
-      mood: entry?.mood || "在线",
-      detail: "避开最近重复的救场社交桥段，按保存的行程提示词回到自己的生活和事业节奏",
-    };
-  });
-};
+const buildJourneyTimelineOnlyTextCompletedTimeline = (_role, parsedTimeline = []) =>
+  (Array.isArray(parsedTimeline) ? parsedTimeline : [])
+    .map((item) => ({
+      ...item,
+      time: sanitizeJourneyWeekTextField(item?.time || ""),
+      title: sanitizeJourneyWeekTextField(item?.title || ""),
+      place: sanitizeJourneyWeekTextField(item?.place || ""),
+      mood: sanitizeJourneyWeekTextField(item?.mood || ""),
+      detail: sanitizeJourneyWeekTextField(item?.detail || ""),
+      npcNames: normalizeReferenceItems(item?.npcNames || [], 4),
+    }))
+    .filter((item) => isJourneyPreviewTimeRangeText(item.time) && item.title && item.place && item.detail);
 
 const parseJourneyTimelineOnlyTextPayload = (rawText = "", expectedCount = 0) => {
   const parsedTimeline = [];
@@ -66136,6 +65998,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
 - 必须简体中文，不能写日文、英文段落、代码块、表格、字段名或开场白。
 - 用户自定义提示词是最高优先级：${normalizedJourneyPrompt ? `「${normalizedJourneyPrompt}」` : "未填写时才按角色日常自动发挥"}。
 - 不要把最近几天的旧桥段当模板复读；连续性只用于承接生活状态，不用于重复同一个 NPC、同一种求助或同一个饭局套路。
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 ${journeyDiversityLines.map((line) => `- ${line}`).join("\n")}
 - 行程输出 ${preferredEntryCount} 行左右，按时间正序，不重叠；前端会完整保留，不要故意少写。
 - 地点只能从参考上下文“可用地点”里选；角色、城市、NPC、昨天余波都以参考上下文为准。
@@ -68480,6 +68343,7 @@ HH:MM-HH:MM||标题||地点||详情||状态||NPC名1,NPC名2
 - 不要写“个人日程安排表”“以下是”“好的”“生成结果”这类任何说明文字
 - 时间优先沿用 ${String(item?.time || "").trim() || "原时间段"}；如果必须微调，只能小幅调整，且不能和前后行程冲突
 - 标题 2 到 8 个字，地点 2 到 12 个字，详情 10 到 24 字，状态 2 到 6 字
+- ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 - 你必须结合前后行程、当前目标、地图地点、世界书、记忆和当天生活轨迹，但这 1 行只能写行程本身，不能把生活轨迹故事塞进时间轴
 - 用户点重新生成就是希望这一时段换一个新方案，不是把原条目换个说法
 - replacement 至少满足一项：换成与「${originalPlaceLabel}」不同的地点，或保留同地点但换成和「${originalTitleLabel}」明显不同的新事情
