@@ -20864,6 +20864,35 @@ body {
   margin-top: 10px;
 }
 
+.memory-embedding-model-row {
+  align-items: stretch;
+}
+
+.memory-embedding-model-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .memory-embedding-model-row {
+    flex-wrap: wrap;
+  }
+
+  .memory-embedding-model-row .soft-input {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .memory-embedding-model-actions {
+    width: 100%;
+  }
+
+  .memory-embedding-model-actions .tiny-btn {
+    flex: 1;
+  }
+}
+
 .wallet-transaction-row b {
   color: #c2410c;
   font-size: 13px;
@@ -24329,6 +24358,10 @@ const createDefaultApiConfig = () => ensureDefaultPandaApiConfig({
     model: "",
     key: "",
     preset: "",
+    embeddingEnabled: true,
+    embeddingUrl: "https://api.siliconflow.cn/v1",
+    embeddingKey: "",
+    embeddingModel: "BAAI/bge-m3",
   },
   worldbookEntries: [],
   appearance: createDefaultAppearanceConfig(),
@@ -27007,7 +27040,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "6月5日-1";
+const APP_BUILD_VERSION_LABEL = "8月7日-4";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -29603,20 +29636,39 @@ const renderMemoryApiCard = (api = {}, state = {}) => `
       </label>
     </label>
 
-    <div class="setting-label">Embedding 模型</div>
-    <input class="soft-input" data-config="memory.embeddingModel" value="${escapeHtml(api.embeddingModel || "")}" placeholder="例如 qwen3-vl-embedding" />
+    <div class="setting-label">Embedding 接口地址</div>
+    <input class="soft-input" data-config="memory.embeddingUrl" value="${escapeHtml(api.embeddingUrl || "")}" placeholder="例如 https://api.siliconflow.cn/v1" />
 
-    <div class="memory-embedding-provider-grid">
-      <div>
-        <div class="setting-label">Embedding 接口地址</div>
-        <input class="soft-input" data-config="memory.embeddingUrl" value="${escapeHtml(api.embeddingUrl || "")}" placeholder="可选，例如 https://dashscope.aliyuncs.com" />
-      </div>
-      <div>
-        <div class="setting-label">Embedding API Key</div>
-        <input class="soft-input" data-config="memory.embeddingKey" type="password" value="${escapeHtml(api.embeddingKey || "")}" placeholder="可选，不填则复用上方记忆 API Key" />
+    <div class="setting-label">Embedding 模型</div>
+    <div class="inline-row memory-embedding-model-row">
+      <input class="soft-input" data-config="memory.embeddingModel" value="${escapeHtml(api.embeddingModel || "")}" placeholder="例如 BAAI/bge-m3" />
+      <div class="memory-embedding-model-actions">
+        <button class="tiny-btn" type="button" data-action="fetch-embedding-models" ${state.appConfig?.apiEnabled === false ? "disabled" : ""}>${hasBusyToken(state.modelFetchBusy, "memory-embedding") ? "拉取中" : "拉取"}</button>
+        <button class="tiny-btn light" type="button" data-action="test-memory-embedding" ${state.appConfig?.apiEnabled === false ? "disabled" : ""}>${hasBusyToken(state.modelFetchBusy, "memory-embedding-test") ? "测试中" : "测试"}</button>
       </div>
     </div>
-    <div class="setting-mini-note">qwen3-vl-embedding 会自动走阿里百炼 DashScope 原生多模态 Embedding 接口，当前记忆检索只提交文字内容；请使用北京地域的百炼 API Key。其他 OpenAI 兼容向量模型仍走 /embeddings，失败时自动回退关键词检索。</div>
+    ${
+      state.availableModels?.length && state.modelPickerOpen && state.modelPickerTarget === "memory-embedding"
+        ? `
+          <div class="setting-mini-note">已拉取 ${state.availableModels.length} 个 Embedding 模型，点一下就会直接切换</div>
+          <div class="model-option-list" data-scroll-key="memory-embedding-model-list">
+            ${state.availableModels
+              .map(
+                (model) => `
+                  <button class="model-option-btn ${api.embeddingModel === model ? "active" : ""}" type="button" data-action="select-model" data-model-id="${escapeHtml(model)}" data-model-target="memory-embedding">
+                    <span>${escapeHtml(model)}</span>
+                  </button>
+                `,
+              )
+              .join("")}
+          </div>
+        `
+        : ""
+    }
+
+    <div class="setting-label">Embedding API Key</div>
+    <input class="soft-input" data-config="memory.embeddingKey" type="password" required value="${escapeHtml(api.embeddingKey || "")}" placeholder="请输入 Embedding API Key" />
+    <div class="setting-mini-note">默认使用硅基流动的 OpenAI 兼容 Embedding 接口和 BAAI/bge-m3；当前只提交文字内容，接口失败时自动回退关键词检索。</div>
     ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起记忆 API 请求。</div>' : ""}
   </section>
 `;
@@ -35951,6 +36003,13 @@ const renderVideoSessionSheet = (state, role) => {
     inputMode === "voice" && String(session.micPermissionState || "").trim().toLowerCase() === "blocked"
       ? "你现在这个地址不能开麦克风，请换 HTTPS。电脑本机预览才用 127.0.0.1:8000，手机不要用 127.0.0.1。"
       : "";
+  const micEnginePreference = normalizeVideoSessionMicEngine(session.micEnginePreference || session.micEngine);
+  const micEngineCapabilities =
+    typeof getVideoSessionMicCapabilities === "function"
+      ? getVideoSessionMicCapabilities()
+      : { local: true, tencent: false };
+  const tencentAsrConfigured = Boolean(micEngineCapabilities.tencent || hasTencentAsrConfigValues(state.appConfig?.tencentAsr || {}));
+  const localAsrAvailable = Boolean(micEngineCapabilities.local || isVideoSessionLocalAsrAvailable());
   const micEngineLabel =
     {
       tencent: "腾讯云实时语音识别",
@@ -36046,6 +36105,45 @@ const renderVideoSessionSheet = (state, role) => {
             </label>
           </div>
           <p>${escapeHtml(cameraEnabled ? "开启后会按通话节奏截图，并把少量画面发给模型。" : "关闭时不会截图，也不会向模型发送图片，只走文字和语音。")}</p>
+        </div>
+        <div class="video-session-debug-section">
+          <div class="video-session-debug-row">
+            <span>识别服务</span>
+            <b>${escapeHtml(micEnginePreference === "tencent" ? "腾讯云实时语音识别" : "SenseVoice Small（本地免费）")}</b>
+          </div>
+          <div class="video-session-mode-switch">
+            <button
+              class="video-session-mode-pill ${micEnginePreference === "local" ? "is-active" : ""}"
+              type="button"
+              data-action="set-video-mic-engine"
+              data-video-mic-engine="local"
+              ${localAsrAvailable ? "" : "disabled"}
+            >SenseVoice Small</button>
+            <button
+              class="video-session-mode-pill ${micEnginePreference === "tencent" ? "is-active" : ""}"
+              type="button"
+              data-action="set-video-mic-engine"
+              data-video-mic-engine="tencent"
+              ${tencentAsrConfigured ? "" : "disabled"}
+            >腾讯云识别</button>
+          </div>
+          <p>${escapeHtml(
+            micEnginePreference === "local"
+              ? "本地模型在设备上运行，不消耗腾讯云识别额度；首次使用会准备约 241MB 语音资源。"
+              : tencentAsrConfigured
+                ? "使用你已配置的腾讯云实时识别，识别结果会通过腾讯云连接返回。"
+                : "腾讯云识别尚未配置 AppID、SecretId 和 SecretKey，请先到设置页填写。",
+          )}</p>
+        </div>
+        <div class="video-session-debug-section">
+          <div class="video-session-debug-row video-session-debug-toggle">
+            <span>清理自动情绪 emoji</span>
+            <label class="switch mini">
+              <input type="checkbox" data-action="toggle-video-clean-emotion-emoji" ${session.cleanEmotionEmoji !== false ? "checked" : ""} />
+              <span></span>
+            </label>
+          </div>
+          <p>${escapeHtml(session.cleanEmotionEmoji !== false ? "会从语音识别结果里去掉模型附带的 emoji 和末尾情绪词。" : "保留语音识别结果里的 emoji 和末尾情绪词。")}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -37392,6 +37490,19 @@ const isVideoSessionLocalAsrAvailable = () =>
   Boolean(getVideoSessionAudioContextCtor() && navigator?.mediaDevices?.getUserMedia);
 const getInitialVideoSessionMicEngine = () =>
   isVideoSessionLocalAsrAvailable() ? "local" : "unsupported";
+const normalizeVideoSessionMicEngine = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "tencent" ? "tencent" : "local";
+};
+const getVideoSessionMicEnginePreference = (session = {}) =>
+  normalizeVideoSessionMicEngine(session?.micEnginePreference || session?.micEngine || getInitialVideoSessionMicEngine());
+const resolveVideoSessionMicEngine = (session = {}, capabilities = {}) => {
+  const preferred = getVideoSessionMicEnginePreference(session);
+  if (capabilities?.[preferred]) return preferred;
+  if (capabilities?.local) return "local";
+  if (capabilities?.tencent) return "tencent";
+  return "unsupported";
+};
 const VIDEO_SESSION_TENCENT_ASR_LABEL = "腾讯云实时语音识别";
 const VIDEO_SESSION_SENSEVOICE_LOCAL_BASE = (() => {
   try {
@@ -37493,6 +37604,8 @@ const createVideoSessionState = () => ({
   micRecording: false,
   speechSupported: isVideoSessionLocalAsrAvailable(),
   micEngine: getInitialVideoSessionMicEngine(),
+  micEnginePreference: getInitialVideoSessionMicEngine() === "unsupported" ? "local" : getInitialVideoSessionMicEngine(),
+  cleanEmotionEmoji: true,
   micPermissionState: "unknown",
   micHealthState: "idle",
   micHealthMessage: "",
@@ -37692,6 +37805,8 @@ const restoreBootVideoSession = (snapshot) => {
   next.responseMode = String(snapshot.responseMode || "").trim() === "voice" ? "voice" : "text";
   next.inputMode = String(snapshot.inputMode || "").trim() === "text" ? "text" : "voice";
   next.micTriggerMode = normalizeVideoSessionMicTriggerMode(snapshot.micTriggerMode);
+  next.micEnginePreference = normalizeVideoSessionMicEngine(snapshot.micEnginePreference || snapshot.micEngine);
+  next.cleanEmotionEmoji = snapshot.cleanEmotionEmoji !== false;
   next.cameraEnabled = Boolean(snapshot.cameraEnabled);
   next.cameraFacing = String(snapshot.cameraFacing || "").trim() === "environment" ? "environment" : "user";
   next.minimalMode = Boolean(snapshot.minimalMode);
@@ -37969,12 +38084,16 @@ const MEMORY_API_DEFAULTS = Object.freeze({
   model: "",
   key: "",
   followSecondaryModel: true,
-  embeddingEnabled: false,
-  embeddingUrl: "",
+  embeddingEnabled: true,
+  embeddingUrl: "https://api.siliconflow.cn/v1",
   embeddingKey: "",
-  embeddingModel: "",
+  embeddingModel: "BAAI/bge-m3",
   preset: "\u718a\u732b",
 });
+
+const SILICONFLOW_EMBEDDING_URL = "https://api.siliconflow.cn/v1";
+const SILICONFLOW_EMBEDDING_MODEL = "BAAI/bge-m3";
+const SILICONFLOW_EMBEDDING_MIGRATION_ID = "2026-08-07-siliconflow-bge-m3";
 
 const DZZI_API_URL = "";
 const DZZI_PRIMARY_MODEL = "[\u6309\u6b21]gemini-3-flash-preview";
@@ -38183,10 +38302,20 @@ const normalizeMemoryApiConfig = (secondaryConfig = SECONDARY_API_DEFAULTS, memo
     ? getDefaultPlannerModelForConfig(secondaryConfig)
     : memoryConfig?.model || getDefaultPlannerModelForConfig(secondaryConfig),
   key: memoryConfig?.key || secondaryConfig.key || MEMORY_API_DEFAULTS.key,
-  embeddingEnabled: memoryConfig?.embeddingEnabled === true,
-  embeddingUrl: String(memoryConfig?.embeddingUrl || "").trim(),
+  embeddingEnabled: Object.prototype.hasOwnProperty.call(memoryConfig || {}, "embeddingEnabled")
+    ? memoryConfig?.embeddingEnabled === true
+    : MEMORY_API_DEFAULTS.embeddingEnabled,
+  embeddingUrl: String(
+    Object.prototype.hasOwnProperty.call(memoryConfig || {}, "embeddingUrl")
+      ? memoryConfig?.embeddingUrl || ""
+      : MEMORY_API_DEFAULTS.embeddingUrl,
+  ).trim(),
   embeddingKey: String(memoryConfig?.embeddingKey || "").trim(),
-  embeddingModel: String(memoryConfig?.embeddingModel || "").trim(),
+  embeddingModel: String(
+    Object.prototype.hasOwnProperty.call(memoryConfig || {}, "embeddingModel")
+      ? memoryConfig?.embeddingModel || ""
+      : MEMORY_API_DEFAULTS.embeddingModel,
+  ).trim(),
   preset: memoryConfig?.preset || secondaryConfig.preset || MEMORY_API_DEFAULTS.preset,
 });
 
@@ -38280,10 +38409,12 @@ const snapshotMemoryApiConfig = (config = {}, secondarySnapshot = SECONDARY_API_
       shouldMemoryFollowSecondaryModel(config, secondarySnapshot)
         ? getDefaultPlannerModelForConfig(secondarySnapshot)
         : config?.model || getDefaultPlannerModelForConfig(secondarySnapshot) || MEMORY_API_DEFAULTS.model,
-    ).trim() || MEMORY_API_DEFAULTS.model,
+  ).trim() || MEMORY_API_DEFAULTS.model,
   key: String(config?.key || secondarySnapshot.key || MEMORY_API_DEFAULTS.key).trim() || MEMORY_API_DEFAULTS.key,
   embeddingEnabled: config?.embeddingEnabled === true,
-  embeddingModel: String(config?.embeddingModel || "").trim(),
+  embeddingUrl: String(config?.embeddingUrl || MEMORY_API_DEFAULTS.embeddingUrl).trim() || MEMORY_API_DEFAULTS.embeddingUrl,
+  embeddingKey: String(config?.embeddingKey || "").trim(),
+  embeddingModel: String(config?.embeddingModel || MEMORY_API_DEFAULTS.embeddingModel).trim() || MEMORY_API_DEFAULTS.embeddingModel,
 });
 
 const buildPresetEntrySnapshot = (name, primaryConfig = {}, secondaryConfigs = [], plannerConfig = null, memoryConfig = null) => {
@@ -38362,6 +38493,84 @@ const normalizePresetEntries = ({ presetEntries = [], presetNames = [], primaryC
   }
 
   return normalizedEntries;
+};
+
+const migrateLivingMemoryEmbeddingsToSiliconFlow = () => {
+  const appConfig = state?.appConfig;
+  if (!appConfig || typeof appConfig !== "object") return false;
+  if (String(appConfig.livingMemoryEmbeddingMigration || "").trim() === SILICONFLOW_EMBEDDING_MIGRATION_ID) {
+    return false;
+  }
+
+  let changed = false;
+  const memoryConfig = appConfig.memory && typeof appConfig.memory === "object" ? appConfig.memory : {};
+  if (memoryConfig.embeddingEnabled !== true) changed = true;
+  if (String(memoryConfig.embeddingUrl || "").trim() !== SILICONFLOW_EMBEDDING_URL) changed = true;
+  if (String(memoryConfig.embeddingModel || "").trim() !== SILICONFLOW_EMBEDDING_MODEL) changed = true;
+  appConfig.memory = {
+    ...memoryConfig,
+    embeddingEnabled: true,
+    embeddingUrl: SILICONFLOW_EMBEDDING_URL,
+    embeddingModel: SILICONFLOW_EMBEDDING_MODEL,
+  };
+
+  const presetEntries = Array.isArray(appConfig.presetEntries) ? appConfig.presetEntries : [];
+  presetEntries.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+    const presetMemory = entry.memory && typeof entry.memory === "object" ? entry.memory : {};
+    if (
+      presetMemory.embeddingEnabled !== true ||
+      String(presetMemory.embeddingUrl || "").trim() !== SILICONFLOW_EMBEDDING_URL ||
+      String(presetMemory.embeddingModel || "").trim() !== SILICONFLOW_EMBEDDING_MODEL
+    ) {
+      changed = true;
+    }
+    entry.memory = {
+      ...presetMemory,
+      embeddingEnabled: true,
+      embeddingUrl: SILICONFLOW_EMBEDDING_URL,
+      embeddingModel: SILICONFLOW_EMBEDDING_MODEL,
+    };
+  });
+
+  let reindexableCardCount = 0;
+  (Array.isArray(state.roles) ? state.roles : []).forEach((role) => {
+    const livingMemory = role?.livingMemory;
+    if (!livingMemory || !Array.isArray(livingMemory.cards)) return;
+    let roleCleared = false;
+    livingMemory.cards = livingMemory.cards.map((card) => {
+      if (!card || typeof card !== "object") return card;
+      if (card.id && String(card.text || card.content || card.summary || card.title || card.dateKey || "").trim()) reindexableCardCount += 1;
+      const hadEmbedding =
+        (Array.isArray(card.embedding) && card.embedding.length > 0) ||
+        String(card.embeddingModel || "").trim() ||
+        String(card.embeddingUpdatedAt || "").trim() ||
+        String(card.embeddingTextHash || "").trim();
+      if (!hadEmbedding) return card;
+      roleCleared = true;
+      return {
+        ...card,
+        embedding: [],
+        embeddingModel: "",
+        embeddingUpdatedAt: "",
+        embeddingTextHash: "",
+      };
+    });
+    if (roleCleared) {
+      livingMemory.embeddingMeta = {
+        ...(livingMemory.embeddingMeta || {}),
+        model: SILICONFLOW_EMBEDDING_MODEL,
+        rebuiltAt: "",
+        cardCount: 0,
+        errorMessage: "",
+      };
+      changed = true;
+    }
+  });
+
+  appConfig.livingMemoryEmbeddingMigration = SILICONFLOW_EMBEDDING_MIGRATION_ID;
+  appConfig.siliconFlowEmbeddingRebuildPending = reindexableCardCount > 0 || appConfig.siliconFlowEmbeddingRebuildPending === true;
+  return true;
 };
 
 const normalizeSessionState = ({ clearRuntimeBusy = false } = {}) => {
@@ -38446,9 +38655,10 @@ const normalizeSessionState = ({ clearRuntimeBusy = false } = {}) => {
   state.appConfig.planner.preset = normalizedPrimaryPreset;
   state.appConfig.memory.preset = normalizedPrimaryPreset;
   state.recentStickerIds = [...new Set((Array.isArray(state.recentStickerIds) ? state.recentStickerIds : []).map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 30);
+  return migrateLivingMemoryEmbeddingsToSiliconFlow();
 };
 
-normalizeSessionState({ clearRuntimeBusy: true });
+const initialEmbeddingMigrationChanged = normalizeSessionState({ clearRuntimeBusy: true });
 
 let backgroundKeepAliveRuntime = {
   audio: null,
@@ -39116,6 +39326,8 @@ const createPersistableVideoSessionSnapshot = (session = state.videoSession || {
     String(session?.responseMode || "").trim() === "voice" ||
     String(session?.inputMode || "").trim() === "text" ||
     normalizeVideoSessionMicTriggerMode(session?.micTriggerMode) !== "tap" ||
+    normalizeVideoSessionMicEngine(session?.micEnginePreference || session?.micEngine) !== "local" ||
+    session?.cleanEmotionEmoji === false ||
     Boolean(session?.cameraEnabled) ||
     String(session?.cameraFacing || "").trim() === "environment" ||
     Boolean(session?.captionDrawerOpen) ||
@@ -39138,6 +39350,8 @@ const createPersistableVideoSessionSnapshot = (session = state.videoSession || {
     responseMode: String(session?.responseMode || "").trim() === "voice" ? "voice" : "text",
     inputMode: String(session?.inputMode || "").trim() === "text" ? "text" : "voice",
     micTriggerMode: normalizeVideoSessionMicTriggerMode(session?.micTriggerMode),
+    micEnginePreference: normalizeVideoSessionMicEngine(session?.micEnginePreference || session?.micEngine),
+    cleanEmotionEmoji: session?.cleanEmotionEmoji !== false,
     cameraEnabled: Boolean(session?.cameraEnabled),
     cameraFacing: String(session?.cameraFacing || "").trim() === "environment" ? "environment" : "user",
     minimalMode: Boolean(session?.minimalMode),
@@ -39921,7 +40135,7 @@ const setDesktopAppearanceValueByPath = (appearance, path, value) => {
 
 const normalizeDesktopAppearancePromptValue = (value) => String(value ?? "").replace(/\r\n?/g, "\n").trim();
 
-if (migrateLegacyApiSettings()) {
+if (initialEmbeddingMigrationChanged || migrateLegacyApiSettings()) {
   saveState(serializeState());
 }
 
@@ -45140,7 +45354,7 @@ const getLivingMemoryEmbeddingConfig = () => {
   return {
     ...config,
     url: embeddingUrl || config.url,
-    key: embeddingKey || config.key,
+    key: embeddingKey,
     model: embeddingModel,
     embeddingUrl,
     embeddingKey,
@@ -60471,6 +60685,34 @@ const rebuildLivingMemoryEmbeddingsForRole = async (roleId) => {
   }
 };
 
+let siliconFlowEmbeddingRebuildTimer = 0;
+const queueSiliconFlowEmbeddingRebuild = ({ delayMs = 900 } = {}) => {
+  if (siliconFlowEmbeddingRebuildTimer || state?.appConfig?.siliconFlowEmbeddingRebuildPending !== true) return;
+  siliconFlowEmbeddingRebuildTimer = window.setTimeout(async () => {
+    siliconFlowEmbeddingRebuildTimer = 0;
+    if (!hasLivingMemoryEmbeddingConfig()) return;
+    const roles = (Array.isArray(state.roles) ? state.roles : []).filter((role) =>
+      Array.isArray(role?.livingMemory?.cards) && role.livingMemory.cards.some((card) => card?.id && getLivingMemoryEmbeddingText(card)),
+    );
+    for (const role of roles) {
+      await rebuildLivingMemoryEmbeddingsForRole(role.id);
+    }
+    const config = getLivingMemoryEmbeddingConfig();
+    const hasPendingCards = (Array.isArray(state.roles) ? state.roles : []).some((role) =>
+      (Array.isArray(role?.livingMemory?.cards) ? role.livingMemory.cards : []).some(
+        (card) =>
+          card?.id &&
+          getLivingMemoryEmbeddingText(card) &&
+          (!Array.isArray(card.embedding) || !card.embedding.length || String(card.embeddingModel || "").trim() !== config.embeddingModel),
+      ),
+    );
+    if (!hasPendingCards) {
+      state.appConfig.siliconFlowEmbeddingRebuildPending = false;
+      syncPersistentState();
+    }
+  }, Math.max(0, Number(delayMs) || 0));
+};
+
 const buildWalletGenerationPlainTextContext = (role) => {
   const monthKey = getMonthKeyFromDateKey();
   const stats = buildLivingStatsForRole(role, monthKey);
@@ -74418,7 +74660,7 @@ const refreshVideoSessionMicHealth = ({ messageOverride = "", paintNow = false, 
   const busy = ["processing", "replying"].includes(String(state.videoSession?.status || "").trim());
   const accessIssue = getVideoSessionDeviceAccessIssue("麦克风");
   const capabilities = getVideoSessionMicCapabilities();
-  const currentEngine = capabilities.tencent ? "tencent" : capabilities.local ? "local" : "unsupported";
+  const currentEngine = resolveVideoSessionMicEngine(state.videoSession, capabilities);
   state.videoSession.micEngine = currentEngine;
   state.videoSession.speechSupported = capabilities.tencent || capabilities.local;
 
@@ -74796,14 +75038,15 @@ const getVideoSessionRecorderMimeType = () => {
 };
 
 const sanitizeVideoSessionLocalTranscript = (value = "") => {
+  const shouldCleanEmotionEmoji = state?.videoSession?.cleanEmotionEmoji !== false;
   const normalized = String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(VIDEO_SESSION_LOCAL_ASR_SPEECH_TAG_PATTERN, " ")
     .replace(/[\[\【][^\]\】\n]{0,48}[\]\】]/g, " ")
     .replace(/[<＜《][^>＞》\n]{0,48}[>＞》]/g, " ")
     .replace(/[「『][^」』\n]{0,48}[」』]/g, " ")
-    .replace(VIDEO_SESSION_LOCAL_ASR_EMOJI_PATTERN, " ")
-    .replace(VIDEO_SESSION_LOCAL_ASR_TRAILING_MOOD_WORD_PATTERN, "")
+    .replace(shouldCleanEmotionEmoji ? VIDEO_SESSION_LOCAL_ASR_EMOJI_PATTERN : /$^/g, "")
+    .replace(shouldCleanEmotionEmoji ? VIDEO_SESSION_LOCAL_ASR_TRAILING_MOOD_WORD_PATTERN : /$^/g, "")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{2,}/g, "\n")
     .trim();
@@ -75514,7 +75757,9 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
     return false;
   }
   if (isDocumentHidden() || !isVideoSessionLocalAsrAvailable()) return false;
-  const useTencentAsr = hasTencentAsrConfig();
+  const capabilities = getVideoSessionMicCapabilities();
+  const selectedEngine = resolveVideoSessionMicEngine(state.videoSession, capabilities);
+  const useTencentAsr = selectedEngine === "tencent";
   if (isVideoSessionLocalRecorderActive()) {
     videoSessionRuntime.lastInputReadyAt = Date.now();
     syncVideoSessionMicLiveFlags({ syncNow: true });
@@ -75531,8 +75776,10 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
         syncNow: true,
       });
       paint();
-    } else {
+    } else if (selectedEngine === "local") {
       await loadVideoSessionLocalAsrPipeline();
+    } else {
+      throw new Error("当前没有可用的语音识别模型");
     }
     const stream = await ensureVideoSessionAudioStreamReady();
     const audioContext = await ensureVideoSessionAudioContextReady();
@@ -75540,8 +75787,10 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
     disconnectVideoSessionLocalAudioGraph();
     if (useTencentAsr) {
       await ensureTencentAsrSocketReady();
-    } else {
+    } else if (selectedEngine === "local") {
       resetVideoSessionSenseVoiceWindow();
+    } else {
+      throw new Error("当前没有可用的语音识别模型");
     }
 
     const sourceNode = audioContext.createMediaStreamSource(stream);
@@ -75564,7 +75813,7 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
       );
       if (useTencentAsr) {
         enqueueTencentAsrPcmSamples(chunk);
-      } else {
+      } else if (selectedEngine === "local") {
         feedVideoSessionSenseVoiceSamples(chunk);
       }
     };
@@ -75583,7 +75832,7 @@ const startVideoSessionLocalAsrCapture = async ({ setAsPrimary = false } = {}) =
       state.videoSession.speechSupported = true;
       if (useTencentAsr) {
         state.videoSession.micEngine = "tencent";
-      } else if (setAsPrimary) {
+      } else if (selectedEngine === "local" && setAsPrimary) {
         state.videoSession.micEngine = "local";
       }
       state.videoSession.error = "";
@@ -76530,6 +76779,80 @@ const setVideoSessionMicTriggerMode = async (mode = "auto") => {
   queueVideoSessionVisualAutoReply();
 };
 
+const setVideoSessionMicEngine = async (engine = "local") => {
+  const nextEngine = normalizeVideoSessionMicEngine(engine);
+  const capabilities = getVideoSessionMicCapabilities();
+  if (!capabilities[nextEngine]) {
+    setToast(
+      nextEngine === "tencent"
+        ? "腾讯云识别尚未配置，请先填写 AppID、SecretId 和 SecretKey"
+        : "当前浏览器暂不支持 SenseVoice Small",
+    );
+    return false;
+  }
+
+  state.videoSession = {
+    ...(state.videoSession || createVideoSessionState()),
+    micEnginePreference: nextEngine,
+    micEngine: nextEngine,
+    cleanEmotionEmoji: state.videoSession?.cleanEmotionEmoji !== false,
+  };
+  clearVideoSessionAutoSubmitTimer();
+  clearVideoSessionRestartTimer();
+
+  if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") {
+    refreshVideoSessionMicHealth({ syncNow: true });
+    paint();
+    queueVideoSessionStateSync({ flush: true });
+    setToast(nextEngine === "tencent" ? "已切换到腾讯云实时语音识别" : "已切换到 SenseVoice Small 本地识别");
+    return true;
+  }
+
+  const busy = ["processing", "replying"].includes(String(state.videoSession?.status || "").trim()) || videoSessionRuntime.roundSubmitting;
+  let preservedDraft = getVideoSessionVoiceDraftText(state.videoSession);
+  if (isVideoSessionLocalRecorderActive()) {
+    try {
+      const stopped = await stopVideoSessionLocalAsrCapture({ transcribe: true });
+      preservedDraft = mergeVideoSessionTextParts(preservedDraft, stopped?.transcript);
+    } catch {
+      // keep the text already visible while changing engines
+    }
+  }
+  destroyVideoSessionRecognition();
+  teardownVideoSessionLocalAsrCapture({ releaseStream: false });
+  if (preservedDraft) {
+    state.videoSession.transcript = sanitizeVideoSessionLocalTranscript(preservedDraft);
+    state.videoSession.interimTranscript = "";
+  }
+  state.videoSession.micListening = false;
+  state.videoSession.micRecording = false;
+  state.videoSession.status = busy ? state.videoSession.status : getVideoSessionIdleStatus();
+  state.videoSession.error = "";
+  refreshVideoSessionMicHealth({ syncNow: true });
+  paint();
+  queueVideoSessionStateSync({ flush: true });
+
+  if (!busy && shouldAutoStartVideoSessionRecognition(state.videoSession)) {
+    const started = await startVideoSessionRecognition();
+    if (!started) {
+      setToast(state.videoSession?.error || state.videoSession?.micHealthMessage || "麦克风暂时不可用");
+      return false;
+    }
+  }
+  queueVideoSessionVisualAutoReply({ awaitInputReady: !isVideoSessionHoldToTalkMode(state.videoSession) });
+  setToast(nextEngine === "tencent" ? "已切换到腾讯云实时语音识别" : "已切换到 SenseVoice Small 本地识别");
+  return true;
+};
+
+const toggleVideoSessionCleanEmotionEmoji = () => {
+  state.videoSession = {
+    ...(state.videoSession || createVideoSessionState()),
+    cleanEmotionEmoji: state.videoSession?.cleanEmotionEmoji === false,
+  };
+  paint();
+  queueVideoSessionStateSync({ flush: true });
+};
+
 const toggleVideoSessionHistoryOpen = () => {
   const nextHistoryOpen = !state.videoSession?.historyOpen;
   state.videoSession = {
@@ -77162,7 +77485,19 @@ const startVideoSessionRecognition = async () => {
     return false;
   }
 
-  setVideoSessionMicHealth("checking", `正在检查麦克风和${capabilities.tencent ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL}`, {
+  const selectedEngine = resolveVideoSessionMicEngine(state.videoSession, capabilities);
+  if (selectedEngine === "unsupported") {
+    state.videoSession.speechSupported = false;
+    state.videoSession.micListening = false;
+    state.videoSession.micEngine = "unsupported";
+    state.videoSession.error = "当前选择的语音识别模型不可用";
+    refreshVideoSessionMicHealth({ paintNow: true, syncNow: true });
+    paint();
+    return false;
+  }
+
+  const selectedSpeechLabel = selectedEngine === "tencent" ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL;
+  setVideoSessionMicHealth("checking", `正在检查麦克风和${selectedSpeechLabel}`, {
     paintNow: true,
     syncNow: true,
   });
@@ -77181,53 +77516,21 @@ const startVideoSessionRecognition = async () => {
     return false;
   }
 
-  const startLocalFallback = async ({ setAsPrimary = false, preferTencent = capabilities.tencent } = {}) => {
-    if (!capabilities.local) return false;
+  const startSelectedEngine = async () => {
+    if (!capabilities[selectedEngine]) return false;
     try {
-      const started = await startVideoSessionLocalAsrCapture({ setAsPrimary });
-      if (started && setAsPrimary) {
-        state.videoSession.micEngine = preferTencent ? "tencent" : "local";
-        state.videoSession.speechSupported = true;
-        if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
-          state.videoSession.status = getVideoSessionIdleStatus();
-        }
-        refreshVideoSessionMicHealth({ syncNow: true });
-        paint();
-      }
+      const started = await startVideoSessionLocalAsrCapture({ setAsPrimary: true });
       return started;
     } catch (error) {
-      if (setAsPrimary) {
-        state.videoSession.error = error?.message || `${preferTencent ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL} 启动失败`;
-        setVideoSessionMicHealth("error", state.videoSession.error, {
-          syncNow: true,
-        });
-        paint();
-      }
+      state.videoSession.error = error?.message || `${selectedSpeechLabel} 启动失败`;
+      setVideoSessionMicHealth("error", state.videoSession.error, { syncNow: true });
+      paint();
       return false;
     }
   };
 
-  if (capabilities.tencent) {
-    const localStarted = await startLocalFallback({ setAsPrimary: true });
-    if (!localStarted) {
-      state.videoSession.speechSupported = false;
-      state.videoSession.micListening = false;
-      state.videoSession.micEngine = "unsupported";
-      if (state.videoSession.status !== "processing" && state.videoSession.status !== "replying") {
-        state.videoSession.status = "manual";
-      }
-      setVideoSessionMicHealth("error", state.videoSession.error || `${VIDEO_SESSION_TENCENT_ASR_LABEL} 启动失败`, {
-        syncNow: true,
-      });
-      paint();
-      return false;
-    } else {
-      return true;
-    }
-  }
-
-  const localStarted = await startLocalFallback({ setAsPrimary: true, preferTencent: false });
-  if (!localStarted) {
+  const started = await startSelectedEngine();
+  if (!started) {
     state.videoSession.speechSupported = false;
     state.videoSession.micListening = false;
     state.videoSession.micEngine = "unsupported";
@@ -77435,6 +77738,8 @@ const startVideoSession = async () => {
     responseMode: String(state.videoSession?.responseMode || "text").trim() === "voice" ? "voice" : "text",
     inputMode: String(state.videoSession?.inputMode || "voice").trim() === "text" ? "text" : "voice",
     micTriggerMode: normalizeVideoSessionMicTriggerMode(state.videoSession?.micTriggerMode),
+    micEnginePreference: getVideoSessionMicEnginePreference(state.videoSession),
+    cleanEmotionEmoji: state.videoSession?.cleanEmotionEmoji !== false,
     cameraEnabled: Boolean(state.videoSession?.cameraEnabled),
     cameraFacing: String(state.videoSession?.cameraFacing || "user").trim() === "environment" ? "environment" : "user",
     minimalMode: Boolean(state.videoSession?.minimalMode),
@@ -77452,15 +77757,17 @@ const startVideoSession = async () => {
   if (wantsVoiceInput) {
     try {
       const capabilities = getVideoSessionMicCapabilities();
-      const preferredSpeechLabel = capabilities.tencent ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL;
+      const selectedEngine = resolveVideoSessionMicEngine(state.videoSession, capabilities);
+      const preferredSpeechLabel =
+        selectedEngine === "tencent" ? VIDEO_SESSION_TENCENT_ASR_LABEL : VIDEO_SESSION_LOCAL_ASR_MODEL_LABEL;
       setVideoSessionMicHealth("checking", `正在请求麦克风权限，并准备 ${preferredSpeechLabel}`, {
         syncNow: true,
       });
       paint();
       queueVideoSessionStateSync();
-      if (capabilities.tencent) {
-        await ensureVideoSessionAudioStreamReady();
-      } else if (capabilities.local) {
+       if (selectedEngine === "tencent") {
+         await ensureVideoSessionAudioStreamReady();
+       } else if (selectedEngine === "local") {
         await ensureVideoSessionAudioStreamReady();
         if (isMobileLikeRuntime()) {
           void loadVideoSessionLocalAsrPipeline().catch((error) => {
@@ -81108,6 +81415,69 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "fetch-embedding-models") {
+    if (!isApiRequestsEnabled()) {
+      setToast(buildApiDisabledMessage("API 调用"));
+      return;
+    }
+    const config = getLivingMemoryEmbeddingConfig();
+    if (!config?.url || !config?.key) {
+      setToast("请先填写 Embedding 接口地址和 API Key");
+      return;
+    }
+    const token = "memory-embedding";
+    addBusyToken("modelFetchBusy", token);
+    paint();
+
+    void fetchAvailableModels(config)
+      .then((models) => {
+        state.availableModels = models;
+        state.modelPickerOpen = models.length > 0;
+        state.modelPickerTarget = token;
+        setToast(`已拉取 ${models.length} 个 Embedding 模型`);
+      })
+      .catch((error) => {
+        state.availableModels = [];
+        state.modelPickerOpen = false;
+        state.modelPickerTarget = "";
+        setToast(error.message || "拉取 Embedding 模型失败");
+      })
+      .finally(() => {
+        removeBusyToken("modelFetchBusy", token);
+        paint();
+      });
+    return;
+  }
+
+  if (action === "test-memory-embedding") {
+    if (!isApiRequestsEnabled()) {
+      setToast(buildApiDisabledMessage("API 调用"));
+      return;
+    }
+    const config = getLivingMemoryEmbeddingConfig();
+    if (!config?.url || !config?.embeddingModel || !config?.key) {
+      setToast("请填写 Embedding 接口地址、模型和 API Key");
+      return;
+    }
+    const token = "memory-embedding-test";
+    addBusyToken("modelFetchBusy", token);
+    paint();
+
+    void requestEmbeddingVectorsWithConfig(config, ["LifeTalk 向量检索测试"])
+      .then((vectors) => {
+        const dimension = vectors?.[0]?.length || 0;
+        setToast(`Embedding 接口测试成功${dimension ? `，返回 ${dimension} 维向量` : ""}`);
+      })
+      .catch((error) => {
+        setToast(error.message || "Embedding 接口测试失败");
+      })
+      .finally(() => {
+        removeBusyToken("modelFetchBusy", token);
+        paint();
+      });
+    return;
+  }
+
   if (action === "fetch-minimax-voice-models") {
     const token = "minimax-voice-model";
     addBusyToken("modelFetchBusy", token);
@@ -81168,6 +81538,8 @@ eventRoot.addEventListener("click", async (event) => {
     const subApiIndex = Number(button.dataset.subapiIndex);
     if (button.dataset.modelTarget === "minimax-voice-model") {
       state.appConfig.minimaxVoice.model = nextModel || state.appConfig.minimaxVoice.model;
+    } else if (button.dataset.modelTarget === "memory-embedding" && state.appConfig.memory) {
+      state.appConfig.memory.embeddingModel = nextModel || state.appConfig.memory.embeddingModel;
     } else if (apiLane === "imageGeneration" && state.appConfig.imageGeneration) {
       state.appConfig.imageGeneration.model = nextModel || state.appConfig.imageGeneration.model;
     } else if (apiLane === "chatFallback" && state.appConfig.chatFallback) {
@@ -81436,6 +81808,7 @@ eventRoot.addEventListener("click", async (event) => {
     syncPersistentState();
     refreshGlobalFeatureStatus({ paintNow: true });
     void syncBackgroundKeepAliveMode({ silent: true });
+    queueSiliconFlowEmbeddingRebuild({ delayMs: 200 });
     setToast("设置已保存");
     return;
   }
@@ -81518,6 +81891,16 @@ eventRoot.addEventListener("click", async (event) => {
 
   if (action === "set-video-mic-trigger-mode") {
     void setVideoSessionMicTriggerMode(button.dataset.videoMicTriggerMode || "auto");
+    return;
+  }
+
+  if (action === "set-video-mic-engine") {
+    void setVideoSessionMicEngine(button.dataset.videoMicEngine || "local");
+    return;
+  }
+
+  if (action === "toggle-video-clean-emotion-emoji") {
+    toggleVideoSessionCleanEmotionEmoji();
     return;
   }
 
@@ -82104,7 +82487,7 @@ const restoreNewerIndexedDbState = async () => {
     },
     state,
   );
-  normalizeSessionState({ clearRuntimeBusy: true });
+  const embeddingMigrationChanged = normalizeSessionState({ clearRuntimeBusy: true });
   reconcileSharedStickerMoodAssignments();
   repairVisibleStickerProtocolMessages();
   repairPersistedReferenceCityStatusLeaks();
@@ -82113,6 +82496,9 @@ const restoreNewerIndexedDbState = async () => {
   void syncBackgroundKeepAliveMode({ silent: true });
   restoreComposerQuickDraftsIntoState();
   saveState(serializeState());
+  if (embeddingMigrationChanged) {
+    queueSiliconFlowEmbeddingRebuild({ delayMs: 200 });
+  }
   paint();
   void restorePersistedAssets();
   return true;
@@ -82123,7 +82509,7 @@ window.addEventListener("storage", () => {
   const currentPersistent = serializeState();
   const mergedPersistent = mergePersistentChatMessages(loadedPersistent, currentPersistent);
   state = preserveCurrentNavigationState(buildStateFromPersistent(mergedPersistent), state);
-  normalizeSessionState({ clearRuntimeBusy: true });
+  const embeddingMigrationChanged = normalizeSessionState({ clearRuntimeBusy: true });
   reconcileSharedStickerMoodAssignments();
   repairVisibleStickerProtocolMessages();
   pendingAiReply = null;
@@ -82131,6 +82517,9 @@ window.addEventListener("storage", () => {
   void syncBackgroundKeepAliveMode({ silent: true });
   restoreComposerQuickDraftsIntoState();
   paint();
+  if (embeddingMigrationChanged) {
+    saveState(serializeState());
+  }
   void restoreNewerIndexedDbState().finally(() => {
     queueAutoSummaryChecksForAllRoles({ delayMs: 500 });
   });
@@ -82277,6 +82666,7 @@ void restoreNewerIndexedDbState().finally(() => {
     reconcilePendingNotificationLaunch();
     void runRuntimeTick();
     saveState(serializeState());
+    queueSiliconFlowEmbeddingRebuild({ delayMs: 900 });
     queueAutoSummaryChecksForAllRoles({ delayMs: 500 });
   });
 });
