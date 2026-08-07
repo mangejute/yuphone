@@ -24643,6 +24643,7 @@ const makeTimeline = () => [
 
 const normalizeTimelineEntryData = (item = {}, index = 0) => ({
   id: item.id || uid("line"),
+  slotKey: String(item.slotKey || item.period || "").trim(),
   time: item.time || `${String(9 + index).padStart(2, "0")}:00`,
   title: item.title || item.place || "新的行程",
   place: item.place || item.title || "未命名地点",
@@ -27296,7 +27297,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "8月8日-3";
+const APP_BUILD_VERSION_LABEL = "8月8日-4";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -28741,8 +28742,8 @@ const getLifeStreamJourneySyncMeta = (role) => {
     return {
       badge: `已按${todayLabel}行程联动`,
       shortBadge: "行程联动",
-      note: `这页的地点、状态和事件默认都以${todayLabel}的行程为准，单独生成时也会一起联动。`,
-      detail: `${todayLabel} · 行程和事件流同源`,
+      note: `这页的地点、状态和事件默认都以${todayLabel}的行程为准；当日事件会在每个时段开始时实时补全。`,
+      detail: `${todayLabel} · 分时段实时联动`,
     };
   }
 
@@ -28750,7 +28751,7 @@ const getLifeStreamJourneySyncMeta = (role) => {
     return {
       badge: "今日已有行程",
       shortBadge: "待同步",
-      note: `今天的行程已经在了。点行程页右上角“生成”会按${todayLabel}的行程把当日事件一起刷到同一份。`,
+      note: `今天的五段行程已经在了。当日事件会在每个时段开始时按当前行程实时补全。`,
       detail: `${todayLabel} · 等待联动刷新`,
     };
   }
@@ -28759,7 +28760,7 @@ const getLifeStreamJourneySyncMeta = (role) => {
     return {
       badge: "待补今日联动",
       shortBadge: "待补今天",
-      note: `最近一次联动停在${latestLinkedLabel}。点行程页右上角“生成”会一起补今天的行程和当日事件。`,
+      note: `最近一次联动停在${latestLinkedLabel}。生成当天行程后，当日事件会按五个时段逐段补全。`,
       detail: `最近联动 ${latestLinkedLabel}`,
     };
   }
@@ -28767,7 +28768,7 @@ const getLifeStreamJourneySyncMeta = (role) => {
   return {
     badge: "今日未生成",
     shortBadge: "待生成",
-    note: `今天还没有行程。点行程页右上角“生成”会一起生成${todayLabel}的行程和当日事件。`,
+    note: `今天还没有五段行程。点行程页右上角“生成”先建立五个粗时段，当日事件会随后逐段实时补全。`,
     detail: `${todayLabel} · 还没生成`,
   };
 };
@@ -31832,7 +31833,7 @@ const getJourneyLifeTrackBusyMeta = (state) => {
   const generatorVisible = (Array.isArray(state?.panelStack) ? state.panelStack : []).includes("journey-generator");
   const shouldUseUnifiedLabel = (generatorVisible && (hasJourneyBusy || hasMonitorBusy)) || (hasJourneyBusy && hasMonitorBusy);
   const label = shouldUseUnifiedLabel
-    ? "正在生成行程以及当日事件"
+    ? "正在生成五段行程与当前时段事件"
     : hasJourneyBusy
       ? "正在生成行程"
       : hasMonitorBusy
@@ -31863,7 +31864,7 @@ const getJourneyGenerationStatusMeta = (state, fallbackNote = "") => {
       ? toastText
       : String(fallbackNote || "").trim() ||
         (linkedBusy.unified
-          ? "正在联动当前日期的行程和当日事件，完成后这里会自动刷新"
+          ? "正在生成五段行程并更新当前时段事件，完成后这里会自动刷新"
           : linkedBusy.hasJourneyBusy
             ? "正在更新这一天的行程安排，完成后这里会自动刷新"
             : linkedBusy.hasMonitorBusy
@@ -35537,7 +35538,7 @@ const renderJourneyGeneratorSheet = (state, role) => {
         icon: icons.journey,
         kicker: "联动生成",
         title: formatJourneyDateLabel(generatorDate),
-        note: "会一起生成这一天的行程和当日事件，地点只会从地图里已启用的地点中选。",
+        note: "先生成这一天固定五段粗行程；当日事件会在对应时段开始时实时补全，地点只会从地图里已启用的地点中选。",
         badge: monthMeta.monthLabel,
         extraClass: "journey-generator-hero",
       })}
@@ -35563,10 +35564,10 @@ const renderJourneyGeneratorSheet = (state, role) => {
           </div>
         </div>
         <p>每行一条行程，支持 09:30-10:30 处理消息：在卧室回消息 这种格式，也可以直接写你想让这一天有什么安排</p>
-        <p class="sheet-note">主按钮会直接联动生成当天行程和当日事件，地点只会从地图里已启用的地点中选。</p>
+        <p class="sheet-note">主按钮先生成当天五段粗行程；当日事件按时段逐次实时生成，地点只会从地图里已启用的地点中选。</p>
         <textarea class="soft-input soft-area map-generator-area" data-journey-generator="text" placeholder="例如：这一天想让他上午在创意园开会，傍晚去后街便利店，夜里回工作室继续忙&#10;如果不写日期，也默认生成上面所选这一天的行程">${escapeHtml(state.journeyGeneratorText || "")}</textarea>
         <div class="journey-generator-saved-row">
-          <button class="sheet-action-btn" type="button" data-action="save-journey-generator-prompt">保存提示词</button>
+          <button class="sheet-action-btn" type="button" data-action="save-journey-generator-prompt">保存</button>
           <span class="sheet-note">${escapeHtml(savedJourneyPrompt ? "已保存，下次打开这个角色的联动生成会自动带入" : "点保存后，下次打开这个角色的联动生成会自动带入")}</span>
         </div>
         <div class="journey-generator-actions">
@@ -35935,7 +35936,7 @@ const renderJourneySheetRefined = (state, role) => {
   const activeDate = clampDateKeyToCurrentMonth(state.journeyActiveDate || formatJourneyDayKey());
   const activeDateKey = formatDateKey(activeDate);
   const activeDateLabel = formatJourneyDateLabel(activeDateKey);
-  const journeyItems = filterJourneyTimelineForDisplay(alignJourneyEntriesTailForRender(role, getRoleTimelineForDate(role, activeDate)));
+  const journeyItems = filterJourneyTimelineForDisplay(alignJourneyEntriesTailForRender(role, getRoleTimelineForDate(role, activeDate))).slice(0, 5);
   const journeyDisplayGoals = getJourneyDisplayGoalsForDate(role, activeDateKey);
   const mealTimes = Array.isArray(role.settings?.mealTimes) ? role.settings.mealTimes : ["10:30", "14:00", "20:00"];
   const journeyRoutineCollapsed = state.journeyRoutineCollapsed !== false;
@@ -62508,10 +62509,12 @@ const repairJourneyReplacementPayload = (
 
 const finalizeJourneyPreviewResult = (role, result, normalizedTargetDate, targetDateLabel) => {
   const entries = normalizeJourneyPreviewTimelineWithRebalance(role, result?.timeline || [])
+    .slice(0, 5)
     .map((item, index) => {
       const npcNames = extractJourneyNpcNamesFromEntry(role, item);
       return {
         id: `line-${normalizedTargetDate}-${Date.now()}-${index}`,
+        slotKey: normalizeJourneyWeekSlotKey(item?.slotKey || "") || ["morning", "midday", "afternoon", "night", "midnight"][index],
         time: String(item?.time || `${String(9 + index).padStart(2, "0")}:00`).trim(),
         title: String(item?.title || item?.place || "新的行程").trim(),
         place: String(item?.place || item?.title || "未命名地点").trim(),
@@ -62521,11 +62524,7 @@ const finalizeJourneyPreviewResult = (role, result, normalizedTargetDate, target
       };
     })
     .filter((item) => item.title && item.time);
-  const transientAdjustedEntries = splitJourneyTransientFocusStops(role, entries);
-  const normalizedEntries = splitJourneyDinnerAndLateNight(
-    role,
-    alignJourneyTimelineTailToSleep(role, transientAdjustedEntries),
-  );
+  const normalizedEntries = alignJourneyTimelineTailToSleep(role, entries);
 
   if (!normalizedEntries.length) {
     throw new Error("模型没有生成可用行程");
@@ -62567,6 +62566,7 @@ const hasMeaningfulJourneyEventPreview = (eventPreview = null) =>
 
 const finalizeJourneyPreviewResultModelOnly = (role, result, normalizedTargetDate, targetDateLabel) => {
   const entries = normalizeJourneyTimelineItems(result?.timeline || [])
+    .slice(0, 5)
     .map((item, index) => {
       const npcNames = extractJourneyNpcNamesFromEntry(role, item);
       const title = String(item?.title || "").trim();
@@ -62574,6 +62574,7 @@ const finalizeJourneyPreviewResultModelOnly = (role, result, normalizedTargetDat
       const detail = String(item?.detail || "").trim();
       return {
         id: `line-${normalizedTargetDate}-${Date.now()}-${index}`,
+        slotKey: normalizeJourneyWeekSlotKey(item?.slotKey || "") || ["morning", "midday", "afternoon", "night", "midnight"][index],
         time: String(item?.time || "").trim(),
         title,
         place,
@@ -63146,7 +63147,7 @@ const pickJourneySlotFallbackPlace = (role, slotKey = "", options = {}) => {
 
 const getJourneyTimelineDerivedSlotKey = (item = {}, index = 0, total = 0) =>
   normalizeJourneyWeekSlotKey(item?.slotKey || item?.key || item?.period || "") ||
-  (index === 0 ? "morning" : index === Math.max(0, total - 1) ? "night" : index === 1 ? "midday" : "afternoon");
+  (index === 0 ? "morning" : index === Math.max(0, total - 1) ? (total >= 5 ? "midnight" : "night") : index === 1 ? "midday" : "afternoon");
 
 const enforceJourneyTimelineMapPlaceSpread = (role, timeline = [], options = {}) => {
   const normalizedTimeline = normalizeJourneyTimelineItems(timeline);
@@ -63430,6 +63431,9 @@ const normalizeJourneyWeekSlotKey = (value = "") => {
   }
   if (["3", "afternoon", "pm", "下午"].includes(normalized) || /下午|afternoon|pm/.test(normalized)) {
     return "afternoon";
+  }
+  if (["5", "midnight", "深夜", "半夜", "午夜"].includes(normalized) || /半夜|深夜|午夜|midnight/.test(normalized)) {
+    return "midnight";
   }
   if (["4", "night", "evening", "晚间", "夜间", "晚上", "睡前"].includes(normalized) || /晚|夜|睡前|night|evening/.test(normalized)) {
     return "night";
@@ -66112,17 +66116,10 @@ const JOURNEY_STABLE_WEEK_TEXT_TIMEOUT_MS = 32_000;
 const JOURNEY_STABLE_WEEK_TEXT_RESCUE_TIMEOUT_MS = 18_000;
 const JOURNEY_STABLE_WEEK_MISSING_DAY_TIMEOUT_MS = 16_000;
 const JOURNEY_DYNAMIC_ENTRY_MIN = 5;
-const JOURNEY_DYNAMIC_ENTRY_MAX = 14;
+const JOURNEY_DYNAMIC_ENTRY_MAX = 5;
 
 const getJourneyPreferredEntryCount = (targetDateKey = formatDateKey(), role = null) => {
-  const seedSource = `${formatDateKey(targetDateKey)}|${String(role?.id || "").trim()}|${String(
-    role?.profile?.note || role?.profile?.name || "",
-  ).trim()}`;
-  let hash = 0;
-  for (let index = 0; index < seedSource.length; index += 1) {
-    hash = (hash * 33 + seedSource.charCodeAt(index)) % 0x7fffffff;
-  }
-  return JOURNEY_DYNAMIC_ENTRY_MIN + (hash % (JOURNEY_DYNAMIC_ENTRY_MAX - JOURNEY_DYNAMIC_ENTRY_MIN + 1));
+  return 5;
 };
 
 const requestJourneyPreviewFallbackData = async (
@@ -66250,6 +66247,7 @@ const buildJourneyTimelineOnlyTextTimeSeeds = (role, preferredEntryCount = JOURN
 
 const buildJourneyTimelineOnlyTextCompletedTimeline = (_role, parsedTimeline = []) =>
   (Array.isArray(parsedTimeline) ? parsedTimeline : [])
+    .slice(0, 5)
     .map((item) => ({
       ...item,
       time: sanitizeJourneyWeekTextField(item?.time || ""),
@@ -66259,7 +66257,11 @@ const buildJourneyTimelineOnlyTextCompletedTimeline = (_role, parsedTimeline = [
       detail: sanitizeJourneyWeekTextField(item?.detail || ""),
       npcNames: normalizeReferenceItems(item?.npcNames || [], 4),
     }))
-    .filter((item) => isJourneyPreviewTimeRangeText(item.time) && item.title && item.place && item.detail);
+    .filter((item) => isJourneyPreviewTimeRangeText(item.time) && item.title && item.place && item.detail)
+    .map((item, index) => ({
+      ...item,
+      slotKey: normalizeJourneyWeekSlotKey(item?.slotKey || "") || ["morning", "midday", "afternoon", "night", "midnight"][index],
+    }));
 
 const parseJourneyTimelineOnlyTextPayload = (rawText = "", expectedCount = 0) => {
   const parsedTimeline = [];
@@ -66622,15 +66624,7 @@ const buildJourneyA3PlainTextContext = ({
     memories.length ? `重要记忆：${memories.join("；")}` : "",
     summaryArchive.length ? `自动总结：${summaryArchive.join("；")}` : "",
     recentMessages.length ? `最近聊天：${recentMessages.join("；")}` : "",
-    `行程条数：建议 ${preferredEntryCount} 条，前端完整保留，不要少写`,
-    fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
-    fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
-    fortuneRoll?.mainEventType?.npcHints ? `主事件优先NPC：${fortuneRoll.mainEventType.npcHints}` : "",
-    `当日事件：必须生成 事件||总标题||进行中||文风||天数 和 ${LIFE_MONITOR_DAILY_NODE_MIN}-${LIFE_MONITOR_DAILY_NODE_MAX} 个 HH:MM 节点；第一节点靠近 ${lifeNodeClockHint}`,
-    `当日事件文风：${fortuneRoll?.eventStyle?.label || "细腻日常"}；${fortuneRoll?.eventStyle?.prompt || "写出具体生活细节"}`,
-    Array.isArray(fortuneRoll?.storyHooks) && fortuneRoll.storyHooks.length
-      ? `题材钩子：${fortuneRoll.storyHooks.slice(0, 4).join(" / ")}`
-      : "",
+    "行程条数：严格五条，依次对应早上、中午、下午、晚上、半夜；每条只写这一大致时段的安排",
   ];
   return lines.filter(Boolean).join("\n");
 };
@@ -66691,7 +66685,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     normalizedTargetDate === formatJourneyDayKey(journeyGenerationNow)
       ? `${String(journeyGenerationNow.getHours()).padStart(2, "0")}:${String(journeyGenerationNow.getMinutes()).padStart(2, "0")}`
       : "当天行程里最容易出事的合理时间点";
-  const journeyCanWriteEventLine = true;
+  const journeyCanWriteEventLine = false;
   const journeySlimContext = {
     roleName: String(roleName || "").trim(),
     currentPlace,
@@ -66720,7 +66714,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
   };
   const journeyPlainTextContext = buildPureTextGenerationContext({
     task: `生成 ${targetDateLabel} 的当天时间轴文本`,
-    outputIntent: journeyCanWriteEventLine ? "行程纯文本 + 目标池更新行 + 1 个生活轨迹事件主题 + 3到5个同主题节点" : "行程纯文本 + 目标池更新行，本日未触发生活轨迹",
+    outputIntent: "只生成五个粗略行程时段，不生成当日事件；当日事件到对应时段再单独生成",
     roleContext: {
       ...journeyRoleContext,
       goals: [],
@@ -66754,18 +66748,17 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     diversityContext: journeyDiversityContext,
   });
   const journeySystemPrompt = `纯文本格式任务：只输出双竖线分隔文本，不要 JSON，不要 Markdown，不要代码块，不要解释。
-你负责生成 ${targetDateLabel} 的当天行程和当日事件。
+你只负责生成 ${targetDateLabel} 的当天五段粗略行程。
 第一行必须从数字开头，格式固定：HH:MM-HH:MM||标题||地点||详情
 输出规则：
 - 必须简体中文，不能写日文、英文段落、代码块、表格、字段名或开场白。
 - 行程生成提示词是最高优先级：${normalizedJourneyPrompt ? `「${normalizedJourneyPrompt}」` : "未填写时才按角色日常自动发挥"}；任何默认规则都不能覆盖它。
 - 当日事件文风是第二优先级：${fortuneRoll?.eventStyle?.label || "细腻日常"}。执行要求：${fortuneRoll?.eventStyle?.prompt || "写出具体生活细节"}
-- 先给当天安排五个粗时段：早上、 中午、下午、晚上、半夜；每个时段都要有一个大致安排，再把它们展开成具体时间轴。
-- 具体当日事件要结合当天已有事件、最近 50 条角色与用户对话、角色长期记忆和记忆召回；不要脱离这些上下文另起身份或地点。
+- 只给当天安排五个粗时段：早上、中午、下午、晚上、半夜；时间根据角色作息和三餐设置计算，每行只写该时段的大致安排，不展开全天细节。
 - 不要把最近几天的旧桥段当模板复读；连续性只用于承接生活状态，不用于重复同一个 NPC、同一种求助或同一个饭局套路。
 - ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 ${journeyDiversityLines.map((line) => `- ${line}`).join("\n")}
-- 行程输出 ${preferredEntryCount} 行左右，按时间正序，不重叠；前端会完整保留，不要故意少写。
+- 行程输出严格 5 行，按早上、中午、下午、晚上、半夜顺序，按时间正序且不重叠；不要输出第六行。
 - 地点只能从参考上下文“可用地点”里选；角色、城市、NPC、昨天余波都以参考上下文为准。
 - 先锁定“今日主事件类型”，再写行程；行程不是流水账，要给这个主事件留出至少 1 个自然发生的时段。
 - NPC 面板里的人物即使没写进世界书，也必须视为可用真实关系；如果今日主事件类型或 NPC 关系适合，就在详情里自然写 @NPC名，并把 npcNames 保存下来。
@@ -66779,7 +66772,7 @@ ${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：当日事件
 - 再写 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个同主题节点：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
 - 当日事件必须是现实生活突发事件，优先手机、钥匙、外卖、排队、路人、朋友、天气、错拿物品、小额好运、社交误会；工作只能当背景，不能写成工作进度。
 - 当日事件必须承接今日主事件类型，优先使用 NPC 面板人物、家庭/朋友/同事/公众身份/都市现场，而不是连续写快递配件、咖啡渍、工作素材这种单一小物件。
-- 每个节点围绕同一个事件总标题推进，有起因、转折和余波；正文用第三人称，不能用“我”。` : "- 每次都生成当日事件，不得跳过或输出占位。"}
+- 每个节点围绕同一个事件总标题推进，有起因、转折和余波；正文用第三人称，不能用“我”。` : "- 本次只输出五行行程，不得输出事件、轨迹、节点或目标协议；当日事件由当前时段的独立请求生成。"}
 写完最后一行立刻停止。`
 
   const response = await requestJourneyModelText({
@@ -66799,9 +66792,9 @@ ${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：当日事件
       plainTextContext: useA3SlimContext ? journeyA3PlainTextContext : journeyPlainTextContext,
       timeSeeds: timeSeeds.map((item) => item.time),
       outputRules: {
-        format: `行程: HH:MM-HH:MM||标题||地点||详情; 目标: 短期目标/长期目标||标题||动作||进度||说明; 生活轨迹: ${journeyCanWriteEventLine ? "事件" : "主题"}||标题||状态||等级||天数 + HH:MM||小标题||故事||标签`,
+        format: "HH:MM-HH:MM||标题||地点||详情（严格五行，对应早上、中午、下午、晚上、半夜）",
         contextFormat: "plain-text",
-        suggestedLineCount: preferredEntryCount,
+        suggestedLineCount: 5,
         maxOutputTokens: JOURNEY_LIFE_MODEL_OUTPUT_TOKEN_BUDGET,
         compactBudget: true,
         forceMaxOutputTokens: useA3SlimContext,
@@ -70133,7 +70126,7 @@ const LIFE_MONITOR_MODEL_COOLDOWN_MINUTES = 45;
 const LIFE_MONITOR_ACTIVE_EVENT_COOLDOWN_MINUTES = 150;
 const LIFE_MONITOR_HOURLY_STORY_CHANCE_MIN = 2;
 const LIFE_MONITOR_HOURLY_STORY_CHANCE_MAX = 32;
-const LIFE_MONITOR_DAILY_NODE_MIN = 3;
+const LIFE_MONITOR_DAILY_NODE_MIN = 1;
 const LIFE_MONITOR_DAILY_NODE_MAX = 5;
 const LIFE_MONITOR_STORY_MIN_CHARS = 100;
 const LIFE_MONITOR_STORY_TARGET_CHARS = 140;
@@ -70855,10 +70848,17 @@ const mergeLifeMonitorPlannedTimelineEntries = (existing = [], incoming = [], ta
 const shouldSkipLifeMonitorAttempt = (role, now = new Date()) =>
   getMinutesSince(role?.runtime?.lastLifeMonitorAttemptAt, now) < LIFE_MONITOR_RETRY_MINUTES;
 
-const markLifeMonitorAttempt = (role, now = new Date()) => {
+const markLifeMonitorAttempt = (role, now = new Date(), segmentKey = "") => {
+  const normalizedSegmentKey = String(segmentKey || "").trim();
+  const previousKeys = Array.isArray(role?.runtime?.lifeMonitorSegmentCallKeys)
+    ? role.runtime.lifeMonitorSegmentCallKeys.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
   role.runtime = {
     ...(role.runtime || {}),
     lastLifeMonitorAttemptAt: now.toISOString(),
+    lifeMonitorSegmentCallKeys: normalizedSegmentKey
+      ? [...new Set([...previousKeys, normalizedSegmentKey])].slice(-40)
+      : previousKeys,
   };
 };
 
@@ -70867,11 +70867,11 @@ const getLifeMonitorLocalHourKey = (now = new Date()) => {
   return `${formatJourneyDayKey(safeNow)}|${String(safeNow.getHours()).padStart(2, "0")}`;
 };
 
-const getLifeMonitorJourneySegmentKey = (entry = null) =>
+const getLifeMonitorJourneySegmentKey = (entry = null, targetDateKey = "") =>
   [
+    String(targetDateKey || entry?.journeyDateKey || formatJourneyDayKey()).trim(),
+    normalizeJourneyWeekSlotKey(entry?.slotKey || ""),
     String(entry?.time || "").trim(),
-    String(entry?.title || "").trim(),
-    String(entry?.place || "").trim(),
   ]
     .filter(Boolean)
     .join("|");
@@ -70933,38 +70933,26 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
   const dailyNodeLimitReached = dailyNodeCount >= LIFE_MONITOR_DAILY_NODE_MAX;
   const fateTriggerAllowed = true;
   const activeEvent = getChatReplyLiveMonitorEvent(role, now);
-  const activeEntry = pickJourneyMonitorAnchorEntry(entries, targetDateKey, cutoffDate);
-  const segmentKey = getLifeMonitorJourneySegmentKey(activeEntry);
-  const previousSegmentKey = String(role?.runtime?.lastLifeMonitorJourneySegmentKey || "").trim();
-  const segmentChanged = Boolean(segmentKey && segmentKey !== previousSegmentKey);
-  const segmentDueSoon = hasUpcomingJourneySegmentWithinHour(entries, targetDateKey, now);
-  const minutesSinceModel = getMinutesSince(role?.runtime?.lastLifeMonitorAt, now);
-  const hasModelHistory = Boolean(String(role?.runtime?.lastLifeMonitorAt || "").trim());
-  const generalCooldownReady = !hasModelHistory || minutesSinceModel >= LIFE_MONITOR_MODEL_COOLDOWN_MINUTES;
-  const activeEventCooldownReady =
-    fateTriggerAllowed && Boolean(activeEvent) && (!hasModelHistory || minutesSinceModel >= LIFE_MONITOR_ACTIVE_EVENT_COOLDOWN_MINUTES);
-  const eventMissing =
-    fateTriggerAllowed &&
-    Boolean(fortuneRoll.eventTriggered) &&
-    !plannedNodeCount &&
-    !hasLifeMonitorGeneratedEventForDate(role, targetDateKey);
-  const hourlyChance = getLifeMonitorHourlyStoryChance(fortuneRoll, {
-    segmentChanged,
-    hasActiveEvent: Boolean(activeEvent),
-  });
+  const activeEntryIndex = entries.findIndex((entry) => isJourneyEntryActiveAtCutoff(entry, targetDateKey, cutoffDate));
+  const activeEntry = activeEntryIndex >= 0
+    ? {
+        ...entries[activeEntryIndex],
+        slotKey: normalizeJourneyWeekSlotKey(entries[activeEntryIndex]?.slotKey || "") || ["morning", "midday", "afternoon", "night", "midnight"][activeEntryIndex],
+      }
+    : null;
+  const segmentKey = getLifeMonitorJourneySegmentKey(activeEntry, targetDateKey);
+  const segmentCallKeys = Array.isArray(role?.runtime?.lifeMonitorSegmentCallKeys)
+    ? role.runtime.lifeMonitorSegmentCallKeys.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  const segmentAlreadyCalled = Boolean(segmentKey && segmentCallKeys.includes(segmentKey));
+  const segmentChanged = Boolean(segmentKey && !segmentAlreadyCalled);
+  const segmentDueSoon = false;
+  const hourlyChance = 100;
   const hourlyHit = true;
-  const shouldCallModel =
-    !dailyNodeLimitReached &&
-    fateTriggerAllowed &&
-    (activeEventCooldownReady ||
-      eventMissing ||
-      (generalCooldownReady && (segmentChanged || segmentDueSoon) && hourlyHit) ||
-      (generalCooldownReady && hourlyHit && Number(fortuneRoll.variationScore || 0) >= 70));
-  const retryReady = !shouldSkipLifeMonitorAttempt(role, now);
-  const intervalReady = shouldScheduleLifeMonitorAuto(role, now);
-  const hasExistingTimelineToday = getLifeMonitorTimelineItemsForDate(role, targetDateKey).length > 0;
-  const canAutoCallModel = retryReady && (intervalReady || segmentDueSoon || eventMissing || activeEventCooldownReady);
-  const finalShouldCallModel = shouldCallModel && canAutoCallModel;
+  const shouldCallModel = Boolean(activeEntry && !dailyNodeLimitReached && !segmentAlreadyCalled);
+  const retryReady = true;
+  const intervalReady = true;
+  const finalShouldCallModel = shouldCallModel && retryReady;
 
   if (dailyNodeLimitReached) {
     return {
@@ -70979,17 +70967,17 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       fortuneRoll,
       hourlyChance,
       hourlyHit,
-      cooldownReady: generalCooldownReady,
+      cooldownReady: retryReady,
       dailyNodeCount,
       plannedNodeCount,
     };
   }
 
-  if (alreadyCheckedThisHour && !finalShouldCallModel) {
+  if (!activeEntry || segmentAlreadyCalled) {
     return {
       shouldCheck: false,
       shouldCallModel: false,
-      reason: shouldCallModel && !retryReady ? "waiting-retry-cooldown" : "checked-this-hour",
+      reason: !activeEntry ? "segment-not-started" : "segment-already-generated",
       targetDateKey,
       hourKey,
       segmentKey,
@@ -70998,7 +70986,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       fortuneRoll,
       hourlyChance,
       hourlyHit,
-      cooldownReady: generalCooldownReady,
+      cooldownReady: retryReady,
       dailyNodeCount,
       plannedNodeCount,
     };
@@ -71007,19 +70995,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
   return {
     shouldCheck: true,
     shouldCallModel: finalShouldCallModel,
-    reason: activeEventCooldownReady
-      ? "active-event"
-      : eventMissing
-        ? "fate-event-hit"
-        : finalShouldCallModel
-          ? segmentChanged
-            ? "segment-changed-hit"
-            : "hourly-story-hit"
-          : shouldCallModel && !retryReady
-            ? "waiting-retry-cooldown"
-            : shouldCallModel && !intervalReady && hasExistingTimelineToday
-              ? "waiting-model-interval"
-          : "local-only",
+    reason: finalShouldCallModel ? "segment-started" : shouldCallModel ? "waiting-retry-cooldown" : "local-only",
     targetDateKey,
     hourKey,
     segmentKey,
@@ -71028,7 +71004,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
     fortuneRoll,
     hourlyChance,
     hourlyHit,
-    cooldownReady: generalCooldownReady,
+    cooldownReady: retryReady,
     intervalReady,
     retryReady,
     dailyNodeCount,
@@ -71794,6 +71770,7 @@ const requestLifeMonitorPlainTextData = async ({
   fortuneRoll,
   lifeFateSettings,
   journeyPrompt = "",
+  activeJourneyEntry = null,
   requiresArchiveEvent,
   isAutoMonitor,
   forceRegenerate = false,
@@ -71876,6 +71853,8 @@ const requestLifeMonitorPlainTextData = async ({
         generationMode: "monitor",
       })),
     goals: [],
+    recentMessages: getRecentMessagesSummary(liveRole, 50, { now: cutoffDate, compactOlder: true, detailedRecentCount: 12 }),
+    memory: buildRoleMemoryContextItems(liveRole, { limit: 12, textLimit: 120 }),
   };
   const journeyContext = {
     ...(forceRegenerate
@@ -71912,10 +71891,21 @@ const requestLifeMonitorPlainTextData = async ({
           beats: (existingEvent.beats || []).slice(-3),
         }
       : null,
+    activeJourneyEntry: activeJourneyEntry
+      ? {
+          slotKey: activeJourneyEntry.slotKey || "",
+          time: activeJourneyEntry.time || "",
+          title: activeJourneyEntry.title || "",
+          place: activeJourneyEntry.place || "",
+          detail: activeJourneyEntry.detail || "",
+        }
+      : null,
+    recentMessages: getRecentMessagesSummary(liveRole, 50, { now: cutoffDate, compactOlder: true, detailedRecentCount: 12 }),
+    memory: buildRoleMemoryContextItems(liveRole, { limit: 12, textLimit: 120 }),
   };
   const lifeMonitorPlainTextContext = buildPureTextGenerationContext({
-    task: isAutoMonitor ? "后台按行程提前一小时生成当日事件节点" : "生成当日事件节点",
-    outputIntent: forceRegenerate ? "手动重生成：新开非工作生活事件首行 + 1到5个 HH:MM 节点" : "事件首行 + 1到5个 HH:MM 当日事件节点",
+    task: isAutoMonitor ? "后台按当前行程时段生成当日事件节点" : "生成当日事件节点",
+    outputIntent: "事件首行 + 恰好 1 个当前时段 HH:MM 当日事件节点",
     roleContext,
     journeyContext,
     slimContext: lifeMonitorSlimContext,
@@ -71951,7 +71941,7 @@ const requestLifeMonitorPlainTextData = async ({
 规则：
 - 第一个可见字符必须是“事”，也就是第一行从事件||开头
 - 如果已有同一事件，只生成 1 个新节点，时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM
-- 如果这是今天第一次命中生活轨迹，生成同一事件主题下 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${Math.min(LIFE_MONITOR_DAILY_NODE_MAX, Math.max(LIFE_MONITOR_DAILY_NODE_MIN, remainingNodeCount || LIFE_MONITOR_DAILY_NODE_MAX))} 个节点
+- 无论今天是否第一次调用，本次只生成当前时段的 1 个节点，绝不预测或预写后续时段
 - 每个节点都必须围绕同一个事件总标题推进，写起因、转折、余波，不要散成多个无关小故事
 - 正文必须现实向、抓马、有现场细节，必须用第三人称写角色，不能用“我”
 - 主事件优先来自手机没电、付款卡住、叫号乌龙、错拿物品、店员误会、路人搭话、天气反转、钥匙门禁、排队插曲、小额好运、临时邀约、外卖咖啡奶茶出错、邻里互动、宠物插曲
@@ -71973,7 +71963,7 @@ const requestLifeMonitorPlainTextData = async ({
  HH:MM||10个字左右的小标题||一百到二百个汉字的第三人称故事正文||短标签
  规则:
 - 如果已有同一事件，本次只生成 1 个新节点，时间必须使用 ${cutoffClock} 或非常接近 ${cutoffClock} 的 HH:MM，只写到 ${cutoffLabel}，不得预测后面
-- 如果这是今天第一次命中生活轨迹，本次生成同一事件主题下 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${Math.min(LIFE_MONITOR_DAILY_NODE_MAX, Math.max(LIFE_MONITOR_DAILY_NODE_MIN, remainingNodeCount || LIFE_MONITOR_DAILY_NODE_MAX))} 个节点，节点时间按当天行程灵活安排；第一条尽量接近 ${cutoffClock}，后续可以是稍后的计划节点，前端会到点再显示
+- 无论今天是否第一次调用，本次只生成当前时段的 1 个节点，时间必须接近 ${cutoffClock}，不得预测或预写后续时段
 - 今天已经有 ${dailyNodeCount} 个生活轨迹节点，本次生成后一天最多只能到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个；不要为了补时段而多写
  - 第一行必须是 事件||，节点行必须匹配 HH:MM||小标题||故事||短标签；影响天数必须填具体数字
 - 第一行第 3 段只能写进行中、收尾或已结束，第 5 段只能写 1 到 7 的数字
@@ -72048,6 +72038,14 @@ const requestLifeMonitorPlainTextData = async ({
     signal,
   });
   const parsedPayload = parseLifeMonitorPlainTextPayload(response?.text || "", normalizedTargetDate);
+  parsedPayload.timeline = Array.isArray(parsedPayload.timeline) ? parsedPayload.timeline.slice(0, 1) : [];
+  parsedPayload.plannedTimeline = Array.isArray(parsedPayload.plannedTimeline) ? parsedPayload.plannedTimeline.slice(0, 1) : parsedPayload.timeline;
+  if (parsedPayload.event && typeof parsedPayload.event === "object") {
+    parsedPayload.event = {
+      ...parsedPayload.event,
+      beats: Array.isArray(parsedPayload.event.beats) ? parsedPayload.event.beats.slice(0, 1) : [],
+    };
+  }
   const parsedResult = {
     ...parsedPayload,
     plannedTimeline: Array.isArray(parsedPayload.plannedTimeline) && parsedPayload.plannedTimeline.length
@@ -72077,6 +72075,7 @@ const requestLifeMonitorPlainTextData = async ({
 const generateLifeMonitorFromApi = async ({
   roleId = "",
   targetDateKey = formatJourneyDayKey(),
+  segmentKey = "",
   silent = false,
   source = "manual",
   forceRegenerate = false,
@@ -72103,6 +72102,13 @@ const generateLifeMonitorFromApi = async ({
   const syntheticNow = new Date();
   const cutoffDate = buildLifeMonitorCutoffDate(normalizedTargetDate, syntheticNow);
   const cutoffClock = formatLifeMonitorClock(cutoffDate);
+  const roleJourneyEntries = getJourneyTimelineForRole(role, normalizedTargetDate);
+  const activeJourneyEntry = roleJourneyEntries
+    .map((entry, index) => ({
+      ...entry,
+      slotKey: normalizeJourneyWeekSlotKey(entry?.slotKey || "") || ["morning", "midday", "afternoon", "night", "midnight"][index],
+    }))
+    .find((entry) => getLifeMonitorJourneySegmentKey(entry, normalizedTargetDate) === String(segmentKey || "").trim()) || null;
   const cutoffLabel = new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
     month: "2-digit",
@@ -72173,6 +72179,7 @@ const generateLifeMonitorFromApi = async ({
           lastLifeMonitorAttemptAt: "",
           lastLifeMonitorLocalReason: "manual-regenerate",
           lastLifeMonitorJourneySegmentKey: "",
+          lifeMonitorSegmentCallKeys: [],
         };
         return nextRole;
       },
@@ -72219,6 +72226,7 @@ const generateLifeMonitorFromApi = async ({
       fortuneRoll,
       lifeFateSettings,
       journeyPrompt: journeyPromptPriority,
+      activeJourneyEntry,
       requiresArchiveEvent,
       isAutoMonitor,
       forceRegenerate,
@@ -72328,6 +72336,25 @@ const generateLifeMonitorFromApi = async ({
           normalizedTargetDate,
         ),
       };
+
+      const generatedSegmentTimeline = Array.isArray(result?.timeline) ? result.timeline : [];
+      const concreteSegmentNode = generatedSegmentTimeline.find((item) => String(item?.text || "").trim()) || null;
+      if (activeJourneyEntry && concreteSegmentNode) {
+        const currentJourney = getJourneyTimelineForRole(nextRole, normalizedTargetDate);
+        const journeyIndex = currentJourney.findIndex((entry) => getLifeMonitorJourneySegmentKey(entry, normalizedTargetDate) === String(segmentKey || "").trim());
+        if (journeyIndex >= 0) {
+          const nextJourney = currentJourney.map((entry, index) =>
+            index === journeyIndex
+              ? {
+                  ...entry,
+                  detail: String(concreteSegmentNode.text || entry.detail || "").trim(),
+                  mood: String(concreteSegmentNode.tag || entry.mood || "").trim(),
+                }
+              : entry,
+          );
+          setRoleTimelineForDate(nextRole, normalizedTargetDate, nextJourney);
+        }
+      }
 
       syncRoleGoalsWithTime(nextRole, syntheticNow);
       syncLifeMonitorGoalsWithTime(nextRole, syntheticNow);
@@ -79461,8 +79488,12 @@ const applyRuntime = async () => {
       !toBusyList(state.apiGenerationBusy).includes("monitor") &&
       !toBusyList(state.apiGenerationBusy).includes(`monitor-auto:${next.id}`)
     ) {
-      markLifeMonitorAttempt(next, now);
-      lifeMonitorJobs.push({ roleId: next.id, targetDateKey: lifeMonitorDecision.targetDateKey });
+      markLifeMonitorAttempt(next, now, lifeMonitorDecision.segmentKey);
+      lifeMonitorJobs.push({
+        roleId: next.id,
+        targetDateKey: lifeMonitorDecision.targetDateKey,
+        segmentKey: lifeMonitorDecision.segmentKey,
+      });
       changed = true;
     }
 
@@ -79495,6 +79526,7 @@ const applyRuntime = async () => {
     await syncLifeMonitorWithJourney({
       roleId: job.roleId,
       targetDateKey: job.targetDateKey,
+      segmentKey: job.segmentKey,
       source: "day-rollover",
       silent: true,
     });
@@ -80883,7 +80915,7 @@ eventRoot.addEventListener("click", async (event) => {
       };
       return nextRole;
     });
-    setToast(nextPrompt ? "已保存行程提示词" : "已清空保存的行程提示词");
+    setToast(nextPrompt ? "已保存" : "已清空");
     return;
   }
 
