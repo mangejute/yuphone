@@ -12902,6 +12902,8 @@ html.chat-composer-focused .ref-chat-composer {
 
 .chat-screen.bubble-theme-default .chat-message-line {
   align-items: start;
+  content-visibility: auto;
+  contain-intrinsic-size: 72px;
 }
 
 .chat-screen.bubble-theme-default .bubble-tail {
@@ -13105,6 +13107,8 @@ html.chat-composer-focused .ref-chat-composer {
   gap: var(--chat-avatar-gap);
   align-items: start;
   justify-items: stretch;
+  content-visibility: auto;
+  contain-intrinsic-size: 72px;
 }
 
 .chat-screen.bubble-theme-wechat .chat-message-line.has-external-quote-line {
@@ -13274,6 +13278,15 @@ html.chat-composer-focused .ref-chat-composer {
   grid-column: 1;
   grid-row: 2;
   justify-items: end;
+}
+
+.chat-screen.bubble-theme-wechat .chat-quote-slot.user-quote-slot {
+  width: 100%;
+  justify-self: end;
+}
+
+.chat-screen.bubble-theme-wechat .chat-quote-slot.user-quote-slot > .wechat-message-quote {
+  margin-left: auto !important;
 }
 
 .chat-screen.bubble-theme-qq .chat-message-line.with-selection .message-select {
@@ -13915,7 +13928,7 @@ html.chat-composer-focused .ref-chat-composer {
 
 .wechat-composer-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 42px 42px 42px;
+  grid-template-columns: 42px minmax(0, 1fr) 42px 42px;
   align-items: center;
   gap: 4px;
 }
@@ -20864,35 +20877,6 @@ body {
   margin-top: 10px;
 }
 
-.memory-embedding-model-row {
-  align-items: stretch;
-}
-
-.memory-embedding-model-actions {
-  display: flex;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-@media (max-width: 560px) {
-  .memory-embedding-model-row {
-    flex-wrap: wrap;
-  }
-
-  .memory-embedding-model-row .soft-input {
-    flex: 1 1 100%;
-    min-width: 0;
-  }
-
-  .memory-embedding-model-actions {
-    width: 100%;
-  }
-
-  .memory-embedding-model-actions .tiny-btn {
-    flex: 1;
-  }
-}
-
 .wallet-transaction-row b {
   color: #c2410c;
   font-size: 13px;
@@ -22198,6 +22182,148 @@ body {
   min-width: 58px;
 }
 
+.sheet-panel-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+}
+
+.token-prompt-view-row button {
+  width: auto;
+  min-height: 32px;
+  padding: 7px 11px;
+  border-radius: 12px;
+}
+
+.prompt-viewer-screen {
+  width: min(100%, 960px);
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: #f6f7f9;
+}
+
+.prompt-viewer-header-copy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.prompt-viewer-header-copy h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.prompt-viewer-header-copy small {
+  color: #707783;
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prompt-viewer-feature-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 10px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.07);
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prompt-viewer-feature-btn {
+  flex: none;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid #dfe3e8;
+  border-radius: 14px;
+  background: #fff;
+  color: #535a64;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.prompt-viewer-feature-btn.is-active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.prompt-viewer-feature-btn:disabled {
+  opacity: 0.42;
+}
+
+.prompt-viewer-scroll {
+  padding: 18px 16px 36px;
+}
+
+.prompt-viewer-card {
+  display: grid;
+  gap: 14px;
+  min-height: calc(100vh - 124px);
+  padding: 18px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.prompt-viewer-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prompt-viewer-card-head strong {
+  display: block;
+  margin-top: 4px;
+  color: #111;
+  font-size: 16px;
+}
+
+.prompt-viewer-card-head > span {
+  flex: none;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: #f0f2f5;
+  color: #6c737d;
+  font-size: 11px;
+}
+
+.prompt-viewer-content {
+  min-height: 420px;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border-radius: 14px;
+  background: #202838;
+  color: #eef2f7;
+  font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prompt-viewer-empty {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  padding: 28px;
+  border: 1px dashed #d8dce2;
+  border-radius: 14px;
+  color: #737b86;
+  text-align: center;
+  line-height: 1.7;
+}
+
 .chat-screen.chat-motion-open .clean-chat-header,
 .chat-screen.chat-motion-open .modern-chat-body,
 .chat-screen.chat-motion-open .chat-bottom-overlay,
@@ -22464,6 +22590,72 @@ body {
   .ios-widget-textarea,
   .wallet-line-field input {
     font-size: 16px !important;
+  }
+}
+.daily-event-style-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.daily-event-style-card,
+.daily-event-style-custom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-height: 106px;
+  padding: 16px;
+  border: 1px solid #e2e2e5;
+  border-radius: 16px;
+  background: #fff;
+  color: #2c2c2e;
+  text-align: left;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.daily-event-style-card strong,
+.daily-event-style-custom {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.daily-event-style-card span {
+  color: #8e8e93;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.daily-event-style-card.is-selected,
+.daily-event-style-custom.is-selected {
+  border-color: #1c1917;
+  background: #1c1917;
+  color: #fff;
+}
+
+.daily-event-style-card.is-selected span {
+  color: #d6d3d1;
+}
+
+.daily-event-style-custom-wrap {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.daily-event-style-custom {
+  min-height: auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@media (max-width: 520px) {
+  .daily-event-style-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -22878,6 +23070,52 @@ const LIFE_FORTUNE_TIER_DEFS = Object.freeze([
   },
 ]);
 const LIFE_FORTUNE_TRIGGER_DEFAULT = 40;
+const DAILY_EVENT_STYLE_DEFS = Object.freeze([
+  {
+    key: "fine-daily",
+    label: "细腻日常",
+    description: "生活流文笔：气味、光线、触感和食物温度落到具体细节",
+    prompt: "以细腻日常为主，写出气味、光线、触感、声音和食物温度等可感知细节，让小事自然发生。",
+  },
+  {
+    key: "inner-monologue",
+    label: "内心独白",
+    description: "以内心活动为主体，自我对话、犹疑、回忆闪回交织",
+    prompt: "以内心独白为主，写角色的自我对话、犹疑和回忆闪回，但必须落在具体行动和现场，不写空泛情绪。",
+  },
+  {
+    key: "dramatic",
+    label: "戏剧张力",
+    description: "强情节和转折：误会、巧合、冲突都要留下后续",
+    prompt: "以戏剧张力为主，安排一个现实可信的小冲突、误会或巧合，并写清起因、转折、角色选择和余波。",
+  },
+  {
+    key: "light-humor",
+    label: "轻快幽默",
+    description: "口语化、自嘲和吐槽视角，节奏明快，把倒霉事写出喜感",
+    prompt: "以轻快幽默为主，允许口语化、自嘲和吐槽视角，把倒霉或尴尬的小事写出节奏和喜感。",
+  },
+  {
+    key: "daily-sitcom",
+    label: "日常轻喜剧",
+    description: "情景喜剧节奏：一桩小事被一步步放大成好笑的现场",
+    prompt: "以日常轻喜剧为主，让一桩小事在人物反应、误会和连锁巧合里逐步放大，最后留下生活后续。",
+  },
+]);
+
+const DAILY_EVENT_STYLE_KEYS = DAILY_EVENT_STYLE_DEFS.map((item) => item.key);
+const normalizeDailyEventStyle = (value = {}) => {
+  const safeValue = value && typeof value === "object" ? value : {};
+  const key = String(safeValue.key || safeValue.preset || "fine-daily").trim();
+  const safeKey = key === "custom" ? "custom" : DAILY_EVENT_STYLE_KEYS.includes(key) ? key : "fine-daily";
+  const definition = DAILY_EVENT_STYLE_DEFS.find((item) => item.key === safeKey) || DAILY_EVENT_STYLE_DEFS[0];
+  return {
+    key: safeKey,
+    label: String(safeValue.label || (safeKey === "custom" ? "自定义文风" : definition.label)).trim() || definition.label,
+    custom: String(safeValue.custom || "").trim(),
+    prompt: String(safeValue.prompt || (safeKey === "custom" ? safeValue.custom : definition.prompt)).trim() || definition.prompt,
+  };
+};
 
 const LIFE_FORTUNE_TIER_KEYS = LIFE_FORTUNE_TIER_DEFS.map((item) => item.key);
 const normalizeLifeFateSettings = (value = {}) => {
@@ -23204,6 +23442,8 @@ const SECONDARY_USAGE_FEATURE_KEYS = [
   "monitor",
   "summary",
   "summaryRefine",
+  "livingMemory",
+  "importantMemory",
 ];
 
 const createEmptySecondaryFeatureUsage = () => ({
@@ -23267,9 +23507,9 @@ const mergeSecondaryUsage = (fallback = createEmptySecondaryUsage(), incoming = 
     ...(incoming || {}),
     totals,
     lastTasks: Array.isArray(incoming?.lastTasks)
-      ? incoming.lastTasks.slice(0, 3)
+      ? incoming.lastTasks.slice(0, 12)
       : Array.isArray(fallback?.lastTasks)
-        ? fallback.lastTasks.slice(0, 3)
+        ? fallback.lastTasks.slice(0, 12)
         : [],
   };
 };
@@ -24623,6 +24863,7 @@ const createRole = (overrides = {}) => {
       topPinned: overrides.settings?.topPinned ?? false,
       realityMode: overrides.settings?.realityMode ?? true,
       lifeFate: normalizeLifeFateSettings(overrides.settings?.lifeFate || overrides.lifeFate),
+      dailyEventStyle: normalizeDailyEventStyle(overrides.settings?.dailyEventStyle || overrides.dailyEventStyle),
       climateMode: overrides.settings?.climateMode ?? false,
       proactiveMessages: overrides.settings?.proactiveMessages ?? true,
       proactiveRateMinutes:
@@ -24920,6 +25161,7 @@ const mergeRole = (role, fallback) => {
       ...fallback.settings,
       ...role.settings,
       lifeFate: normalizeLifeFateSettings(role.settings?.lifeFate || fallback.settings?.lifeFate),
+      dailyEventStyle: normalizeDailyEventStyle(role.settings?.dailyEventStyle || fallback.settings?.dailyEventStyle),
       autoWalletAfterJourney: role.settings?.autoWalletAfterJourney ?? fallback.settings?.autoWalletAfterJourney ?? false,
       imageCharacterDescription: String(role.settings?.imageCharacterDescription ?? fallback.settings?.imageCharacterDescription ?? "").trim(),
       imagePrompt: String(role.settings?.imagePrompt || fallback.settings?.imagePrompt || DEFAULT_ROLE_IMAGE_PROMPT).trim() || DEFAULT_ROLE_IMAGE_PROMPT,
@@ -25644,13 +25886,21 @@ const prepareStateForDurableStorage = (state = {}) => {
     const nextRole = { ...role };
     const nextChats = { ...(nextRole.chats || {}) };
     const sourceMessages = Array.isArray(nextChats.messages) ? nextChats.messages : [];
+    // Keep the configured chat window inline so the active conversation opens immediately.
+    // Older images remain in IndexedDB and are loaded only when their placeholder enters view.
+    const inlineMessageIds = new Set(
+      sourceMessages
+        .slice(-resolveRoleChatRenderLimit(role))
+        .map((message) => String(message?.id || "").trim())
+        .filter(Boolean),
+    );
 
     nextChats.messages = sourceMessages.map((message, index) => {
       if (!["photo", "image"].includes(message?.type) || !message?.content || typeof message.content !== "object") {
         return message;
       }
       const dataUrl = message.content?.dataUrl;
-      if (!isInlineImageDataUrl(dataUrl)) {
+      if (!isInlineImageDataUrl(dataUrl) || inlineMessageIds.has(String(message?.id || "").trim())) {
         return message;
       }
 
@@ -26070,10 +26320,16 @@ const compactStateForMainCache = async (state = {}) => {
   let compactedImages = 0;
   const roles = normalizeArray(state?.roles);
   roles.forEach((role) => {
+    const inlineMessageIds = new Set(
+      normalizeArray(role?.chats?.messages)
+        .slice(-resolveRoleChatRenderLimit(role))
+        .map((message) => String(message?.id || "").trim())
+        .filter(Boolean),
+    );
     normalizeArray(role?.chats?.messages).forEach((message) => {
       if (!["photo", "image"].includes(message?.type) || !message?.content || typeof message.content !== "object") return;
       const dataUrl = String(message.content.dataUrl || "");
-      if (!isInlineImageDataUrl(dataUrl)) return;
+      if (!isInlineImageDataUrl(dataUrl) || inlineMessageIds.has(String(message?.id || "").trim())) return;
       removedInlineBytes += dataUrl.length;
       compactedImages += 1;
     });
@@ -27040,7 +27296,7 @@ const refreshRoleRuntime = (role) => {
 </script>
 <script data-inline-source="render.js">
 
-const APP_BUILD_VERSION_LABEL = "8月7日-4";
+const APP_BUILD_VERSION_LABEL = "8月8日-3";
 
 const TOKEN_REQUEST_LOG_HISTORY_LIMIT = 10;
 
@@ -27705,8 +27961,8 @@ const renderJourneyDateContextCard = (role, dateKey) => {
       class="sheet-card journey-mobile-card journey-date-context-card is-clickable"
       data-action="open-panel"
       data-panel="advanced-settings"
-      aria-label="查看目标详情和生活轨迹概率"
-      title="查看目标详情和生活轨迹概率"
+      aria-label="查看目标详情和当日事件文风"
+      title="查看目标详情和当日事件文风"
     >
       <div class="sheet-kicker journey-date-kicker">当前查看日期</div>
       <div class="journey-date-context-main">
@@ -28048,17 +28304,18 @@ const SECONDARY_FEATURE_LABELS = {
   moment: "朋友圈正文",
   momentThread: "朋友圈 NPC 互动",
   momentReply: "朋友圈评论回复",
-  monitor: "生活轨迹",
+  monitor: "当日事件",
   summary: "自动总结",
   summaryRefine: "AI 精简",
   livingMemory: "记忆消化",
+  importantMemory: "重要记忆",
 };
 
 const SECONDARY_GROUPS = [
   { key: "map", label: "地图", features: ["map"] },
   { key: "journey", label: "行程", features: ["journey"] },
   { key: "moment", label: "朋友圈", features: ["moment", "momentThread", "momentReply"] },
-  { key: "monitor", label: "生活轨迹", features: ["monitor"] },
+  { key: "monitor", label: "当日事件", features: ["monitor"] },
   { key: "summary", label: "总结", features: ["summary", "summaryRefine"] },
   { key: "livingMemory", label: "记忆", features: ["livingMemory"] },
 ];
@@ -28493,7 +28750,7 @@ const getLifeStreamJourneySyncMeta = (role) => {
     return {
       badge: "今日已有行程",
       shortBadge: "待同步",
-      note: `今天的行程已经在了。点行程页右上角“生成”会按${todayLabel}的行程把生活轨迹一起刷到同一份。`,
+      note: `今天的行程已经在了。点行程页右上角“生成”会按${todayLabel}的行程把当日事件一起刷到同一份。`,
       detail: `${todayLabel} · 等待联动刷新`,
     };
   }
@@ -28502,7 +28759,7 @@ const getLifeStreamJourneySyncMeta = (role) => {
     return {
       badge: "待补今日联动",
       shortBadge: "待补今天",
-      note: `最近一次联动停在${latestLinkedLabel}。点行程页右上角“生成”会一起补今天的行程和生活轨迹。`,
+      note: `最近一次联动停在${latestLinkedLabel}。点行程页右上角“生成”会一起补今天的行程和当日事件。`,
       detail: `最近联动 ${latestLinkedLabel}`,
     };
   }
@@ -28510,7 +28767,7 @@ const getLifeStreamJourneySyncMeta = (role) => {
   return {
     badge: "今日未生成",
     shortBadge: "待生成",
-    note: `今天还没有行程。点行程页右上角“生成”会一起生成${todayLabel}的行程和生活轨迹。`,
+    note: `今天还没有行程。点行程页右上角“生成”会一起生成${todayLabel}的行程和当日事件。`,
     detail: `${todayLabel} · 还没生成`,
   };
 };
@@ -28532,6 +28789,7 @@ const getDominantLifeFateTier = (settings = {}) =>
 
 const getLifeMonitorFortuneSnapshot = (role) => {
   const settings = getLifeFateSettings(role);
+  const eventStyle = normalizeDailyEventStyle(role?.settings?.dailyEventStyle);
   const stored = role?.monitor?.fortune && typeof role.monitor.fortune === "object" ? role.monitor.fortune : {};
   const dominant = getDominantLifeFateTier(settings);
   const tierDef = getRenderLifeFateTierDef(stored?.tierKey || dominant?.key || "steady");
@@ -28543,6 +28801,7 @@ const getLifeMonitorFortuneSnapshot = (role) => {
     eventTriggered: Boolean(stored?.eventTriggered),
     triggerChance: Number(settings.eventTriggerChance ?? 0),
     tone: String(tierDef.tone || "neutral").trim() || "neutral",
+    eventStyle,
   };
 };
 
@@ -28603,10 +28862,12 @@ const buildLifeMonitorStatusNote = (role, fortune) => {
   const physical = String(role?.status?.physical || "").trim();
   const mental = String(role?.status?.mental || "").trim();
   const parts = [physical, mental].filter(Boolean);
+  const styleLabel = String(fortune?.eventStyle?.label || "").trim();
+  const eventNote = styleLabel ? `当日事件文风：${styleLabel}` : fortune?.eventTriggered ? "当日事件已启用" : "暂无特殊事件";
   if (parts.length) {
-    return `${parts.join("，")}${fortune?.eventTriggered ? "，命运开始加速" : "，暂无特殊 Buff"}`;
+    return `${parts.join("，")}，${eventNote}`;
   }
-  return fortune?.eventTriggered ? "状态起伏明显，命运开始加速" : "状态良好，无特殊 Buff";
+  return fortune?.eventTriggered ? `状态起伏明显，${eventNote}` : `状态良好，${eventNote}`;
 };
 
 const renderLifeFateSliderRow = (item, settings) => {
@@ -28635,13 +28896,12 @@ const renderLifeFateSliderRow = (item, settings) => {
 };
 
 const renderLifeFateSettingsPanel = (role) => {
-  const settings = getLifeFateSettings(role);
-  const totalWeight = getLifeFateTotalWeight(settings);
+  const eventStyle = normalizeDailyEventStyle(role?.settings?.dailyEventStyle);
   return `
     <div class="overlay-screen dim higher">
       <section class="sheet-modal life-fate-sheet page-enter">
         <div class="sheet-header">
-          <h3>命运概率控制器</h3>
+          <h3>当日事件编辑</h3>
           <div class="sheet-header-actions">
             <button class="icon-plain sheet-close-btn" type="button" data-action="pop-panel">${icons.close}</button>
           </div>
@@ -28649,40 +28909,27 @@ const renderLifeFateSettingsPanel = (role) => {
         <div class="life-fate-sheet-body" data-scroll-key="life-fate-settings">
           <div class="life-fate-sheet-content">
             <section class="sheet-card">
-              <div class="sheet-kicker">每日触发率</div>
-              <div class="life-fate-trigger-head">
-                <strong>决定每天早上自动生成突发事件的几率</strong>
-                <b>${Number(settings.eventTriggerChance || 0)}%</b>
+              <div class="sheet-kicker">正文文风（每轮大段正文按这个写）</div>
+              <div class="daily-event-style-grid">
+                ${DAILY_EVENT_STYLE_DEFS.map(
+                  (style) => `
+                    <button class="daily-event-style-card ${eventStyle.key === style.key ? "is-selected" : ""}" type="button" data-action="select-life-event-style" data-style-key="${style.key}">
+                      <strong>${escapeHtml(style.label)}</strong>
+                      <span>${escapeHtml(style.description)}</span>
+                    </button>
+                  `,
+                ).join("")}
               </div>
-              <input
-                class="voice-chance-slider"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value="${Number(settings.eventTriggerChance || 0)}"
-                data-action="update-role-setting"
-                data-role-setting="lifeFate.eventTriggerChance"
-              />
-              <p class="sheet-note">拉高更容易出现可归档的小剧情，拉低则更偏平稳日常。</p>
-            </section>
-
-            <section class="sheet-card">
-              <div class="life-fate-section-head">
-                <div>
-                  <div class="sheet-kicker">日常运势分布设置</div>
-                  <strong>权重越高，越容易抽到这一档</strong>
-                </div>
-                <span>总权重 ${totalWeight}</span>
+              <div class="daily-event-style-custom-wrap">
+                <button class="daily-event-style-custom ${eventStyle.key === "custom" ? "is-selected" : ""}" type="button" data-action="select-life-event-style" data-style-key="custom">自定义文风</button>
+                <textarea class="soft-input soft-area" data-action="update-role-setting" data-role-setting="dailyEventStyle.custom" placeholder="描述你想要的文风，例如：古早港风言情，对白多，画面感强，带一点宿命感">${escapeHtml(eventStyle.custom || "")}</textarea>
               </div>
-              <div class="life-fate-slider-list">
-                ${LIFE_FORTUNE_TIER_DEFS.map((item) => renderLifeFateSliderRow(item, settings)).join("")}
-              </div>
+              <p class="sheet-note">文风只决定当日事件的写法和走向，具体内容仍会结合角色当天事件、最近 50 条对话和长期记忆生成。</p>
             </section>
           </div>
         </div>
         <div class="life-fate-sheet-footer">
-          <button class="sheet-action-btn primary life-fate-save-btn" type="button" data-action="save-life-fate-settings">保存命运设定</button>
+          <button class="sheet-action-btn primary life-fate-save-btn" type="button" data-action="save-life-fate-settings">保存</button>
         </div>
       </section>
     </div>
@@ -29246,7 +29493,7 @@ const renderPresetCard = (config, state) => `
         <button class="square-btn" type="button" data-action="add-preset">+</button>
         <button class="square-btn danger" type="button" data-action="remove-preset">-</button>
       </div>
-      <div class="setting-mini-note">点击 + 时会把当前主 API、副 API、行程 / 生活轨迹 API、记忆 API 一起保存进这个预设</div>
+      <div class="setting-mini-note">点击 + 时会把当前主 API、副 API、行程 / 当日事件 API、记忆 API 一起保存进这个预设</div>
     </div>
   </section>
 `;
@@ -29304,7 +29551,7 @@ const renderApiAvailabilityBanner = (enabled = true, { withSwitch = false } = {}
     <div class="api-availability-copy">
       <div class="api-availability-text">
         <strong>API 调用${enabled ? "已开启" : "已关闭"}</strong>
-        <p>${enabled ? "主 API、副 API、行程 / 生活轨迹 API 和语音相关远程请求都可以正常调用。" : "关闭后不会再发起聊天、总结、行程、朋友圈、语音等远程 AI 请求，配置编辑不受影响。"}</p>
+        <p>${enabled ? "主 API、副 API、行程 / 当日事件 API 和语音相关远程请求都可以正常调用。" : "关闭后不会再发起聊天、总结、行程、朋友圈、语音等远程 AI 请求，配置编辑不受影响。"}</p>
       </div>
       <div class="api-availability-side">
         ${renderSettingStatusPill(enabled ? "已开启" : "已关闭", enabled ? "active" : "warning")}
@@ -29552,8 +29799,8 @@ const renderPlannerApiCard = (api = {}, state = {}) => `
   <section class="setting-card setting-subpanel card-enter">
     <div class="subapi-head">
       <div>
-        <h3>${escapeHtml(api.name || "行程 / 生活轨迹 API")}</h3>
-        <p>${escapeHtml(api.purpose || "用于行程和生活轨迹专用生成任务")}</p>
+        <h3>${escapeHtml(api.name || "行程 / 当日事件 API")}</h3>
+        <p>${escapeHtml(api.purpose || "用于行程和当日事件专用生成任务")}</p>
       </div>
     </div>
 
@@ -29586,7 +29833,7 @@ const renderPlannerApiCard = (api = {}, state = {}) => `
         `
         : ""
     }
-    ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起行程 / 生活轨迹 API 请求。</div>' : ""}
+    ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起行程 / 当日事件 API 请求。</div>' : ""}
   </section>
 `;
 
@@ -29636,38 +29883,19 @@ const renderMemoryApiCard = (api = {}, state = {}) => `
       </label>
     </label>
 
-    <div class="setting-label">Embedding 接口地址</div>
-    <input class="soft-input" data-config="memory.embeddingUrl" value="${escapeHtml(api.embeddingUrl || "")}" placeholder="例如 https://api.siliconflow.cn/v1" />
-
     <div class="setting-label">Embedding 模型</div>
-    <div class="inline-row memory-embedding-model-row">
-      <input class="soft-input" data-config="memory.embeddingModel" value="${escapeHtml(api.embeddingModel || "")}" placeholder="例如 BAAI/bge-m3" />
-      <div class="memory-embedding-model-actions">
-        <button class="tiny-btn" type="button" data-action="fetch-embedding-models" ${state.appConfig?.apiEnabled === false ? "disabled" : ""}>${hasBusyToken(state.modelFetchBusy, "memory-embedding") ? "拉取中" : "拉取"}</button>
-        <button class="tiny-btn light" type="button" data-action="test-memory-embedding" ${state.appConfig?.apiEnabled === false ? "disabled" : ""}>${hasBusyToken(state.modelFetchBusy, "memory-embedding-test") ? "测试中" : "测试"}</button>
+    <input class="soft-input" data-config="memory.embeddingModel" value="${escapeHtml(api.embeddingModel || "")}" placeholder="例如 BAAI/bge-m3" />
+
+    <div class="memory-embedding-provider-grid">
+      <div>
+        <div class="setting-label">Embedding 接口地址</div>
+        <input class="soft-input" data-config="memory.embeddingUrl" value="${escapeHtml(api.embeddingUrl || "")}" placeholder="例如 https://api.siliconflow.cn/v1" />
+      </div>
+      <div>
+        <div class="setting-label">Embedding API Key</div>
+        <input class="soft-input" data-config="memory.embeddingKey" type="password" value="${escapeHtml(api.embeddingKey || "")}" placeholder="可选，不填则复用上方记忆 API Key" />
       </div>
     </div>
-    ${
-      state.availableModels?.length && state.modelPickerOpen && state.modelPickerTarget === "memory-embedding"
-        ? `
-          <div class="setting-mini-note">已拉取 ${state.availableModels.length} 个 Embedding 模型，点一下就会直接切换</div>
-          <div class="model-option-list" data-scroll-key="memory-embedding-model-list">
-            ${state.availableModels
-              .map(
-                (model) => `
-                  <button class="model-option-btn ${api.embeddingModel === model ? "active" : ""}" type="button" data-action="select-model" data-model-id="${escapeHtml(model)}" data-model-target="memory-embedding">
-                    <span>${escapeHtml(model)}</span>
-                  </button>
-                `,
-              )
-              .join("")}
-          </div>
-        `
-        : ""
-    }
-
-    <div class="setting-label">Embedding API Key</div>
-    <input class="soft-input" data-config="memory.embeddingKey" type="password" required value="${escapeHtml(api.embeddingKey || "")}" placeholder="请输入 Embedding API Key" />
     <div class="setting-mini-note">默认使用硅基流动的 OpenAI 兼容 Embedding 接口和 BAAI/bge-m3；当前只提交文字内容，接口失败时自动回退关键词检索。</div>
     ${state.appConfig?.apiEnabled === false ? '<div class="setting-mini-note api-disabled-note">API 总开关已关闭，当前不会发起记忆 API 请求。</div>' : ""}
   </section>
@@ -30005,8 +30233,7 @@ const renderMessageQuoteBlock = (currentMessage, role, { variant = "inline", use
   if (!quoted) return "";
   const userName = String(userProfile.nickname || userProfile.name || userProfile.avatar || "你").trim() || "你";
   const speaker = quoted.role === "user" ? userName : role.profile.note;
-  const quoteTime = formatShortDateTime(quoted.timestamp || "");
-  const speakerLabel = [speaker, quoteTime].filter(Boolean).join(" · ");
+  const speakerLabel = speaker;
   const isWechatStyle = variant === "wechat" || variant === "wechat-external";
   return `<div class="message-quote${isWechatStyle ? " wechat-message-quote" : ""}"><span>${escapeHtml(`${speakerLabel}${isWechatStyle ? "：" : ""}`)}</span><p>${escapeHtml(previewMessage(quoted))}</p></div>`;
 };
@@ -30022,19 +30249,23 @@ const renderMessageContent = (message, role = null, state = {}, { suppressQuote 
       const isError = transferStatus === "error";
       const dataUrl = typeof message.content?.dataUrl === "string" ? message.content.dataUrl : "";
       const assetKey = String(message.content?.assetKey || "").trim();
-      const imageBody = dataUrl
+      const isPersistedChatMessage = Boolean(role?.chats?.messages?.some((item) => item === message));
+      const shouldDeferInlineImage = Boolean(dataUrl && isPersistedChatMessage);
+      const lazyImageTitle = shouldDeferInlineImage ? "图片加载中" : "图片已压缩存放";
+      const lazyImageNote = shouldDeferInlineImage ? "即将显示" : "滚动到这里时自动读取";
+      const imageBody = dataUrl && !shouldDeferInlineImage
         ? `<img src="${dataUrl}" alt="${escapeHtml(message.content.name || "图片")}" />`
         : `
           <div class="image-lazy-placeholder" data-image-placeholder-note>
             <span>${icons.photo}</span>
-            <strong>图片已压缩存放</strong>
-            <small>滚动到这里时自动读取</small>
+            <strong>${lazyImageTitle}</strong>
+            <small>${lazyImageNote}</small>
           </div>
         `;
       return `
         ${quoteBlock}
         ${mediaDebugBadge}
-        <div class="image-placeholder image-real ${dataUrl ? "" : "is-lazy"} ${isProcessing ? "is-processing" : ""} ${isError ? "is-error" : ""}" data-message-id="${escapeHtml(message.id || "")}" ${assetKey ? `data-image-asset-key="${escapeHtml(assetKey)}"` : ""} aria-label="${escapeHtml(isProcessing ? "图片处理中" : isError ? "图片处理失败" : message.content.name || "聊天图片")}">
+        <div class="image-placeholder image-real ${dataUrl && !shouldDeferInlineImage ? "" : "is-lazy"} ${isProcessing ? "is-processing" : ""} ${isError ? "is-error" : ""}" data-message-id="${escapeHtml(message.id || "")}" ${assetKey ? `data-image-asset-key="${escapeHtml(assetKey)}"` : ""} ${shouldDeferInlineImage ? 'data-image-inline="1"' : ""} aria-label="${escapeHtml(isProcessing ? "图片处理中" : isError ? "图片处理失败" : message.content.name || "聊天图片")}">
           ${imageBody}
           ${isProcessing ? `<span class="image-transfer-indicator" aria-hidden="true"><span class="busy-spinner"></span></span>` : ""}
           ${isError ? `<span class="image-transfer-error">读取失败</span>` : ""}
@@ -30298,8 +30529,7 @@ const renderComposerQuotePreview = (role) => {
   const quoted = role.chats.messages.find((item) => item.id === role.chats.quotedMessageId);
   if (!quoted) return "";
   const speaker = quoted.role === "user" ? "你" : role.profile.note;
-  const quoteTime = formatShortDateTime(quoted.timestamp || "");
-  const speakerLabel = [speaker, quoteTime].filter(Boolean).join(" · ");
+  const speakerLabel = speaker;
   return `
     <div class="composer-quote" data-composer-quote-id="${escapeHtml(quoted.id || "")}">
       <div class="composer-quote-main">
@@ -30361,13 +30591,12 @@ const renderChatComposerByTheme = (state, role) => {
       <div class="chat-composer ref-chat-composer wechat-chat-composer">
         ${renderComposerQuotePreview(role)}
         <div class="wechat-composer-row">
-          <button class="wechat-side-btn wechat-voice-toggle" type="button" aria-label="语音模式占位">${icons.wechatVoice}</button>
+          <button class="wechat-side-btn wechat-voice-toggle" type="button" data-action="send-message" aria-label="发送消息" title="发送">${icons.wechatVoice}</button>
           <div class="chat-input-pill composer-plain wechat-composer-pill${state.chatReplyBusyRoleId === role.id ? " has-cancel-reply" : ""}">
             <textarea id="composer-input" rows="1" enterkeyhint="send" placeholder="">${escapeHtml(role.chats.draft)}</textarea>
             ${cancelButton}
           </div>
           <button class="wechat-side-btn" type="button" data-action="open-sticker-sheet" aria-label="打开表情包">${icons.smile}</button>
-          <button class="wechat-side-btn wechat-send-btn" type="button" data-action="send-message" aria-label="发送消息" title="发送">${icons.send}</button>
           <button class="wechat-side-btn ${state.quickPlusMenuOpen ? "is-active" : ""}" type="button" data-action="toggle-quick-plus-menu" aria-label="更多功能">${icons.plus}</button>
         </div>
         ${renderQuickPlusMenu(state, role)}
@@ -31505,10 +31734,10 @@ const renderLinkedLifeTrackCard = (
   {
     wrapperClass = "panel-card",
     kicker = "",
-    title = "生活轨迹",
+    title = "当日事件",
     subtitle = "",
     eventTitle = "",
-    emptyText = "这一天还没有新的生活轨迹",
+    emptyText = "这一天还没有新的当日事件",
   } = {},
 ) => {
   const kickerText = String(kicker || "").trim();
@@ -31552,7 +31781,7 @@ const renderLinkedLifeTrackCard = (
         groups.length
           ? groups
               .map((group) => {
-                const groupTitle = String(group.eventTitle || eventTitleText || "生活轨迹").trim();
+                const groupTitle = String(group.eventTitle || eventTitleText || "当日事件").trim();
                 return `
                   <div class="life-track-day-group">
                     <div class="life-track-day-heading">
@@ -31603,11 +31832,11 @@ const getJourneyLifeTrackBusyMeta = (state) => {
   const generatorVisible = (Array.isArray(state?.panelStack) ? state.panelStack : []).includes("journey-generator");
   const shouldUseUnifiedLabel = (generatorVisible && (hasJourneyBusy || hasMonitorBusy)) || (hasJourneyBusy && hasMonitorBusy);
   const label = shouldUseUnifiedLabel
-    ? "正在生成行程以及生活轨迹"
+    ? "正在生成行程以及当日事件"
     : hasJourneyBusy
       ? "正在生成行程"
       : hasMonitorBusy
-        ? "正在生成生活轨迹"
+        ? "正在生成当日事件"
         : hasShortGoalBusy
           ? "正在生成短期目标"
           : hasLongGoalBusy
@@ -31634,14 +31863,14 @@ const getJourneyGenerationStatusMeta = (state, fallbackNote = "") => {
       ? toastText
       : String(fallbackNote || "").trim() ||
         (linkedBusy.unified
-          ? "正在联动当前日期的行程和生活轨迹，完成后这里会自动刷新"
+          ? "正在联动当前日期的行程和当日事件，完成后这里会自动刷新"
           : linkedBusy.hasJourneyBusy
             ? "正在更新这一天的行程安排，完成后这里会自动刷新"
             : linkedBusy.hasMonitorBusy
-              ? "正在更新这一天的生活轨迹，完成后这里会自动刷新"
+              ? "正在更新这一天的当日事件，完成后这里会自动刷新"
               : linkedBusy.hasShortGoalBusy
-                ? "正在结合角色资料、行程和生活轨迹生成新的短期目标"
-                : "正在结合角色资料、行程和生活轨迹生成新的长期目标");
+              ? "正在结合角色资料、行程和当日事件生成新的短期目标"
+              : "正在结合角色资料、行程和当日事件生成新的长期目标");
 
   return {
     labels,
@@ -31679,7 +31908,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
   const recentEventTitle = latestEventTitle || (fortune.eventTriggered ? fortune.tierLabel : "");
   const recentEventText =
     String(latestFeed?.text || "").trim() ||
-    (fortune.eventTriggered ? fortune.summary || "今天已经有一条生活轨迹在推进" : "");
+    (fortune.eventTriggered ? fortune.summary || "今天已经有一条当日事件在推进" : "");
   const isLifeMonitorBusy = hasBusyToken(state.apiGenerationBusy, "monitor") || hasBusyToken(state.apiGenerationBusy, `monitor-auto:${role.id}`);
   const shortGoalsEditing = Boolean(state?.goalEditModes?.short);
   const longGoalsEditing = Boolean(state?.goalEditModes?.long);
@@ -31688,14 +31917,14 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
     <div class="overlay-screen panel-overlay">
       <section class="panel-screen life-stream-screen page-enter">
         ${panelHeader(
-          "生活轨迹",
+          "当日事件",
           "pop-panel",
           false,
           `
             <div class="life-monitor-header-actions">
               <button class="tiny-header-btn ios-segment-btn" type="button" data-action="generate-life-monitor">${isLifeMonitorBusy ? "生成中" : "刷新"}</button>
               <button class="tiny-header-btn ios-segment-btn" type="button" data-action="regenerate-life-monitor-today">${isLifeMonitorBusy ? "生成中" : "重生成"}</button>
-              <button class="tiny-header-btn ios-segment-btn" type="button" data-action="open-panel" data-panel="life-fate-settings">概率</button>
+              <button class="tiny-header-btn ios-segment-btn" type="button" data-action="open-panel" data-panel="life-fate-settings">编辑</button>
             </div>
           `,
         )}
@@ -31707,7 +31936,7 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
             wrapperClass: "panel-card life-stream-track-card",
             title: "",
             eventTitle: latestEventTitle,
-            emptyText: "这一天还没有新的生活轨迹",
+            emptyText: "这一天还没有新的当日事件",
           })}
 
           <section class="panel-card life-stream-group-card">
@@ -31749,13 +31978,13 @@ const renderLifeStreamPanel = (role, userProfile, state) => {
               <div class="life-stream-section-copy">
                 <div class="life-stream-section-kicker">真实气候模拟</div>
                 <strong>让城市、天气和事件背景都能对上</strong>
-                <p>这里决定生活轨迹里的环境信息是否跟真实天气联动。</p>
+                <p>这里决定当日事件里的环境信息是否跟真实天气联动。</p>
               </div>
             </div>
             <div class="life-stream-toggle-row">
               <div class="life-stream-toggle-copy">
                 <strong>启用真实气候</strong>
-                <p>同步角色和你的天气，生活轨迹里的环境会更像真实当天。</p>
+                <p>同步角色和你的天气，当日事件里的环境会更像真实当天。</p>
               </div>
               ${renderSwitch(role.settings.climateMode, "climateMode")}
             </div>
@@ -31977,7 +32206,7 @@ const renderRoleInfoPage = (role, userProfile = {}) => `
 
         ${renderIdentityCard({
           title: "核心人设",
-          note: "这里的内容会直接影响对话、行程、世界书联动和生活轨迹",
+          note: "这里的内容会直接影响对话、行程、世界书联动和当日事件",
           body: `<textarea class="soft-input soft-area identity-editor-area" data-role-profile="bio" placeholder="角色人设">${escapeHtml(role.profile.bio || "")}</textarea>`,
         })}
 
@@ -32729,13 +32958,16 @@ const renderSheetHeroCard = ({ icon = "", kicker = "", title = "", note = "", ba
   </section>
 `;
 
-const renderSheetSectionHead = ({ kicker = "", title = "", badge = "", extraClass = "" } = {}) => `
+const renderSheetSectionHead = ({ kicker = "", title = "", badge = "", extraClass = "", action = "" } = {}) => `
   <div class="sheet-panel-head ${extraClass}">
     <div class="sheet-panel-copy">
       ${kicker ? `<div class="sheet-kicker">${escapeHtml(kicker)}</div>` : ""}
       ${title ? `<strong class="sheet-panel-title">${escapeHtml(title)}</strong>` : ""}
     </div>
-    ${badge ? `<span class="sheet-panel-badge">${escapeHtml(badge)}</span>` : ""}
+    <div class="sheet-panel-head-actions">
+      ${badge ? `<span class="sheet-panel-badge">${escapeHtml(badge)}</span>` : ""}
+      ${action}
+    </div>
   </div>
 `;
 
@@ -33628,7 +33860,7 @@ const renderLivingMemoryPanel = (state, fallbackRole) => {
     ${habits.length ? `<section class="living-panel-card"><h3>生活习惯</h3>${habits.map((item) => `<p class="living-digest-line">${escapeHtml(item.type || "习惯")}｜${escapeHtml(item.text || "")}</p>`).join("")}</section>` : ""}
     <section class="living-panel-card"><h3>常去地点</h3>${renderLivingHeatRows(stats.places, "行程生成后会自动累计地点")}</section>
     <section class="living-panel-card"><h3>常吃东西</h3>${renderLivingHeatRows(stats.foods, "吃饭、外卖、咖啡等会自动累计")}</section>
-    <section class="living-panel-card"><h3>事件分类</h3>${renderLivingHeatRows(stats.categories, "生活轨迹会按类型沉淀")}</section>
+    <section class="living-panel-card"><h3>事件分类</h3>${renderLivingHeatRows(stats.categories, "当日事件会按类型沉淀")}</section>
     <section class="living-panel-card"><h3>常见的人</h3>${renderLivingHeatRows(stats.people, "行程或记忆里出现 NPC 后会累计")}</section>
     <section class="living-panel-card living-memory-cards-panel"><h3>记忆卡片</h3>
       <div class="living-memory-filter-block">
@@ -33721,7 +33953,7 @@ const renderWalletPanel = (state, fallbackRole) => {
           <span></span>
         </label>
       </label>
-      <p class="living-digest-line">开启后，每天行程/生活轨迹联动保存后，会顺手用记忆 API 更新一次钱包和物品，不会把用户说“我买了、我喝了”的内容算进角色。</p>
+      <p class="living-digest-line">开启后，每天行程/当日事件联动保存后，会顺手用记忆 API 更新一次钱包和物品，不会把用户说“我买了、我喝了”的内容算进角色。</p>
     </section>
     <section class="living-panel-card wallet-edit-card">
       <h3>基础余额</h3>
@@ -34849,6 +35081,64 @@ const renderTokenRequestLogs = (state = {}, role = {}, snapshot = {}) => {
   `;
 };
 
+const renderPromptMessagesText = (messages = []) =>
+  (Array.isArray(messages) ? messages : [])
+    .map((message) => `${String(message?.role || "user").toUpperCase()}\n${String(message?.content || "").trim()}`.trim())
+    .filter(Boolean)
+    .join("\n\n────────────────────────────────\n\n");
+
+const getPromptViewerTask = (role, feature) =>
+  (Array.isArray(role?.usage?.secondary?.lastTasks) ? role.usage.secondary.lastTasks : []).find(
+    (task) => String(task?.feature || "").trim() === String(feature || "").trim(),
+  ) || null;
+
+const renderPromptViewerScreen = (state, role) => {
+  const scope = String(state?.promptViewerScope || "primary").trim() === "secondary" ? "secondary" : "primary";
+  const feature = String(state?.promptViewerFeature || "summary").trim() || "summary";
+  const primarySnapshot = role?.usage?.lastPrimaryChat || {};
+  const task = getPromptViewerTask(role, feature);
+  const messages = scope === "primary" ? primarySnapshot.promptMessages : task?.promptMessages;
+  const promptText = renderPromptMessagesText(messages || []);
+  const title = scope === "primary" ? "主聊天提示词" : `${SECONDARY_FEATURE_LABELS[feature] || "副 API 任务"}提示词`;
+  const subtitle = scope === "primary"
+    ? `${getTokenModeLabel(primarySnapshot.mode)} · ${formatTokenConsoleTime(primarySnapshot.timestamp)}`
+    : `${task ? formatTokenConsoleTime(task.timestamp) : "还没有调用记录"} · ${task?.model || ""}`;
+  const featureButtons = Object.entries(SECONDARY_FEATURE_LABELS)
+    .map(([key, label]) => {
+      const available = Boolean(getPromptViewerTask(role, key));
+      return `<button class="prompt-viewer-feature-btn${key === feature ? " is-active" : ""}" type="button" data-action="select-prompt-viewer-feature" data-prompt-feature="${escapeHtml(key)}" ${available ? "" : "disabled"}>${escapeHtml(label)}${available ? "" : " · 未记录"}</button>`;
+    })
+    .join("");
+
+  return `
+    <div class="overlay-screen panel-overlay highest">
+      <section class="panel-screen page-enter prompt-viewer-screen">
+        <header class="screen-topbar compact panel-topbar">
+          <button class="back-btn white-back" type="button" data-action="pop-panel">${icons.back}</button>
+          <div class="prompt-viewer-header-copy">
+            <h2>${escapeHtml(title)}</h2>
+            <small>${escapeHtml(subtitle)}</small>
+          </div>
+          <button class="icon-plain sheet-close-btn" type="button" data-action="copy-prompt-viewer" aria-label="复制提示词" title="复制提示词">${icons.document}</button>
+        </header>
+        ${scope === "secondary" ? `<div class="prompt-viewer-feature-bar">${featureButtons}</div>` : ""}
+        <div class="panel-scroll prompt-viewer-scroll" data-scroll-key="prompt-viewer">
+          <section class="prompt-viewer-card">
+            <div class="prompt-viewer-card-head">
+              <div>
+                <div class="sheet-kicker">实际发送内容</div>
+                <strong>${promptText ? `${promptText.length} 字` : "暂无提示词记录"}</strong>
+              </div>
+              <span>${scope === "primary" ? "最近一轮" : "最近一次"}</span>
+            </div>
+            ${promptText ? `<pre class="prompt-viewer-content">${escapeHtml(promptText)}</pre>` : `<div class="prompt-viewer-empty">这次调用还没有保存提示词。新生成一次后，这里会显示实际发给 API 的全部文字。</div>`}
+          </section>
+        </div>
+      </section>
+    </div>
+  `;
+};
+
 const renderTokenConsoleSheet = (state, role) => {
   const snapshot = role?.usage?.lastPrimaryChat || {};
   const secondaryUsage = role?.usage?.secondary || {};
@@ -34894,6 +35184,7 @@ const renderTokenConsoleSheet = (state, role) => {
                 ${renderTokenMetric("总计", formatTokenValue(snapshot.totalTokens), snapshot.validationAttempts > 1 ? `校验 ${snapshot.validationAttempts} 次` : "")}
               </div>
               <div class="token-console-list">
+                <div class="token-console-row token-prompt-view-row"><span>提示词查看</span><button class="sheet-action-btn" type="button" data-action="open-prompt-viewer" data-prompt-scope="primary">查看这一轮</button></div>
                 <div class="token-console-row"><span>消息类型</span><strong>${escapeHtml(getTokenModeLabel(snapshot.mode))}</strong></div>
                 <div class="token-console-row"><span>状态</span><strong>${escapeHtml(getPrimaryChatStatusLabel(snapshot.status))}</strong></div>
                 <div class="token-console-row"><span>模型</span><strong>${escapeHtml(snapshot.model || "未记录")}</strong></div>
@@ -34931,6 +35222,7 @@ const renderTokenConsoleSheet = (state, role) => {
         ${renderSheetSectionHead({
           kicker: "副 API 生成统计",
           title: hasSecondaryStats ? "角色侧生成任务" : "还没有副 API 记录",
+          action: `<button class="sheet-action-btn" type="button" data-action="open-prompt-viewer" data-prompt-scope="secondary">提示词查看</button>`,
         })}
         ${
           hasSecondaryStats
@@ -34957,7 +35249,7 @@ const renderTokenConsoleSheet = (state, role) => {
             `
             : `
               <div class="sheet-empty">还没有副 API 记录</div>
-              <p class="sheet-note">地图、朋友圈、总结走副 API；行程和生活轨迹走行程 / 生活轨迹 API。真实调用后会在这里累计显示</p>
+              <p class="sheet-note">地图、朋友圈、总结走副 API；行程和当日事件走行程 / 当日事件 API。真实调用后会在这里累计显示</p>
             `
         }
       </section>
@@ -34966,7 +35258,7 @@ const renderTokenConsoleSheet = (state, role) => {
           kicker: "说明",
           title: "这些数字怎么看",
         })}
-        <p>主 API 和副 API 可以并行调用。聊天回复、主动消息、离线消息走主 API，地图、行程、朋友圈、生活轨迹、总结走副 API</p>
+        <p>主 API 和副 API 可以并行调用。聊天回复、主动消息、离线消息走主 API，地图、行程、朋友圈、当日事件、总结走副 API</p>
         <p>页面累计：约 ${formatTokenValue(role?.usage?.tokensToday, "0")} tokens</p>
       </section>
       ${renderTokenRequestLogs(state, role, snapshot)}
@@ -35239,13 +35531,13 @@ const renderJourneyGeneratorSheet = (state, role) => {
   );
 
   return renderChatBottomSheet(
-    "行程与生活轨迹",
+    "行程与当日事件",
     `
       ${renderSheetHeroCard({
         icon: icons.journey,
         kicker: "联动生成",
         title: formatJourneyDateLabel(generatorDate),
-        note: "会一起生成这一天的行程和生活轨迹，地点只会从地图里已启用的地点中选。",
+        note: "会一起生成这一天的行程和当日事件，地点只会从地图里已启用的地点中选。",
         badge: monthMeta.monthLabel,
         extraClass: "journey-generator-hero",
       })}
@@ -35271,7 +35563,7 @@ const renderJourneyGeneratorSheet = (state, role) => {
           </div>
         </div>
         <p>每行一条行程，支持 09:30-10:30 处理消息：在卧室回消息 这种格式，也可以直接写你想让这一天有什么安排</p>
-        <p class="sheet-note">主按钮会直接联动生成当天行程和生活轨迹，地点只会从地图里已启用的地点中选。</p>
+        <p class="sheet-note">主按钮会直接联动生成当天行程和当日事件，地点只会从地图里已启用的地点中选。</p>
         <textarea class="soft-input soft-area map-generator-area" data-journey-generator="text" placeholder="例如：这一天想让他上午在创意园开会，傍晚去后街便利店，夜里回工作室继续忙&#10;如果不写日期，也默认生成上面所选这一天的行程">${escapeHtml(state.journeyGeneratorText || "")}</textarea>
         <div class="journey-generator-saved-row">
           <button class="sheet-action-btn" type="button" data-action="save-journey-generator-prompt">保存提示词</button>
@@ -36003,13 +36295,6 @@ const renderVideoSessionSheet = (state, role) => {
     inputMode === "voice" && String(session.micPermissionState || "").trim().toLowerCase() === "blocked"
       ? "你现在这个地址不能开麦克风，请换 HTTPS。电脑本机预览才用 127.0.0.1:8000，手机不要用 127.0.0.1。"
       : "";
-  const micEnginePreference = normalizeVideoSessionMicEngine(session.micEnginePreference || session.micEngine);
-  const micEngineCapabilities =
-    typeof getVideoSessionMicCapabilities === "function"
-      ? getVideoSessionMicCapabilities()
-      : { local: true, tencent: false };
-  const tencentAsrConfigured = Boolean(micEngineCapabilities.tencent || hasTencentAsrConfigValues(state.appConfig?.tencentAsr || {}));
-  const localAsrAvailable = Boolean(micEngineCapabilities.local || isVideoSessionLocalAsrAvailable());
   const micEngineLabel =
     {
       tencent: "腾讯云实时语音识别",
@@ -36105,45 +36390,6 @@ const renderVideoSessionSheet = (state, role) => {
             </label>
           </div>
           <p>${escapeHtml(cameraEnabled ? "开启后会按通话节奏截图，并把少量画面发给模型。" : "关闭时不会截图，也不会向模型发送图片，只走文字和语音。")}</p>
-        </div>
-        <div class="video-session-debug-section">
-          <div class="video-session-debug-row">
-            <span>识别服务</span>
-            <b>${escapeHtml(micEnginePreference === "tencent" ? "腾讯云实时语音识别" : "SenseVoice Small（本地免费）")}</b>
-          </div>
-          <div class="video-session-mode-switch">
-            <button
-              class="video-session-mode-pill ${micEnginePreference === "local" ? "is-active" : ""}"
-              type="button"
-              data-action="set-video-mic-engine"
-              data-video-mic-engine="local"
-              ${localAsrAvailable ? "" : "disabled"}
-            >SenseVoice Small</button>
-            <button
-              class="video-session-mode-pill ${micEnginePreference === "tencent" ? "is-active" : ""}"
-              type="button"
-              data-action="set-video-mic-engine"
-              data-video-mic-engine="tencent"
-              ${tencentAsrConfigured ? "" : "disabled"}
-            >腾讯云识别</button>
-          </div>
-          <p>${escapeHtml(
-            micEnginePreference === "local"
-              ? "本地模型在设备上运行，不消耗腾讯云识别额度；首次使用会准备约 241MB 语音资源。"
-              : tencentAsrConfigured
-                ? "使用你已配置的腾讯云实时识别，识别结果会通过腾讯云连接返回。"
-                : "腾讯云识别尚未配置 AppID、SecretId 和 SecretKey，请先到设置页填写。",
-          )}</p>
-        </div>
-        <div class="video-session-debug-section">
-          <div class="video-session-debug-row video-session-debug-toggle">
-            <span>清理自动情绪 emoji</span>
-            <label class="switch mini">
-              <input type="checkbox" data-action="toggle-video-clean-emotion-emoji" ${session.cleanEmotionEmoji !== false ? "checked" : ""} />
-              <span></span>
-            </label>
-          </div>
-          <p>${escapeHtml(session.cleanEmotionEmoji !== false ? "会从语音识别结果里去掉模型附带的 emoji 和末尾情绪词。" : "保留语音识别结果里的 emoji 和末尾情绪词。")}</p>
         </div>
         <div class="video-session-debug-section">
           <div class="video-session-debug-row">
@@ -36455,7 +36701,7 @@ const renderDeleteRoleConfirmSheet = (role) =>
       <section class="sheet-card chat-danger-sheet-card">
         <div class="sheet-kicker">二次确认</div>
         <div class="chat-danger-title">确认删除这个角色吗</div>
-        <p class="sheet-note">删除后，这个角色的聊天、地图、行程、世界书、NPC、记忆和生活轨迹都会一起移除，无法恢复</p>
+        <p class="sheet-note">删除后，这个角色的聊天、地图、行程、世界书、NPC、记忆和当日事件都会一起移除，无法恢复</p>
         <div class="chat-danger-role-name">${escapeHtml(role?.profile?.note || role?.profile?.name || "当前角色")}</div>
         <div class="danger-sheet-actions">
           <button class="sheet-action-btn" type="button" data-action="pop-panel">取消</button>
@@ -36618,6 +36864,7 @@ const renderPanelOverlayRefined = (state, role) => {
   if (panel === "storage-health") return renderStorageHealthPanel(state);
   if (panel === "user-identity") return renderUserIdentityPage(state.userProfile, role);
   if (panel === "export-options") return renderExportOptionsSheet(state);
+  if (panel === "prompt-viewer") return renderPromptViewerScreen(state, role);
   if (!role) return "";
   if (panel === "sticker-sheet") return renderStickerSheet(state);
   if (panel === "worldbook-sheet") return renderWorldbookSheet(state, role);
@@ -36968,7 +37215,7 @@ const renderBusyBanner = (state) => {
       return;
     }
     if (value.startsWith("monitor-auto:")) {
-      pushLabel("正在生成生活轨迹");
+      pushLabel("正在生成当日事件");
       return;
     }
     if (value.startsWith("moment-thread:")) {
@@ -37628,6 +37875,8 @@ const createTransientState = () => ({
   momentFilter: "say",
   activeChatRoleId: null,
   panelStack: [],
+  promptViewerScope: "primary",
+  promptViewerFeature: "summary",
   shareSheet: null,
   momentDeleteSheet: null,
   commentingMomentId: null,
@@ -40183,18 +40432,26 @@ const hydrateMessageImageById = async (roleId = "", messageId = "", { paintNow =
 const hydrateVisibleChatImages = () => {
   const activeRoleId = String(state.activeChatRoleId || "").trim();
   if (!activeRoleId) return;
-  const nodes = [...root.querySelectorAll("[data-image-asset-key][data-message-id]")];
+  const nodes = [...root.querySelectorAll(".image-real[data-message-id]")];
   if (!nodes.length) return;
-  nodes.slice(0, 8).forEach((node) => {
-    if (!(node instanceof HTMLElement)) return;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const visibleNodes = nodes.filter((node) => {
+    if (!(node instanceof HTMLElement)) return false;
     const rect = node.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    if (rect.bottom < -240 || rect.top > viewportHeight + 240) return;
+    return rect.bottom >= -240 && rect.top <= viewportHeight + 240;
+  });
+  visibleNodes.slice(0, 8).forEach((node) => {
+    if (!(node instanceof HTMLElement)) return;
     const assetKey = String(node.dataset.imageAssetKey || "").trim();
     const messageId = String(node.dataset.messageId || "").trim();
-    if (!assetKey || !messageId || node.dataset.imageHydrating === "1") return;
+    if (!messageId || node.dataset.imageHydrating === "1" || node.querySelector("img")) return;
+    const role = getRoleById(state, activeRoleId);
+    const message = (role?.chats?.messages || []).find((item) => item?.id === messageId);
+    const inlineDataUrl = String(message?.content?.dataUrl || "");
+    if (!assetKey && !inlineDataUrl) return;
     node.dataset.imageHydrating = "1";
-    void hydratePersistedAssetForKey(assetKey).then((dataUrl) => {
+    const dataUrlPromise = inlineDataUrl ? Promise.resolve(inlineDataUrl) : hydratePersistedAssetForKey(assetKey);
+    void dataUrlPromise.then((dataUrl) => {
       if (!dataUrl) {
         node.classList.add("is-error");
         const note = node.querySelector("[data-image-placeholder-note]");
@@ -40205,8 +40462,6 @@ const hydrateVisibleChatImages = () => {
       img.src = dataUrl;
       img.alt = node.getAttribute("aria-label") || "聊天图片";
       node.replaceChildren(img);
-      const role = getRoleById(state, activeRoleId);
-      const message = (role?.chats?.messages || []).find((item) => item?.id === messageId);
       if (message?.content && typeof message.content === "object") {
         message.content.dataUrl = dataUrl;
       }
@@ -43813,7 +44068,7 @@ const attemptJsonRepairWithConfig = async ({
   });
 
   const { data, rawText } = await parseJsonLikeResponse(response);
-  const meta = buildModelResponseMeta({
+  const meta = attachPromptMessagesToModelMeta(buildModelResponseMeta({
     data,
     config,
     endpoint,
@@ -43824,7 +44079,27 @@ const attemptJsonRepairWithConfig = async ({
     systemPromptText: finalSystemPrompt,
     imageCount,
     promptBreakdown: [],
-  });
+  }), [
+    {
+      role: "system",
+      content: "你是 JSON 修复器 只输出可以被 JSON.parse 的合法 JSON 不要解释 不要 Markdown 代码块 更不要输出规则清单 Yes/No 检查项 提示词摘要或自然语言说明",
+    },
+    {
+      role: "user",
+      content: [
+        "下面是上一轮模型输出 它本来应该是 JSON 但现在不是合法 JSON",
+        "",
+        "【原始格式要求】",
+        String(finalSystemPrompt || "").trim(),
+        "",
+        "【上一轮原始输出】",
+        sourceText,
+        "",
+        "现在只返回修复后的合法 JSON",
+        "不要把格式要求改写成 messages 文案 不要输出诸如 Natural conversation style / No narration / 3-6 messages 这类规则回显",
+      ].join("\n"),
+    },
+  ]);
 
   if (!response.ok) {
     throw attachModelMetaToError(new Error(buildApiErrorMessage(data, "JSON 修复失败", rawText)), meta, {
@@ -44597,7 +44872,7 @@ const GENERATION_CONTEXT_MESSAGE_LIMITS = Object.freeze({
   video: VIDEO_SESSION_RECENT_CHAT_CONTEXT_LIMIT,
   autonomous: 72,
   map: 56,
-  journey: 48,
+  journey: 50,
   monitor: 56,
   moment: 44,
   "moment-thread": 32,
@@ -45354,7 +45629,7 @@ const getLivingMemoryEmbeddingConfig = () => {
   return {
     ...config,
     url: embeddingUrl || config.url,
-    key: embeddingKey,
+    key: embeddingKey || config.key,
     model: embeddingModel,
     embeddingUrl,
     embeddingKey,
@@ -47853,7 +48128,7 @@ const getPlainTextBreakdownMeta = (label = "") => {
   if (normalized === "生活账本摘要") return { key: "livingMemory", label: "生活账本" };
   if (normalized === "待执行事项") return { key: "pendingTodos", label: "待办事项" };
   if (normalized === "本轮召回记忆") return { key: "memoryRecall", label: "召回记忆" };
-  if (["目标", "突发事件和余波", "概率设置"].includes(normalized)) return { key: "goals", label: "目标事件" };
+  if (["目标", "突发事件和余波", "当日事件文风", "概率设置"].includes(normalized)) return { key: "goals", label: "目标事件" };
   if (normalized === "作息约束") return { key: "status", label: "状态与时间" };
   if (normalized === "时间判定") return { key: "recentMessages", label: "最近消息" };
   if (["地图地点", "行程读取范围", "聊天行程窗口", "当天行程", "昨日与当日连续性"].includes(normalized)) {
@@ -48259,6 +48534,32 @@ const buildModelResponseMeta = ({
   };
 };
 
+const normalizePromptMessageContentForStorage = (content) => {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => normalizePromptMessageContentForStorage(item))
+      .filter((item) => item !== "")
+      .join("\n");
+  }
+  if (!content || typeof content !== "object") return String(content ?? "");
+  if (content.type === "image_url" || content.type === "input_image") return "[图片内容已发送]";
+  return String(content.text ?? content.content ?? content.description ?? "");
+};
+
+const normalizePromptMessagesForStorage = (messages = []) =>
+  (Array.isArray(messages) ? messages : [])
+    .map((message) => ({
+      role: String(message?.role || "user").trim() || "user",
+      content: normalizePromptMessageContentForStorage(message?.content).trim(),
+    }))
+    .filter((message) => message.content);
+
+const attachPromptMessagesToModelMeta = (meta, messages = []) => ({
+  ...(meta || {}),
+  promptMessages: normalizePromptMessagesForStorage(messages),
+});
+
 const buildModelRequestPreflightMeta = ({
   config = {},
   endpoint = "",
@@ -48479,7 +48780,7 @@ const requestModelJsonWithConfig = async ({
   if (type === "anthropic") {
     const endpoint = ensureEndpoint(config.url, "/messages");
     const startedAtMs = Date.now();
-    lastPreflightMeta = buildModelRequestPreflightMeta({
+    lastPreflightMeta = attachPromptMessagesToModelMeta(buildModelRequestPreflightMeta({
       config,
       endpoint,
       variantMode: "anthropic",
@@ -48489,7 +48790,10 @@ const requestModelJsonWithConfig = async ({
       imageCount: imageAttachments.length,
       promptBreakdown,
       modelRequestStrategy: requestStrategy,
-    });
+    }), [
+      { role: "system", content: finalSystemPrompt },
+      { role: "user", content: context },
+    ]);
     emitModelRequestTrace(requestTrace, {
       phase: "request",
       ok: null,
@@ -48516,7 +48820,7 @@ const requestModelJsonWithConfig = async ({
         }),
       });
       const { data, rawText } = await parseJsonLikeResponse(response);
-      const meta = buildModelResponseMeta({
+      const meta = attachPromptMessagesToModelMeta(buildModelResponseMeta({
         data,
         config,
         endpoint,
@@ -48528,7 +48832,10 @@ const requestModelJsonWithConfig = async ({
         imageCount: imageAttachments.length,
         promptBreakdown,
         modelRequestStrategy: requestStrategy,
-      });
+      }), [
+        { role: "system", content: finalSystemPrompt },
+        { role: "user", content: context },
+      ]);
       emitModelRequestTrace(requestTrace, {
         phase: response.ok ? "response" : "error",
         ok: response.ok,
@@ -48592,7 +48899,7 @@ const requestModelJsonWithConfig = async ({
   for (const endpoint of getOpenAiEndpointCandidates(config.url).slice(0, STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? 1 : undefined)) {
     for (const variant of messageVariants) {
       const startedAtMs = Date.now();
-      lastPreflightMeta = buildModelRequestPreflightMeta({
+      lastPreflightMeta = attachPromptMessagesToModelMeta(buildModelRequestPreflightMeta({
         config,
         endpoint,
         variantMode: variant.mode,
@@ -48602,7 +48909,7 @@ const requestModelJsonWithConfig = async ({
         imageCount: imageAttachments.length,
         promptBreakdown,
         modelRequestStrategy: requestStrategy,
-      });
+      }), variant.messages);
       emitModelRequestTrace(requestTrace, {
         phase: "request",
         ok: null,
@@ -48629,7 +48936,7 @@ const requestModelJsonWithConfig = async ({
           }),
         });
         const { data, rawText } = await parseJsonLikeResponse(response);
-        const meta = buildModelResponseMeta({
+        const meta = attachPromptMessagesToModelMeta(buildModelResponseMeta({
           data,
           config,
           endpoint,
@@ -48641,7 +48948,7 @@ const requestModelJsonWithConfig = async ({
           imageCount: imageAttachments.length,
           promptBreakdown,
           modelRequestStrategy: requestStrategy,
-        });
+        }), variant.messages);
         emitModelRequestTrace(requestTrace, {
           ok: response.ok,
           status: response.status,
@@ -49011,7 +49318,7 @@ const requestModelTextWithConfig = async ({
   if (type === "anthropic") {
     const endpoint = ensureEndpoint(config.url, "/messages");
     const startedAtMs = Date.now();
-    lastPreflightMeta = buildModelRequestPreflightMeta({
+    lastPreflightMeta = attachPromptMessagesToModelMeta(buildModelRequestPreflightMeta({
       config,
       endpoint,
       variantMode: "anthropic",
@@ -49021,7 +49328,10 @@ const requestModelTextWithConfig = async ({
       imageCount: imageAttachments.length,
       promptBreakdown,
       modelRequestStrategy: requestStrategy,
-    });
+    }), [
+      { role: "system", content: finalSystemPrompt },
+      { role: "user", content: context },
+    ]);
       emitModelRequestTrace(requestTrace, {
         phase: "request",
         ok: null,
@@ -49048,7 +49358,7 @@ const requestModelTextWithConfig = async ({
         }),
       });
       const { data, rawText } = await parseJsonLikeResponse(response);
-      const meta = buildModelResponseMeta({
+      const meta = attachPromptMessagesToModelMeta(buildModelResponseMeta({
         data,
         config,
         endpoint,
@@ -49060,7 +49370,10 @@ const requestModelTextWithConfig = async ({
         imageCount: imageAttachments.length,
         promptBreakdown,
         modelRequestStrategy: requestStrategy,
-      });
+      }), [
+        { role: "system", content: finalSystemPrompt },
+        { role: "user", content: context },
+      ]);
       if (!response.ok) {
         const apiErrorMessage = buildApiErrorMessage(data, "Anthropic 请求失败", rawText);
         emitModelRequestTrace(requestTrace, {
@@ -49157,7 +49470,7 @@ const requestModelTextWithConfig = async ({
   for (const endpoint of getOpenAiEndpointCandidates(config.url).slice(0, STRICT_SINGLE_AI_REQUEST_PER_ENTRY ? 1 : undefined)) {
     for (const variant of messageVariants) {
       const startedAtMs = Date.now();
-      lastPreflightMeta = buildModelRequestPreflightMeta({
+      lastPreflightMeta = attachPromptMessagesToModelMeta(buildModelRequestPreflightMeta({
         config,
         endpoint,
         variantMode: variant.mode,
@@ -49167,7 +49480,7 @@ const requestModelTextWithConfig = async ({
         imageCount: imageAttachments.length,
         promptBreakdown,
         modelRequestStrategy: requestStrategy,
-      });
+      }), variant.messages);
       emitModelRequestTrace(requestTrace, {
         phase: "request",
         ok: null,
@@ -49193,7 +49506,7 @@ const requestModelTextWithConfig = async ({
           }),
         });
         const { data, rawText } = await parseJsonLikeResponse(response);
-        const meta = buildModelResponseMeta({
+        const meta = attachPromptMessagesToModelMeta(buildModelResponseMeta({
           data,
           config,
           endpoint,
@@ -49205,7 +49518,7 @@ const requestModelTextWithConfig = async ({
           imageCount: imageAttachments.length,
           promptBreakdown,
           modelRequestStrategy: requestStrategy,
-        });
+        }), variant.messages);
         if (!response.ok) {
           const apiErrorMessage = buildApiErrorMessage(data, `模型请求失败 ${response.status}`, rawText);
           emitModelRequestTrace(requestTrace, {
@@ -49816,9 +50129,9 @@ const requestPlannerModelJson = async ({
 }) =>
   requestModelJsonWithConfigFallback({
     primaryConfig: getPlannerApiConfig(),
-    primaryMissingMessage: "请先在设置里填好行程 / 生活轨迹 API 地址 模型和 API Key",
+    primaryMissingMessage: "请先在设置里填好行程 / 当日事件 API 地址 模型和 API Key",
     fallbackConfig: null,
-    fallbackMissingMessage: "请先在设置里填好行程 / 生活轨迹 API 地址 模型和 API Key",
+    fallbackMissingMessage: "请先在设置里填好行程 / 当日事件 API 地址 模型和 API Key",
     systemPrompt,
     payload,
     includeMeta,
@@ -49847,9 +50160,9 @@ const requestPlannerModelText = async ({
 }) =>
   requestModelTextWithConfigFallback({
     primaryConfig: getPlannerTextApiConfig(),
-    primaryMissingMessage: "请先在设置里填好行程 / 生活轨迹 API 地址 模型和 API Key",
+    primaryMissingMessage: "请先在设置里填好行程 / 当日事件 API 地址 模型和 API Key",
     fallbackConfig: null,
-    fallbackMissingMessage: "请先在设置里填好行程 / 生活轨迹 API 地址 模型和 API Key",
+    fallbackMissingMessage: "请先在设置里填好行程 / 当日事件 API 地址 模型和 API Key",
     systemPrompt,
     payload,
     includeMeta,
@@ -49892,9 +50205,9 @@ const requestJourneyModelText = async ({
 }) =>
   requestModelTextWithConfigFallback({
     primaryConfig: getJourneyTextApiConfig(),
-    primaryMissingMessage: "请先在设置里填好行程 / 生活轨迹 API 地址 模型和 API Key",
+    primaryMissingMessage: "请先在设置里填好行程 / 当日事件 API 地址 模型和 API Key",
     fallbackConfig: null,
-    fallbackMissingMessage: "请先在设置里填好行程 / 生活轨迹 API 地址 模型和 API Key",
+    fallbackMissingMessage: "请先在设置里填好行程 / 当日事件 API 地址 模型和 API Key",
     systemPrompt,
     payload,
     includeMeta,
@@ -50094,7 +50407,7 @@ const ensureJourneyMapPlacesReady = (role, { silent = false } = {}) => {
   const usablePlaces = getRoleUsableMapPlaceNames(role, 1);
   if (usablePlaces.length) return true;
   if (!silent) {
-    setToast("先在地图里补至少一个已启用地点，行程和生活轨迹只会从地图地点里取地点");
+    setToast("先在地图里补至少一个已启用地点，行程和当日事件只会从地图地点里取地点");
   }
   return false;
 };
@@ -51160,6 +51473,7 @@ const persistPrimaryChatUsageSnapshot = (
             }))
             .filter((item) => item.label && item.chars > 0)
         : [],
+      promptMessages: normalizePromptMessagesForStorage(meta?.promptMessages || []),
       requestLogs: normalizedRequestLogs,
       errorMessage: String(errorMessage || "").trim(),
     };
@@ -51212,6 +51526,7 @@ const persistSecondaryTaskUsageSnapshot = (roleId, { feature = "", status = "suc
       latencyMs: Math.max(0, Number(meta?.latencyMs ?? 0) || 0),
       validationAttempts: Math.max(0, Number(meta?.validationAttempts ?? 0) || 0),
       errorMessage: String(errorMessage || "").trim(),
+      promptMessages: normalizePromptMessagesForStorage(meta?.promptMessages || []),
     };
     const lastTasks = [nextTask, ...(Array.isArray(secondary.lastTasks) ? secondary.lastTasks : [])]
       .filter((item) => item && item.feature)
@@ -51220,7 +51535,7 @@ const persistSecondaryTaskUsageSnapshot = (roleId, { feature = "", status = "suc
         list.push(item);
         return list;
       }, [])
-      .slice(0, 3);
+      .slice(0, 12);
 
     nextRole.usage.secondary = {
       totals: {
@@ -60634,34 +60949,32 @@ const rebuildLivingMemoryEmbeddingsForRole = async (roleId) => {
         }
       });
       embeddedCount = embeddingMap.size;
+      // Let the browser process input and paint between network batches.
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
     }
-    updateRole(
-      roleId,
-      (nextRole) => {
-        const store = ensureLivingMemoryStore(nextRole);
-        const now = new Date().toISOString();
-        store.cards = store.cards.map((card) => {
-          const embedding = embeddingMap.get(String(card?.id || ""));
-          if (!embedding) return card;
-          return {
-            ...card,
-            embedding: embedding.vector,
-            embeddingModel: config.embeddingModel,
-            embeddingUpdatedAt: now,
-            embeddingTextHash: embedding.hash,
-          };
-        });
-        store.embeddingMeta = {
-          ...(store.embeddingMeta || {}),
-          model: config.embeddingModel,
-          rebuiltAt: now,
-          cardCount: embeddingMap.size,
-          errorMessage: "",
-        };
-        return nextRole;
-      },
-      { paintNow: false },
-    );
+    const targetRole = getRoleById(state, roleId);
+    if (!targetRole) return;
+    const store = ensureLivingMemoryStore(targetRole);
+    const now = new Date().toISOString();
+    store.cards = store.cards.map((card) => {
+      const embedding = embeddingMap.get(String(card?.id || ""));
+      if (!embedding) return card;
+      return {
+        ...card,
+        embedding: embedding.vector,
+        embeddingModel: config.embeddingModel,
+        embeddingUpdatedAt: now,
+        embeddingTextHash: embedding.hash,
+      };
+    });
+    store.embeddingMeta = {
+      ...(store.embeddingMeta || {}),
+      model: config.embeddingModel,
+      rebuiltAt: now,
+      cardCount: embeddingMap.size,
+      errorMessage: "",
+    };
+    syncPersistentState();
     setToast(`已重建 ${embeddedCount} 条记忆向量`);
   } catch (error) {
     console.error("[living-memory] embedding rebuild failed", error);
@@ -64809,7 +65122,7 @@ const requestJourneyRewriteTextWithFallbacks = async ({
   ensureApiRequestsEnabled();
   const candidates = buildJourneyRewriteApiCandidates();
   if (!candidates.length) {
-    throw new Error("请先在设置里填好行程 / 生活轨迹 API，或者副 API / 主 API");
+    throw new Error("请先在设置里填好行程 / 当日事件 API，或者副 API / 主 API");
   }
 
   const attemptTrail = [];
@@ -64827,7 +65140,7 @@ const requestJourneyRewriteTextWithFallbacks = async ({
           : "openai-standard";
         const response = await requestModelTextWithConfig({
           config: candidate.config,
-          missingConfigMessage: "请先在设置里填好行程 / 生活轨迹 API，或者副 API / 主 API",
+          missingConfigMessage: "请先在设置里填好行程 / 当日事件 API，或者副 API / 主 API",
           systemPrompt,
           payload,
           includeMeta: true,
@@ -65921,6 +66234,7 @@ const buildJourneyTimelineOnlyTextTimeSeeds = (role, preferredEntryCount = JOURN
   const startMinutes = sleepConfig.wakeMinutes;
   const endMinutes = Math.max(startMinutes + totalCount * 60, sleepConfig.sleepMinutes);
   const totalSpan = Math.max(totalCount * 65, endMinutes - startMinutes);
+  const segmentLabels = ["早上", "中午", "下午", "晚上", "半夜"];
   return Array.from({ length: totalCount }, (_, index) => {
     const rawStart = startMinutes + Math.round((totalSpan * index) / totalCount / 5) * 5;
     const rawEnd = startMinutes + Math.round((totalSpan * (index + 1)) / totalCount / 5) * 5;
@@ -65928,6 +66242,7 @@ const buildJourneyTimelineOnlyTextTimeSeeds = (role, preferredEntryCount = JOURN
     const end = Math.max(start + 45, rawEnd);
     return {
       index,
+      segment: segmentLabels[Math.min(index, segmentLabels.length - 1)],
       time: buildJourneyPreviewTimeRangeText(start, end),
     };
   });
@@ -66095,20 +66410,21 @@ const buildPureTextGenerationContext = ({
     ["最近聊天", contextRecentMessages],
     ["轻量锚点", slimContext],
     [
-      "概率设置",
-      fortuneSettings || fortuneRoll
+      "当日事件文风",
+      fortuneRoll
         ? [
-            fortuneSettings ? `每日触发概率：${Number(fortuneSettings?.eventTriggerChance || 0)}%` : "",
-            fortuneRoll ? `本次有效概率：${Number(fortuneRoll?.effectiveTriggerChance || 0)}%` : "",
-      fortuneRoll?.tierLabel ? `运势：${fortuneRoll.tierLabel}` : "",
-      fortuneRoll?.eventTriggered != null ? `是否命中突发事件：${fortuneRoll.eventTriggered ? "是" : "否"}` : "",
-      fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
-      fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
-      fortuneRoll?.mainEventType?.npcHints ? `主事件NPC：${fortuneRoll.mainEventType.npcHints}` : "",
+            fortuneRoll.eventStyle?.label ? `文风：${fortuneRoll.eventStyle.label}` : "",
+            fortuneRoll.eventStyle?.prompt ? `文风要求：${fortuneRoll.eventStyle.prompt}` : "",
+            fortuneRoll.tierLabel ? `事件方向：${fortuneRoll.tierLabel}` : "",
+            fortuneRoll.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
+            fortuneRoll.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
+            fortuneRoll.mainEventType?.npcHints ? `主事件NPC：${fortuneRoll.mainEventType.npcHints}` : "",
           ]
             .filter(Boolean)
             .join("；")
-        : "",
+        : fortuneSettings
+          ? "每次都生成当日事件，具体走向由已保存文风决定"
+          : "",
     ],
   ];
 
@@ -66153,8 +66469,8 @@ const buildLifeMonitorA3PlainTextContext = ({
     .filter(Boolean)
     .slice(-1)
     .map((item) => truncateContextText(item, 72));
-  const recentMessages = getRecentMessagesSummary(role, 6)
-    .slice(-3)
+  const recentMessages = getRecentMessagesSummary(role, 50)
+    .slice(-50)
     .map((item) => truncateContextText(item, 54))
     .filter(Boolean);
   const sameDayNodes = (Array.isArray(sameDayMonitorTimeline) ? sameDayMonitorTimeline : [])
@@ -66175,7 +66491,7 @@ const buildLifeMonitorA3PlainTextContext = ({
         .join("；")
     : "";
   const lines = [
-    `任务：生成 ${normalizedTargetDate} ${cutoffClock} 的生活轨迹纯文本`,
+    `任务：生成 ${normalizedTargetDate} ${cutoffClock} 的当日事件纯文本`,
     `角色：${roleName || profile.note || profile.name || "角色"}`,
     profile?.bio ? `人设：${truncateContextText(profile.bio, 90)}` : "",
     profile?.onlineStyle ? `说话风格：${truncateContextText(profile.onlineStyle, 54)}` : "",
@@ -66187,15 +66503,17 @@ const buildLifeMonitorA3PlainTextContext = ({
     Array.isArray(npcDetails) && npcDetails.length
       ? `NPC关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 96 })}`
       : "",
-    goalTitles.length ? `生活轨迹短期目标：${goalTitles.join(" / ")}` : "",
+    goalTitles.length ? `当日事件短期目标：${goalTitles.join(" / ")}` : "",
     journeyAnchorText ? `当天行程锚点：${truncateContextText(journeyAnchorText, 180)}` : "",
-    sameDayNodes.length ? `当天已有生活轨迹：${sameDayNodes.join("；")}` : "",
+    sameDayNodes.length ? `当天已有当日事件：${sameDayNodes.join("；")}` : "",
     eventText ? `已有同一事件：${eventText}` : "",
     worldbook.length ? `世界书：${worldbook.join("；")}` : "",
     memories.length ? `重要记忆：${memories.join("；")}` : "",
     summaryArchive.length ? `自动总结：${summaryArchive.join("；")}` : "",
     recentMessages.length ? `最近聊天：${recentMessages.join("；")}` : "",
-    `概率：每日${Number(lifeFateSettings?.eventTriggerChance || 0)}%，本次有效${Number(fortuneRoll?.effectiveTriggerChance || 0)}%，运势${fortuneRoll?.tierLabel || "平稳"}`,
+    fortuneRoll?.eventStyle?.label ? `当日事件文风：${fortuneRoll.eventStyle.label}` : "",
+    fortuneRoll?.eventStyle?.prompt ? `文风要求：${fortuneRoll.eventStyle.prompt}` : "",
+    fortuneRoll?.tierLabel ? `事件方向：${fortuneRoll.tierLabel}` : "",
     fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
     fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
     fortuneRoll?.mainEventType?.npcHints ? `主事件优先NPC：${fortuneRoll.mainEventType.npcHints}` : "",
@@ -66270,7 +66588,7 @@ const buildJourneyA3PlainTextContext = ({
     .map((item) => `${item.title || "长期目标"}(${Number(item.progress || 0)}%)`);
   const seedLines = normalizeArray(timeSeeds)
     .slice(0, Math.max(1, preferredEntryCount))
-    .map((item) => item?.time || item)
+    .map((item) => (item?.segment ? `${item.segment} ${item.time}` : item?.time || item))
     .filter(Boolean);
   const diversityLines = buildJourneyDiversityPromptLines(diversityContext);
   const lines = [
@@ -66287,7 +66605,7 @@ const buildJourneyA3PlainTextContext = ({
       ? `NPC关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 96 })}`
       : "",
     normalizedJourneyPrompt ? `用户要求：${truncateContextText(normalizedJourneyPrompt, 90)}` : "",
-    normalizedJourneyPrompt ? "用户要求优先级：必须优先遵守上面的用户要求，它高于最近行程的惯性和模型自行发挥" : "",
+    normalizedJourneyPrompt ? "行程提示词优先级：必须优先遵守上面的行程提示词，它高于最近行程惯性和模型自行发挥" : "",
     diversityLines.length ? `避重规则：${diversityLines.join("；")}` : "",
     targetHoliday?.name || targetHoliday?.promptHint
       ? `日期节奏：${targetHoliday?.name || "普通日"} ${truncateContextText(targetHoliday?.promptHint || "", 72)}`
@@ -66308,8 +66626,8 @@ const buildJourneyA3PlainTextContext = ({
     fortuneRoll?.mainEventType?.label ? `今日主事件类型：${fortuneRoll.mainEventType.label}` : "",
     fortuneRoll?.mainEventType?.directive ? `主事件执行：${fortuneRoll.mainEventType.directive}` : "",
     fortuneRoll?.mainEventType?.npcHints ? `主事件优先NPC：${fortuneRoll.mainEventType.npcHints}` : "",
-    `生活轨迹：${journeyCanWriteEventLine ? `本日概率命中，行程后追加 事件||总标题||进行中||运势||天数 和 ${LIFE_MONITOR_DAILY_NODE_MIN}-${LIFE_MONITOR_DAILY_NODE_MAX} 个 HH:MM 节点；第一节点靠近 ${lifeNodeClockHint}` : "本日概率未命中，行程后不要写生活轨迹"}`,
-    `概率：每日${Number(lifeFateSettings?.eventTriggerChance || 0)}%，本次有效${Number(fortuneRoll?.effectiveTriggerChance || 0)}%，运势${fortuneRoll?.tierLabel || "平稳"}`,
+    `当日事件：必须生成 事件||总标题||进行中||文风||天数 和 ${LIFE_MONITOR_DAILY_NODE_MIN}-${LIFE_MONITOR_DAILY_NODE_MAX} 个 HH:MM 节点；第一节点靠近 ${lifeNodeClockHint}`,
+    `当日事件文风：${fortuneRoll?.eventStyle?.label || "细腻日常"}；${fortuneRoll?.eventStyle?.prompt || "写出具体生活细节"}`,
     Array.isArray(fortuneRoll?.storyHooks) && fortuneRoll.storyHooks.length
       ? `题材钩子：${fortuneRoll.storyHooks.slice(0, 4).join(" / ")}`
       : "",
@@ -66373,10 +66691,7 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     normalizedTargetDate === formatJourneyDayKey(journeyGenerationNow)
       ? `${String(journeyGenerationNow.getHours()).padStart(2, "0")}:${String(journeyGenerationNow.getMinutes()).padStart(2, "0")}`
       : "当天行程里最容易出事的合理时间点";
-  const journeyCanWriteEventLine =
-    Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
-    Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
-    Boolean(fortuneRoll.eventTriggered);
+  const journeyCanWriteEventLine = true;
   const journeySlimContext = {
     roleName: String(roleName || "").trim(),
     currentPlace,
@@ -66439,11 +66754,14 @@ const requestJourneyPreviewTimelineOnlyTextData = async (
     diversityContext: journeyDiversityContext,
   });
   const journeySystemPrompt = `纯文本格式任务：只输出双竖线分隔文本，不要 JSON，不要 Markdown，不要代码块，不要解释。
-你负责生成 ${targetDateLabel} 的当天行程${journeyCanWriteEventLine ? "和生活轨迹" : ""}。
+你负责生成 ${targetDateLabel} 的当天行程和当日事件。
 第一行必须从数字开头，格式固定：HH:MM-HH:MM||标题||地点||详情
 输出规则：
 - 必须简体中文，不能写日文、英文段落、代码块、表格、字段名或开场白。
-- 用户自定义提示词是最高优先级：${normalizedJourneyPrompt ? `「${normalizedJourneyPrompt}」` : "未填写时才按角色日常自动发挥"}。
+- 行程生成提示词是最高优先级：${normalizedJourneyPrompt ? `「${normalizedJourneyPrompt}」` : "未填写时才按角色日常自动发挥"}；任何默认规则都不能覆盖它。
+- 当日事件文风是第二优先级：${fortuneRoll?.eventStyle?.label || "细腻日常"}。执行要求：${fortuneRoll?.eventStyle?.prompt || "写出具体生活细节"}
+- 先给当天安排五个粗时段：早上、 中午、下午、晚上、半夜；每个时段都要有一个大致安排，再把它们展开成具体时间轴。
+- 具体当日事件要结合当天已有事件、最近 50 条角色与用户对话、角色长期记忆和记忆召回；不要脱离这些上下文另起身份或地点。
 - 不要把最近几天的旧桥段当模板复读；连续性只用于承接生活状态，不用于重复同一个 NPC、同一种求助或同一个饭局套路。
 - ${JOURNEY_MODEL_VISIBLE_TEXT_RULE}
 ${journeyDiversityLines.map((line) => `- ${line}`).join("\n")}
@@ -66454,14 +66772,14 @@ ${journeyDiversityLines.map((line) => `- ${line}`).join("\n")}
 - 今日主事件类型：${fortuneRoll?.mainEventType?.label || "普通日常偏折"}
 - 主事件执行：${fortuneRoll?.mainEventType?.directive || "先决定一个真实生活事件，再让行程围绕它自然变化"}
 - NPC面板人物关系：${buildNpcContextInlineText(npcDetails, { itemLimit: NPC_CONTEXT_DEFAULT_LIMIT, relationLimit: 42, summaryLimit: 90 }) || "暂无"}
-- 至少包含起床/早餐、白天主线、晚餐、晚饭后的具体安排；晚饭后不能写“收尾/放松/推进”这种空标题。
+- 至少包含早上、 中午、下午、晚上、半夜五个时段；晚饭后和半夜不能写“收尾/放松/推进”这种空标题，要写具体可发生的事。
 - 目标行可选，只在已有目标确实需要变化时写：短期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明 或 长期目标||标题||保留/更新/替换/完成/新增||进度0到100||说明；不要每天硬凑新目标。
-${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：生活轨迹
-- 生活轨迹总标题行必须是：事件||事件总标题||进行中||运势等级||影响天数1到7
+${journeyCanWriteEventLine ? `- 行程和目标行之后写一行：当日事件
+- 当日事件总标题行必须是：事件||事件总标题||进行中||事件方向||影响天数1到7
 - 再写 ${LIFE_MONITOR_DAILY_NODE_MIN} 到 ${LIFE_MONITOR_DAILY_NODE_MAX} 个同主题节点：HH:MM||8到12字小标题||100到200个汉字的第三人称故事正文||短标签
-- 生活轨迹必须是现实生活突发事件，优先手机、钥匙、外卖、排队、路人、朋友、天气、错拿物品、小额好运、社交误会；工作只能当背景，不能写成工作进度。
-- 生活轨迹必须承接今日主事件类型，优先使用 NPC 面板人物、家庭/朋友/同事/公众身份/都市现场，而不是连续写快递配件、咖啡渍、工作素材这种单一小物件。
-- 每个节点围绕同一个事件总标题推进，有起因、转折和余波；正文用第三人称，不能用“我”。` : "- 本日概率未命中生活轨迹，只输出行程和必要目标行；不要写生活轨迹、事件或占位。"}
+- 当日事件必须是现实生活突发事件，优先手机、钥匙、外卖、排队、路人、朋友、天气、错拿物品、小额好运、社交误会；工作只能当背景，不能写成工作进度。
+- 当日事件必须承接今日主事件类型，优先使用 NPC 面板人物、家庭/朋友/同事/公众身份/都市现场，而不是连续写快递配件、咖啡渍、工作素材这种单一小物件。
+- 每个节点围绕同一个事件总标题推进，有起因、转折和余波；正文用第三人称，不能用“我”。` : "- 每次都生成当日事件，不得跳过或输出占位。"}
 写完最后一行立刻停止。`
 
   const response = await requestJourneyModelText({
@@ -67716,10 +68034,21 @@ const updateRoleSetting = (field, value, { paintNow = true } = {}) => {
   if (normalizedField === "lifeFate.eventTriggerChance" || normalizedField.startsWith("lifeFate.weights.")) {
     nextValue = clampValue(Number(value) || 0, 0, 100);
   }
+  if (normalizedField === "dailyEventStyle.custom") {
+    nextValue = String(value || "").trim().slice(0, 600);
+  }
   updateRole(role.id, (nextRole) => {
     setRoleSettingValueByPath(nextRole.settings, normalizedField, nextValue);
     if (normalizedField === "lifeFate.eventTriggerChance" || normalizedField.startsWith("lifeFate.weights.")) {
       nextRole.settings.lifeFate = normalizeLifeFateSettings(nextRole.settings.lifeFate);
+    }
+    if (normalizedField === "dailyEventStyle.custom") {
+      nextRole.settings.dailyEventStyle = normalizeDailyEventStyle({
+        ...(nextRole.settings.dailyEventStyle || {}),
+        custom: nextValue,
+        key: "custom",
+        prompt: nextValue,
+      });
     }
     const nowIso = new Date().toISOString();
     if (normalizedField === "proactiveRateMinutes") {
@@ -67739,6 +68068,32 @@ const updateRoleSetting = (field, value, { paintNow = true } = {}) => {
     }
     return nextRole;
   }, { paintNow });
+};
+
+const patchVoiceTranscriptDom = (messageId, expanded, role) => {
+  const selector = `[data-message-hit="${escapeAttrSelector(messageId)}"]`;
+  const bubbleWrap = root.querySelector(selector);
+  const line = bubbleWrap?.closest(".chat-message-line");
+  const voiceCard = line?.querySelector(".voice-card");
+  if (!(line instanceof HTMLElement) || !(voiceCard instanceof HTMLElement)) return false;
+
+  voiceCard.classList.toggle("expanded", expanded);
+  const existingSlot = line.querySelector(".chat-voice-transcript-slot");
+  if (!expanded) {
+    existingSlot?.remove();
+    return true;
+  }
+  if (existingSlot) return true;
+
+  const message = (role?.chats?.messages || []).find((item) => item?.id === messageId);
+  if (!message) return false;
+  const slot = document.createElement("div");
+  slot.className = `chat-voice-transcript-slot ${message.role === "user" ? "user-voice-transcript-slot" : "ai-voice-transcript-slot"}`;
+  slot.innerHTML = renderVoiceTranscriptBlock(message, role);
+  const nextElement = bubbleWrap.nextElementSibling;
+  if (nextElement) line.insertBefore(slot, nextElement);
+  else line.appendChild(slot);
+  return true;
 };
 
 const updateRoleMealTime = (index, value) => {
@@ -69774,7 +70129,7 @@ const generateJourneyForSevenDays = async (raw) => {
 
 const LIFE_MONITOR_RETRY_MINUTES = 20;
 const LIFE_MONITOR_AUTO_INTERVAL_MINUTES = 60;
-const LIFE_MONITOR_MODEL_COOLDOWN_MINUTES = 180;
+const LIFE_MONITOR_MODEL_COOLDOWN_MINUTES = 45;
 const LIFE_MONITOR_ACTIVE_EVENT_COOLDOWN_MINUTES = 150;
 const LIFE_MONITOR_HOURLY_STORY_CHANCE_MIN = 2;
 const LIFE_MONITOR_HOURLY_STORY_CHANCE_MAX = 32;
@@ -70281,8 +70636,18 @@ const buildLifeFateSyntheticEventTitle = (fortuneRoll = null, anchorLabel = "") 
 const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
   const normalizedDateKey = formatDateKey(targetDateKey || new Date());
   const settings = normalizeLifeFateSettings(role?.settings?.lifeFate);
+  const eventStyle = normalizeDailyEventStyle(role?.settings?.dailyEventStyle);
   const seedBase = `${normalizedDateKey}|${String(role?.id || "").trim()}|${String(role?.profile?.note || role?.profile?.name || "").trim()}`;
-  const tierKey = pickWeightedLifeFateTierKey(settings.weights, `${seedBase}|tier`);
+  const styleTierMap = {
+    "fine-daily": "steady",
+    "inner-monologue": "steady",
+    dramatic: "storm",
+    "light-humor": "spark",
+    "daily-sitcom": "spark",
+    custom: "steady",
+  };
+  // 事件方向由用户选择的文风决定；旧运势权重只为历史数据保留，不再参与选择。
+  const tierKey = styleTierMap[eventStyle.key] || "steady";
   const tierDef = getLifeFateTierDef(tierKey);
   const selectedHookCount = tierKey === "spark" ? 5 : 4;
   const selectedHookEntries = pickDeterministicLifeFateHooksDetailed(tierKey, `${seedBase}|hooks`, selectedHookCount);
@@ -70295,10 +70660,9 @@ const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
     storyThemes,
     storyHooks,
   });
-  const effectiveTriggerChance = getLifeFateEffectiveTriggerChance(settings, tierKey);
-  const eventTriggered =
-    effectiveTriggerChance > 0 &&
-    buildDeterministicUnit(`${seedBase}|trigger`) * 100 < effectiveTriggerChance;
+  const effectiveTriggerChance = 100;
+  // 当日事件不再由概率决定；旧概率字段仅保留给历史数据兼容。
+  const eventTriggered = true;
   const variationScore = getLifeFateVariationScore(tierKey, effectiveTriggerChance);
   const requiredConcreteMoments = getLifeFateRequiredConcreteMoments({
     variationScore,
@@ -70315,7 +70679,7 @@ const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
     storyThemes,
     mainEventType,
     eventTriggered,
-    triggerChance: Number(settings.eventTriggerChance || 0),
+    triggerChance: 100,
     effectiveTriggerChance,
     variationScore,
     requiredConcreteMoments,
@@ -70326,22 +70690,20 @@ const buildLifeFateRoll = (role, targetDateKey = formatDateKey()) => {
     }),
     weights: settings.weights,
     totalWeight: getLifeFateTotalWeight(settings),
+    eventStyle,
   };
 };
 
 const buildLifeFatePromptBlock = (role, targetDateKey = formatDateKey()) => {
-  const settings = normalizeLifeFateSettings(role?.settings?.lifeFate);
   const roll = buildLifeFateRoll(role, targetDateKey);
-  const weightsText = LIFE_FORTUNE_TIER_DEFS.map((item) => `${item.label} ${Number(settings.weights?.[item.key] || 0)}`).join(" / ");
   return {
-    settings,
+    settings: normalizeLifeFateSettings(role?.settings?.lifeFate),
     roll,
-    promptBlock: `命运概率控制:
-- 每日触发率: ${Number(settings.eventTriggerChance || 0)}%
-- 运势权重分布: ${weightsText}
-- 今日抽中的运势档位: ${roll.tierLabel}
-- 今日运势底色: ${roll.tierBlurb}
-- 今日按档位折算后的事件触发强度: ${Number(roll.effectiveTriggerChance || 0)}%
+    promptBlock: `当日事件生成规则:
+- 文风最高优先级: ${roll.eventStyle?.label || "细腻日常"}
+- 文风执行: ${roll.eventStyle?.prompt || "以具体生活细节推进事件"}
+- 行程提示词和文风都必须贯穿当天五个粗时段与后续细化事件
+- 文风决定今日事件方向: ${roll.tierLabel}
 - 今日生活变化强度: ${Number(roll.variationScore || 0)}/100
 - 今日至少要写出的记忆点数量: ${Number(roll.requiredConcreteMoments || 1)}
 - 今日主事件类型: ${roll.mainEventType?.label || "日常偏折"}
@@ -70349,14 +70711,14 @@ const buildLifeFatePromptBlock = (role, targetDateKey = formatDateKey()) => {
 - 今日优先联动 NPC: ${roll.mainEventType?.npcNames?.join(" / ") || "可从 NPC 面板或上下文自然选择"}
 - 今日戏剧执行要求: ${roll.dramaDirective}
 - 今日优先题材方向: ${Array.isArray(roll.storyThemes) && roll.storyThemes.length ? roll.storyThemes.join(" / ") : "日常变化"}
-- 今日是否触发生活轨迹: ${roll.eventTriggered ? "是 你必须生成一条可归档进往期事件簿的完整生活轨迹事件线" : "否 今天不生成生活轨迹，不要写平稳日常占位"}
+- 今日必须生成当日事件：${roll.eventStyle?.label || "细腻日常"} 文风下的完整事件线，不得以概率跳过
 - 今日优先戏剧元素: ${roll.storyHooks.join("；") || "普通日常里的微妙变化"}
 - 如果今天是 spark，不能只写成顺利和平静，要写出“今天真有点好玩”的感觉，最好带一点轻微乌龙、临时起意、社交热闹或现场笑点
 - 如果今天属于 spark / radiant / koi 这类偏正向档位，优先把记忆点写成城市生活里的 surprise / fun / neighborhood / invitation / animal，再去补职业、目标或主线推进
 - 这些有意思的事不一定非要和角色职业、当前目标或主线有关，也可以来自路上、店里、邻里、小活动、小赠品、偶遇、可爱动物、临时邀约这类现实生活里的小奇遇
 - 生活轨迹不是工作进度簿；如果最近几天已经围绕工作、项目、视觉、宣发、设计、Demo、灵感写过，今天必须优先换成非工作日常事件
 - 新生活轨迹的主矛盾优先来自：${LIFE_MONITOR_NON_WORK_THEME_HINTS}
-- 概率设置不是展示说明，必须真实反映到 timeline / event 的题材、强度和后果里，不能所有天都写成普通推进`,
+- 每次自动或手动生成都必须输出当日事件，不能用概率跳过或改写为占位说明`,
   };
 };
 
@@ -70514,6 +70876,21 @@ const getLifeMonitorJourneySegmentKey = (entry = null) =>
     .filter(Boolean)
     .join("|");
 
+const hasUpcomingJourneySegmentWithinHour = (entries = [], targetDateKey = formatJourneyDayKey(), now = new Date()) => {
+  const normalizedDateKey = formatDateKey(targetDateKey || now);
+  const nowDate = now instanceof Date ? now : new Date(now || Date.now());
+  const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+  return (Array.isArray(entries) ? entries : []).some((entry) => {
+    const range = getJourneyMonitorAbsoluteRangeMeta(entry);
+    if (!range) return false;
+    const start = range.start % 1440;
+    const entryDate = formatDateKey(entry?.journeyDateKey || normalizedDateKey);
+    if (entryDate !== normalizedDateKey) return false;
+    const delta = start - nowMinutes;
+    return delta >= 0 && delta <= 60;
+  });
+};
+
 const hasLifeMonitorGeneratedEventForDate = (role, targetDateKey = formatJourneyDayKey()) => {
   const normalizedTargetDate = formatDateKey(targetDateKey || new Date());
   return (Array.isArray(role?.events) ? role.events : []).some((event) => {
@@ -70554,12 +70931,13 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
   const dailyNodeCount = getLifeMonitorDailyNodeCount(role, targetDateKey);
   const plannedNodeCount = getMonitorPlannedTimelineForDate(role, targetDateKey).length;
   const dailyNodeLimitReached = dailyNodeCount >= LIFE_MONITOR_DAILY_NODE_MAX;
-  const fateTriggerAllowed = Number(fortuneRoll?.triggerChance || 0) > 0 && Number(fortuneRoll?.effectiveTriggerChance || 0) > 0;
+  const fateTriggerAllowed = true;
   const activeEvent = getChatReplyLiveMonitorEvent(role, now);
   const activeEntry = pickJourneyMonitorAnchorEntry(entries, targetDateKey, cutoffDate);
   const segmentKey = getLifeMonitorJourneySegmentKey(activeEntry);
   const previousSegmentKey = String(role?.runtime?.lastLifeMonitorJourneySegmentKey || "").trim();
   const segmentChanged = Boolean(segmentKey && segmentKey !== previousSegmentKey);
+  const segmentDueSoon = hasUpcomingJourneySegmentWithinHour(entries, targetDateKey, now);
   const minutesSinceModel = getMinutesSince(role?.runtime?.lastLifeMonitorAt, now);
   const hasModelHistory = Boolean(String(role?.runtime?.lastLifeMonitorAt || "").trim());
   const generalCooldownReady = !hasModelHistory || minutesSinceModel >= LIFE_MONITOR_MODEL_COOLDOWN_MINUTES;
@@ -70574,18 +70952,18 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
     segmentChanged,
     hasActiveEvent: Boolean(activeEvent),
   });
-  const hourlyHit = buildDeterministicUnit(`${role.id || ""}|${targetDateKey}|${hourKey}|${segmentKey}|life-monitor-hourly`) * 100 < hourlyChance;
+  const hourlyHit = true;
   const shouldCallModel =
     !dailyNodeLimitReached &&
     fateTriggerAllowed &&
     (activeEventCooldownReady ||
       eventMissing ||
-      (generalCooldownReady && segmentChanged && hourlyHit) ||
+      (generalCooldownReady && (segmentChanged || segmentDueSoon) && hourlyHit) ||
       (generalCooldownReady && hourlyHit && Number(fortuneRoll.variationScore || 0) >= 70));
   const retryReady = !shouldSkipLifeMonitorAttempt(role, now);
   const intervalReady = shouldScheduleLifeMonitorAuto(role, now);
   const hasExistingTimelineToday = getLifeMonitorTimelineItemsForDate(role, targetDateKey).length > 0;
-  const canAutoCallModel = retryReady && (intervalReady || eventMissing || activeEventCooldownReady);
+  const canAutoCallModel = retryReady && (intervalReady || segmentDueSoon || eventMissing || activeEventCooldownReady);
   const finalShouldCallModel = shouldCallModel && canAutoCallModel;
 
   if (dailyNodeLimitReached) {
@@ -70596,6 +70974,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       targetDateKey,
       hourKey,
       segmentKey,
+      segmentDueSoon,
       activeEntry,
       fortuneRoll,
       hourlyChance,
@@ -70614,6 +70993,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
       targetDateKey,
       hourKey,
       segmentKey,
+      segmentDueSoon,
       activeEntry,
       fortuneRoll,
       hourlyChance,
@@ -70643,6 +71023,7 @@ const buildLifeMonitorLocalDecision = (role, now = new Date()) => {
     targetDateKey,
     hourKey,
     segmentKey,
+    segmentDueSoon,
     activeEntry,
     fortuneRoll,
     hourlyChance,
@@ -71412,6 +71793,7 @@ const requestLifeMonitorPlainTextData = async ({
   cutoffLabel,
   fortuneRoll,
   lifeFateSettings,
+  journeyPrompt = "",
   requiresArchiveEvent,
   isAutoMonitor,
   forceRegenerate = false,
@@ -71432,12 +71814,8 @@ const requestLifeMonitorPlainTextData = async ({
   const npcNames = getNpcContextNames(npcDetails, NPC_CONTEXT_DEFAULT_LIMIT);
   const rawExistingEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
   const existingEvent = forceRegenerate || isLifeMonitorEventWorkDominant(rawExistingEvent) ? null : rawExistingEvent;
-  const fateAllowsEvent =
-    requiresArchiveEvent ||
-    (Number(lifeFateSettings?.eventTriggerChance || 0) > 0 && Number(fortuneRoll?.effectiveTriggerChance || 0) > 0);
-  const canWriteEventLine =
-    fateAllowsEvent &&
-    (requiresArchiveEvent || forceRegenerate || Boolean(existingEvent));
+  const fateAllowsEvent = true;
+  const canWriteEventLine = true;
   const dailyNodeCount = getLifeMonitorDailyNodeCount(liveRole, normalizedTargetDate);
   const remainingNodeCount = Math.max(0, LIFE_MONITOR_DAILY_NODE_MAX - dailyNodeCount);
   const rawSameDayMonitorTimeline = getLifeMonitorTimelineItemsForDate(liveRole, normalizedTargetDate)
@@ -71467,6 +71845,7 @@ const requestLifeMonitorPlainTextData = async ({
         cutoffClock,
         currentPlace,
         referenceCity,
+        journeyPrompt,
         LIFE_MONITOR_FORCE_REGEN_USER_INPUT_SEED,
         npcNames.join(" "),
       ]
@@ -71477,6 +71856,7 @@ const requestLifeMonitorPlainTextData = async ({
         cutoffClock,
         currentPlace,
         referenceCity,
+        journeyPrompt,
         journeyAnchorText,
         npcNames.join(" "),
       ]
@@ -71534,8 +71914,8 @@ const requestLifeMonitorPlainTextData = async ({
       : null,
   };
   const lifeMonitorPlainTextContext = buildPureTextGenerationContext({
-    task: isAutoMonitor ? "后台本地判定命中后生成生活轨迹事件节点" : "生成生活轨迹事件节点",
-    outputIntent: forceRegenerate ? "手动重生成：新开非工作生活事件首行 + 1到5个 HH:MM 节点" : "事件首行 + 1到5个 HH:MM 生活轨迹节点",
+    task: isAutoMonitor ? "后台按行程提前一小时生成当日事件节点" : "生成当日事件节点",
+    outputIntent: forceRegenerate ? "手动重生成：新开非工作生活事件首行 + 1到5个 HH:MM 节点" : "事件首行 + 1到5个 HH:MM 当日事件节点",
     roleContext,
     journeyContext,
     slimContext: lifeMonitorSlimContext,
@@ -71562,7 +71942,7 @@ const requestLifeMonitorPlainTextData = async ({
   const response = await requestPlannerModelText({
     systemPrompt: useA3SlimContext
       ? `纯文本格式任务：只输出双竖线分隔标签文本。
-你现在只负责生成 ${targetDateLabel} ${cutoffClock} 的生活轨迹事件节点。
+你现在只负责生成 ${targetDateLabel} ${cutoffClock} 的当日事件节点。
 必须简体中文。
 第一行固定格式：事件||总标题||进行中或收尾||运势等级||影响天数1到7
 第一行第一段必须逐字保留“事件”，这不是占位符，不能改成地点、题材或标题。
@@ -71575,6 +71955,8 @@ const requestLifeMonitorPlainTextData = async ({
 - 每个节点都必须围绕同一个事件总标题推进，写起因、转折、余波，不要散成多个无关小故事
 - 正文必须现实向、抓马、有现场细节，必须用第三人称写角色，不能用“我”
 - 主事件优先来自手机没电、付款卡住、叫号乌龙、错拿物品、店员误会、路人搭话、天气反转、钥匙门禁、排队插曲、小额好运、临时邀约、外卖咖啡奶茶出错、邻里互动、宠物插曲
+- 行程提示词最高优先级：${journeyPrompt ? `「${journeyPrompt}」` : "按已保存行程提示词执行"}；当日事件必须服务于该提示词
+- 当日事件文风：${fortuneRoll?.eventStyle?.label || "细腻日常"}；${fortuneRoll?.eventStyle?.prompt || "写出具体生活细节"}
 - ${mainEventTypeDirective || "今日主事件类型：现实日常偏折；先决定事件类型再写节点"}
 - NPC 面板人物即使没写进世界书，也必须视为真实关系；如果主事件适合，优先让一个可用 NPC 用消息、邀约、误会或求助打断当天安排。
 - 不要把工作、方案、视觉、设计、项目、灵感、Demo、宣发、采样、创意园、工作室写成主线；工作最多只能一句背景带过
@@ -71584,7 +71966,7 @@ const requestLifeMonitorPlainTextData = async ({
 - 如果想写无聊状态词，比如生活推进、状态稳定、工作推进、归档、放松，必须改成具体发生的小事
 直接输出纯文本。`
       : `STRICT FORMATTER TASK: output only the requested pipe-delimited plain text. No JSON, no Markdown, no code fence, no prose. The first visible line must start exactly with 事件||, not 事||. Line 1 must have exactly 5 fields. Every node line must have exactly 4 fields. Every node first field must be HH:MM only, not a date. Each story field target is 120-160 Simplified Chinese Hanzi and must not exceed 200 Hanzi.
- 你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的生活轨迹事件节点。
+你只负责生成 ${targetDateLabel} ${cutoffClock} 这一刻的当日事件节点。
  必须使用简体中文。不要 JSON，不要 Markdown，不要代码块，不要解释，不要日文，不要韩文/朝鲜文，不要英文段落，不要任何外语，只输出纯文本。
  输出格式：
  事件||像作文题一样的生活轨迹总标题||进行中或收尾||运势等级||影响天数1到7
@@ -71605,6 +71987,8 @@ const requestLifeMonitorPlainTextData = async ({
 - 小标题必须是模型单独总结出来的 8 到 12 个汉字，不能直接截取正文前几个字
 - 事件总标题必须像作文题一样概括整条故事线，例如“弄堂红门里的老唱片线索”，不能写“生活推进”“状态波动”“今日插曲”
 - 每个节点都必须围绕同一个事件总标题继续推进：有起因、现场物件、人物反应、误会或障碍、角色选择、小反转和余波，不要散成互不相关的小段子
+- 行程提示词最高优先级：${journeyPrompt ? `「${journeyPrompt}」` : "按已保存行程提示词执行"}；当日事件必须服务于该提示词
+- 当日事件文风：${fortuneRoll?.eventStyle?.label || "细腻日常"}；${fortuneRoll?.eventStyle?.prompt || "写出具体生活细节"}
 - ${forceRegenerate ? "本次是用户不满意后手动重生成：必须换成全新的非工作生活事件线，不许沿用上一版展位/方案/视觉/设计/灵感主题；即使行程地点是展位或工作现场，也必须写成生活层面的乌龙、小麻烦、小幸运或社交插曲；不要承接旧生活轨迹、旧事件标题、旧短期目标" : "如果当前上下文偏工作，优先把工作当背景，事件核心改成生活随机变量"}
 - ${forceRegenerate ? "重生成时必须优先使用这些题材之一：手机没电或付款卡住、叫号/排队乌龙、错拿物品、店员误会、路人搭话、天气突然反转、钥匙/门禁/充电宝问题、小额免单好运、朋友临时求助、外卖/咖啡/奶茶出错" : "主事件优先写现实日常变量，不要连续写工作推进"}
 - ${forceRegenerate ? "本次全文禁用工作词：工作、方案、视觉、设计、手册、灵感、项目、Demo、采样、母带、混音、宣发、排版、品牌；不得用“比工作方案更真实”这种对比句，结尾必须落在生活后续；短期目标只能是生活后续，不得生成工作/方案/视觉/设计类目标" : "避免把结尾写回工作收益"}
@@ -71616,7 +72000,7 @@ const requestLifeMonitorPlainTextData = async ({
 - 如果 NPC 面板里有家庭、朋友、同事、助理、前合作对象、邻居或店员类人物，生活轨迹要优先从这些真实关系里挑人联动，不能只使用世界书里的少数 NPC。
 - 禁止只写“获得灵感/心情变化/状态转好”，灵感必须来自一个看得见的物件、一句误会的话或一次临场事故，并写出它影响了后面的哪个选择
 - 所有轨迹和事件明细都会写进角色聊天上下文，必须像角色亲身经历的真实事实，不要写成给用户看的设定扩写；之后用户问起时角色要能自然承认和复述
-- 突发事件必须结合概率设置：${String(fortuneRoll?.tierLabel || "平稳")} / 触发=${requiresArchiveEvent ? "是" : "否"} / 概率=${Number(lifeFateSettings?.eventTriggerChance || 0)}% / 有效概率=${Number(fortuneRoll?.effectiveTriggerChance || 0)}%
+- 当日事件不使用概率开关；每次自动或手动生成都必须输出事件节点
 - 好运写顺手被生活推一把，低运写被现实绊一下；都要现实可信
 - 影响天数按事件大小决定 1 到 7 天；小乌龙 1 天，中等误会/创作线索 2-4 天，重要关系/目标变化 5-7 天
  - 不要生成任何短期目标、长期目标、目标更新、目标建议；只推进生活轨迹事件本身
@@ -71704,15 +72088,16 @@ const generateLifeMonitorFromApi = async ({
     persistSecondaryTaskUsageSnapshot(role.id, {
       feature: "monitor",
       status: "error",
-      errorMessage: "行程 / 生活轨迹 API 未配置完整",
+      errorMessage: "行程 / 当日事件 API 未配置完整",
     });
     if (!silent) {
-      setToast("行程 / 生活轨迹 API 未配置完整，未生成生活轨迹");
+      setToast("行程 / 当日事件 API 未配置完整，未生成当日事件");
     }
     return false;
   }
 
   const normalizedTargetDate = formatDateKey(targetDateKey || new Date());
+  const journeyPromptPriority = normalizeJourneyGenerationPrompt(getSavedJourneyGeneratorPrompt(role), 180);
   const isAutoMonitor = source === "monitor-auto";
   const monitorToken = isAutoMonitor ? `monitor-auto:${role.id}` : "monitor";
   const syntheticNow = new Date();
@@ -71736,7 +72121,7 @@ const generateLifeMonitorFromApi = async ({
         requiredConcreteMoments: Math.max(2, Number(baseFortuneRoll?.requiredConcreteMoments || 0)),
         dramaDirective: [
           String(baseFortuneRoll?.dramaDirective || "").trim(),
-          "用户手动要求重生成今天生活轨迹，本次必须重新开一条非工作生活事件线；不要续写旧工作主题，不受当天随机未命中的限制",
+          "用户手动要求重生成今天当日事件，本次必须重新开一条非工作生活事件线；不要续写旧工作主题，不受旧概率字段影响",
         ]
           .filter(Boolean)
           .join("；"),
@@ -71798,57 +72183,15 @@ const generateLifeMonitorFromApi = async ({
   const dailyNodeCount = getLifeMonitorDailyNodeCount(role, normalizedTargetDate);
   if (dailyNodeCount >= LIFE_MONITOR_DAILY_NODE_MAX) {
     if (!silent) {
-      setToast(`今天生活轨迹已经有 ${LIFE_MONITOR_DAILY_NODE_MAX} 个节点了`);
+      setToast(`今天当日事件已经有 ${LIFE_MONITOR_DAILY_NODE_MAX} 个节点了`);
     }
     return false;
   }
-  const requiresArchiveEvent =
-    forceRegenerate ||
-    (Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
-      Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
-      Boolean(fortuneRoll.eventTriggered));
+  const requiresArchiveEvent = true;
   const rawExistingLiveEventBeforeRequest = getChatReplyLiveMonitorEvent(role, cutoffDate);
   const existingLiveEventBeforeRequest = isLifeMonitorEventWorkDominant(rawExistingLiveEventBeforeRequest)
     ? null
     : rawExistingLiveEventBeforeRequest;
-  if (!requiresArchiveEvent && !existingLiveEventBeforeRequest) {
-    updateRole(
-      role.id,
-      (nextRole) => {
-        nextRole.monitor = {
-          ...(nextRole.monitor || {}),
-          fortune: {
-            ...(nextRole.monitor?.fortune || {}),
-            dateKey: normalizedTargetDate,
-            tierKey: fortuneRoll.tierKey,
-            tierLabel: fortuneRoll.tierLabel,
-            summary: fortuneRoll.tierBlurb,
-            eventTriggered: false,
-            triggerChance: Number(lifeFateSettings.eventTriggerChance || 0),
-            effectiveTriggerChance: Number(fortuneRoll.effectiveTriggerChance || 0),
-            variationScore: Number(fortuneRoll.variationScore || 0),
-            requiredConcreteMoments: 0,
-            dramaDirective: String(fortuneRoll.dramaDirective || "").trim(),
-            storyHooks: fortuneRoll.storyHooks,
-            storyThemes: fortuneRoll.storyThemes,
-            mainEventType: fortuneRoll.mainEventType || null,
-          },
-        };
-        nextRole.runtime = {
-          ...(nextRole.runtime || {}),
-          lastLifeMonitorAttemptAt: new Date().toISOString(),
-          lastLifeMonitorLocalReason: "fate-not-triggered",
-        };
-        return nextRole;
-      },
-      { paintNow: false },
-    );
-    if (!silent) {
-      setToast("今天没有触发生活轨迹，不生成占位故事");
-    }
-    return false;
-  }
-
   addBusyToken("apiGenerationBusy", monitorToken);
   paint();
 
@@ -71864,11 +72207,7 @@ const generateLifeMonitorFromApi = async ({
     const targetDateLabel = formatJourneyDateLabel(normalizedTargetDate);
     const rawExistingLiveEvent = getChatReplyLiveMonitorEvent(liveRole, cutoffDate);
     const existingLiveEvent = isLifeMonitorEventWorkDominant(rawExistingLiveEvent) ? null : rawExistingLiveEvent;
-    const allowMonitorEvent =
-      requiresArchiveEvent ||
-      (Number(lifeFateSettings.eventTriggerChance || 0) > 0 &&
-        Number(fortuneRoll.effectiveTriggerChance || 0) > 0 &&
-        Boolean(existingLiveEvent));
+    const allowMonitorEvent = true;
     const apiResponse = await requestLifeMonitorPlainTextData({
       role,
       liveRole,
@@ -71879,6 +72218,7 @@ const generateLifeMonitorFromApi = async ({
       cutoffLabel,
       fortuneRoll,
       lifeFateSettings,
+      journeyPrompt: journeyPromptPriority,
       requiresArchiveEvent,
       isAutoMonitor,
       forceRegenerate,
@@ -71952,8 +72292,8 @@ const generateLifeMonitorFromApi = async ({
       const nextSummary =
         String(result?.summary || "").trim() ||
         (requiresArchiveEvent
-          ? `今天抽到的是${fortuneRoll.tierLabel}，命运开始加速，整体更像${fortuneRoll.storyHooks[0] || fortuneRoll.tierBlurb}`
-          : `今天抽到的是${fortuneRoll.tierLabel}，整体更像${fortuneRoll.tierBlurb}`);
+          ? `今天按${fortuneRoll.eventStyle?.label || "已选文风"}推进，整体更像${fortuneRoll.storyHooks[0] || fortuneRoll.tierBlurb}`
+          : `今天按${fortuneRoll.eventStyle?.label || "已选文风"}推进，整体更像${fortuneRoll.tierBlurb}`);
 
       nextRole.monitor = {
         ...nextRole.monitor,
@@ -72020,12 +72360,12 @@ const generateLifeMonitorFromApi = async ({
     });
 
     if (!silent) {
-      setToast("生活轨迹已更新");
+      setToast("当日事件已更新");
     }
     return true;
   } catch (error) {
     const rawResponseText = String(error?.rawResponseText || error?.modelMeta?.rawResponseText || "").trim();
-    const baseMessage = String(error?.message || "行程 / 生活轨迹 API 调用失败").trim();
+    const baseMessage = String(error?.message || "行程 / 当日事件 API 调用失败").trim();
     const normalizedBaseMessage =
       baseMessage === "模型没有返回可用文本"
         ? "模型请求成功，但没有返回正文，未写入生活轨迹"
@@ -72046,7 +72386,7 @@ const generateLifeMonitorFromApi = async ({
       errorMessage: [normalizedBaseMessage, diagnosticParts.join(" · ")].filter(Boolean).join(" | "),
     });
     if (!silent) {
-      setToast(error.message || "行程 / 生活轨迹 API 调用失败");
+      setToast(error.message || "行程 / 当日事件 API 调用失败");
     }
     return false;
   } finally {
@@ -72101,16 +72441,17 @@ const syncLifeMonitorWithJourney = async ({
       if (!ensureJourneyMapPlacesReady(liveRole, { silent })) {
         return false;
       }
-      const promptText = normalizeJourneyGenerationPrompt(prompt || getSavedJourneyGeneratorPrompt(liveRole), 180);
+      const savedPrompt = getSavedJourneyGeneratorPrompt(liveRole);
+      const promptText = normalizeJourneyGenerationPrompt(savedPrompt || prompt, 180);
       if (!promptText) {
         if (!silent) {
-          setToast("先保存行程提示词，才能联动生成当天行程和生活轨迹");
+      setToast("先保存行程提示词，才能联动生成当天行程和当日事件");
         }
         return false;
       }
       if (!hasPlannerApiConfig()) {
         if (!silent) {
-          setToast("行程 / 生活轨迹 API 未配置完整，未联动生成");
+          setToast("行程 / 当日事件 API 未配置完整，未联动生成");
         }
         return false;
       }
@@ -72166,8 +72507,8 @@ const syncLifeMonitorWithJourney = async ({
     if (!silent) {
       setToast(
         generatedJourney
-          ? `已联动生成 ${formatJourneyDateLabel(normalizedTargetDate)} 的行程和生活轨迹`
-          : `已按 ${formatJourneyDateLabel(normalizedTargetDate)} 的行程同步生活轨迹`,
+          ? `已联动生成 ${formatJourneyDateLabel(normalizedTargetDate)} 的行程和当日事件`
+          : `已按 ${formatJourneyDateLabel(normalizedTargetDate)} 的行程同步当日事件`,
       );
     }
     return true;
@@ -72182,7 +72523,7 @@ const syncLifeMonitorWithJourney = async ({
       errorMessage: error?.message || "行程与生活轨迹联动失败",
     });
     if (!silent) {
-      setToast(error?.message || "行程与生活轨迹联动失败");
+      setToast(error?.message || "行程与当日事件联动失败");
     }
     return false;
   } finally {
@@ -76779,80 +77120,6 @@ const setVideoSessionMicTriggerMode = async (mode = "auto") => {
   queueVideoSessionVisualAutoReply();
 };
 
-const setVideoSessionMicEngine = async (engine = "local") => {
-  const nextEngine = normalizeVideoSessionMicEngine(engine);
-  const capabilities = getVideoSessionMicCapabilities();
-  if (!capabilities[nextEngine]) {
-    setToast(
-      nextEngine === "tencent"
-        ? "腾讯云识别尚未配置，请先填写 AppID、SecretId 和 SecretKey"
-        : "当前浏览器暂不支持 SenseVoice Small",
-    );
-    return false;
-  }
-
-  state.videoSession = {
-    ...(state.videoSession || createVideoSessionState()),
-    micEnginePreference: nextEngine,
-    micEngine: nextEngine,
-    cleanEmotionEmoji: state.videoSession?.cleanEmotionEmoji !== false,
-  };
-  clearVideoSessionAutoSubmitTimer();
-  clearVideoSessionRestartTimer();
-
-  if (!state.videoSession?.active || String(state.videoSession?.inputMode || "voice").trim() !== "voice") {
-    refreshVideoSessionMicHealth({ syncNow: true });
-    paint();
-    queueVideoSessionStateSync({ flush: true });
-    setToast(nextEngine === "tencent" ? "已切换到腾讯云实时语音识别" : "已切换到 SenseVoice Small 本地识别");
-    return true;
-  }
-
-  const busy = ["processing", "replying"].includes(String(state.videoSession?.status || "").trim()) || videoSessionRuntime.roundSubmitting;
-  let preservedDraft = getVideoSessionVoiceDraftText(state.videoSession);
-  if (isVideoSessionLocalRecorderActive()) {
-    try {
-      const stopped = await stopVideoSessionLocalAsrCapture({ transcribe: true });
-      preservedDraft = mergeVideoSessionTextParts(preservedDraft, stopped?.transcript);
-    } catch {
-      // keep the text already visible while changing engines
-    }
-  }
-  destroyVideoSessionRecognition();
-  teardownVideoSessionLocalAsrCapture({ releaseStream: false });
-  if (preservedDraft) {
-    state.videoSession.transcript = sanitizeVideoSessionLocalTranscript(preservedDraft);
-    state.videoSession.interimTranscript = "";
-  }
-  state.videoSession.micListening = false;
-  state.videoSession.micRecording = false;
-  state.videoSession.status = busy ? state.videoSession.status : getVideoSessionIdleStatus();
-  state.videoSession.error = "";
-  refreshVideoSessionMicHealth({ syncNow: true });
-  paint();
-  queueVideoSessionStateSync({ flush: true });
-
-  if (!busy && shouldAutoStartVideoSessionRecognition(state.videoSession)) {
-    const started = await startVideoSessionRecognition();
-    if (!started) {
-      setToast(state.videoSession?.error || state.videoSession?.micHealthMessage || "麦克风暂时不可用");
-      return false;
-    }
-  }
-  queueVideoSessionVisualAutoReply({ awaitInputReady: !isVideoSessionHoldToTalkMode(state.videoSession) });
-  setToast(nextEngine === "tencent" ? "已切换到腾讯云实时语音识别" : "已切换到 SenseVoice Small 本地识别");
-  return true;
-};
-
-const toggleVideoSessionCleanEmotionEmoji = () => {
-  state.videoSession = {
-    ...(state.videoSession || createVideoSessionState()),
-    cleanEmotionEmoji: state.videoSession?.cleanEmotionEmoji === false,
-  };
-  paint();
-  queueVideoSessionStateSync({ flush: true });
-};
-
 const toggleVideoSessionHistoryOpen = () => {
   const nextHistoryOpen = !state.videoSession?.historyOpen;
   state.videoSession = {
@@ -80655,7 +80922,7 @@ eventRoot.addEventListener("click", async (event) => {
     state.journeyGeneratorDate = targetDateKey;
     state.journeyGeneratorText = getSavedJourneyGeneratorPrompt(role);
     openPanel("journey-generator");
-    setToast("这一天还没有行程，先联动生成行程和生活轨迹");
+          setToast("这一天还没有行程，先联动生成行程和当日事件");
     return;
   }
 
@@ -80668,11 +80935,11 @@ eventRoot.addEventListener("click", async (event) => {
       state.journeyGeneratorDate = targetDateKey;
       state.journeyGeneratorText = getSavedJourneyGeneratorPrompt(role);
       openPanel("journey-generator");
-      setToast("这一天还没有行程，先联动生成行程和生活轨迹");
+      setToast("这一天还没有行程，先联动生成行程和当日事件");
       return;
     }
     const dateLabel = formatJourneyDateLabel(targetDateKey);
-    if (!window.confirm(`要清掉${dateLabel}已有生活轨迹，并重新调用一次生活轨迹 API 生成吗？`)) return;
+    if (!window.confirm(`要清掉${dateLabel}已有当日事件，并重新调用一次当日事件 API 生成吗？`)) return;
     void generateLifeMonitorFromApi({
       roleId: role.id,
       targetDateKey,
@@ -81415,69 +81682,6 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
-  if (action === "fetch-embedding-models") {
-    if (!isApiRequestsEnabled()) {
-      setToast(buildApiDisabledMessage("API 调用"));
-      return;
-    }
-    const config = getLivingMemoryEmbeddingConfig();
-    if (!config?.url || !config?.key) {
-      setToast("请先填写 Embedding 接口地址和 API Key");
-      return;
-    }
-    const token = "memory-embedding";
-    addBusyToken("modelFetchBusy", token);
-    paint();
-
-    void fetchAvailableModels(config)
-      .then((models) => {
-        state.availableModels = models;
-        state.modelPickerOpen = models.length > 0;
-        state.modelPickerTarget = token;
-        setToast(`已拉取 ${models.length} 个 Embedding 模型`);
-      })
-      .catch((error) => {
-        state.availableModels = [];
-        state.modelPickerOpen = false;
-        state.modelPickerTarget = "";
-        setToast(error.message || "拉取 Embedding 模型失败");
-      })
-      .finally(() => {
-        removeBusyToken("modelFetchBusy", token);
-        paint();
-      });
-    return;
-  }
-
-  if (action === "test-memory-embedding") {
-    if (!isApiRequestsEnabled()) {
-      setToast(buildApiDisabledMessage("API 调用"));
-      return;
-    }
-    const config = getLivingMemoryEmbeddingConfig();
-    if (!config?.url || !config?.embeddingModel || !config?.key) {
-      setToast("请填写 Embedding 接口地址、模型和 API Key");
-      return;
-    }
-    const token = "memory-embedding-test";
-    addBusyToken("modelFetchBusy", token);
-    paint();
-
-    void requestEmbeddingVectorsWithConfig(config, ["LifeTalk 向量检索测试"])
-      .then((vectors) => {
-        const dimension = vectors?.[0]?.length || 0;
-        setToast(`Embedding 接口测试成功${dimension ? `，返回 ${dimension} 维向量` : ""}`);
-      })
-      .catch((error) => {
-        setToast(error.message || "Embedding 接口测试失败");
-      })
-      .finally(() => {
-        removeBusyToken("modelFetchBusy", token);
-        paint();
-      });
-    return;
-  }
-
   if (action === "fetch-minimax-voice-models") {
     const token = "minimax-voice-model";
     addBusyToken("modelFetchBusy", token);
@@ -81538,8 +81742,6 @@ eventRoot.addEventListener("click", async (event) => {
     const subApiIndex = Number(button.dataset.subapiIndex);
     if (button.dataset.modelTarget === "minimax-voice-model") {
       state.appConfig.minimaxVoice.model = nextModel || state.appConfig.minimaxVoice.model;
-    } else if (button.dataset.modelTarget === "memory-embedding" && state.appConfig.memory) {
-      state.appConfig.memory.embeddingModel = nextModel || state.appConfig.memory.embeddingModel;
     } else if (apiLane === "imageGeneration" && state.appConfig.imageGeneration) {
       state.appConfig.imageGeneration.model = nextModel || state.appConfig.imageGeneration.model;
     } else if (apiLane === "chatFallback" && state.appConfig.chatFallback) {
@@ -81592,8 +81794,11 @@ eventRoot.addEventListener("click", async (event) => {
     const expanded = new Set(state.expandedVoiceMessageIds || []);
     if (expanded.has(messageId)) expanded.delete(messageId);
     else expanded.add(messageId);
+    const nextExpanded = expanded.has(messageId);
     state.expandedVoiceMessageIds = [...expanded];
-    paint();
+    if (!patchVoiceTranscriptDom(messageId, nextExpanded, role)) {
+      paint();
+    }
     return;
   }
 
@@ -81816,7 +82021,25 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "save-life-fate-settings") {
     syncPersistentState();
     popPanel();
-    setToast("命运设定已保存");
+    setToast("当日事件文风已保存");
+    return;
+  }
+
+  if (action === "select-life-event-style") {
+    const role = getActiveChatRole() || getCurrentRole();
+    if (!role) return;
+    const styleKey = String(button.dataset.styleKey || "fine-daily").trim();
+    const definition = DAILY_EVENT_STYLE_DEFS.find((item) => item.key === styleKey);
+    updateRole(role.id, (nextRole) => {
+      const current = normalizeDailyEventStyle(nextRole.settings?.dailyEventStyle);
+      nextRole.settings.dailyEventStyle = normalizeDailyEventStyle({
+        ...current,
+        key: styleKey,
+        label: definition?.label || (styleKey === "custom" ? "自定义文风" : current.label),
+        prompt: definition?.prompt || current.custom || current.prompt,
+      });
+      return nextRole;
+    });
     return;
   }
 
@@ -81894,16 +82117,6 @@ eventRoot.addEventListener("click", async (event) => {
     return;
   }
 
-  if (action === "set-video-mic-engine") {
-    void setVideoSessionMicEngine(button.dataset.videoMicEngine || "local");
-    return;
-  }
-
-  if (action === "toggle-video-clean-emotion-emoji") {
-    toggleVideoSessionCleanEmotionEmoji();
-    return;
-  }
-
   if (action === "toggle-video-tap-record") {
     toggleVideoSessionTapToRecord(event);
     return;
@@ -81964,6 +82177,46 @@ eventRoot.addEventListener("click", async (event) => {
   if (action === "open-token-console") {
     state.quickPlusMenuOpen = false;
     openPanel("token-console");
+    return;
+  }
+
+  if (action === "open-prompt-viewer") {
+    const scope = button.dataset.promptScope === "secondary" ? "secondary" : "primary";
+    state.promptViewerScope = scope;
+    if (scope === "secondary") {
+      const role = getActiveChatRole() || getCurrentRole();
+      state.promptViewerFeature = String(role?.usage?.secondary?.lastTasks?.[0]?.feature || "summary").trim() || "summary";
+    }
+    openPanel("prompt-viewer");
+    return;
+  }
+
+  if (action === "select-prompt-viewer-feature") {
+    state.promptViewerFeature = String(button.dataset.promptFeature || "summary").trim() || "summary";
+    paint();
+    return;
+  }
+
+  if (action === "copy-prompt-viewer") {
+    const role = getActiveChatRole() || getCurrentRole();
+    const scope = state.promptViewerScope === "secondary" ? "secondary" : "primary";
+    const feature = String(state.promptViewerFeature || "summary").trim();
+    const task = role?.usage?.secondary?.lastTasks?.find((item) => String(item?.feature || "") === feature);
+    const messages = scope === "primary" ? role?.usage?.lastPrimaryChat?.promptMessages : task?.promptMessages;
+    const text = (Array.isArray(messages) ? messages : [])
+      .map((message) => `${String(message?.role || "user").toUpperCase()}\n${String(message?.content || "").trim()}`.trim())
+      .filter(Boolean)
+      .join("\n\n────────────────────────────────\n\n");
+    if (!text) {
+      setToast("还没有可复制的提示词");
+      return;
+    }
+    try {
+      const copied = await writeTextToClipboard(text);
+      setToast(copied ? "已复制提示词" : "复制失败，请长按内容手动选择");
+    } catch {
+      setToast("复制失败，请长按内容手动选择");
+    }
     return;
   }
 
